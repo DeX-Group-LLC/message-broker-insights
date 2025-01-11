@@ -10,10 +10,13 @@ import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import { MatMenuModule } from '@angular/material/menu';
 import { Observable, Subject, Subscription } from 'rxjs';
 import { debounceTime } from 'rxjs/operators';
 import { MetricsService, Metric } from '../../services/metrics.service';
+import { Chart } from 'chart.js/auto';
+import { NgChartsModule } from 'ng2-charts';
+import { ChartConfiguration, ChartOptions } from 'chart.js';
 
 /**
  * Component for displaying and managing system metrics.
@@ -34,7 +37,8 @@ import { MetricsService, Metric } from '../../services/metrics.service';
         MatTooltipModule,
         MatInputModule,
         MatFormFieldModule,
-        MatMenuModule
+        MatMenuModule,
+        NgChartsModule
     ],
     templateUrl: './metrics.component.html',
     styleUrls: ['./metrics.component.scss']
@@ -59,12 +63,49 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
     /** Filter for metric timestamps */
     timestampFilter = '';
 
+    /** Chart data configuration */
+    chartData: ChartConfiguration<'line'>['data'] = {
+        datasets: [{
+            data: [],
+            label: 'Value',
+            borderColor: '#1976d2',
+            tension: 0.1,
+            fill: false
+        }],
+        labels: []
+    };
+
+    /** Chart options configuration */
+    chartOptions: ChartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            },
+            x: {
+                reverse: false,
+                ticks: {
+                    maxTicksLimit: 10
+                }
+            }
+        },
+        plugins: {
+            legend: {
+                display: false
+            }
+        }
+    };
+
     /** Subject for handling component destruction */
     private destroy$ = new Subject<void>();
     /** Subscription to metrics updates */
     private metricsSubscription?: Subscription;
     /** Latest unfiltered metrics data */
     private latestMetrics: Metric[] = [];
+    /** Historical metric values for charting */
+    private metricHistory = new Map<string, { value: number, timestamp: string }[]>();
 
     /** Reference to the paginator component */
     @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -148,6 +189,21 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
 
                 // Update existing metrics and add new ones
                 metrics.forEach(newMetric => {
+                    // Update history only if timestamp changed
+                    const history = this.metricHistory.get(newMetric.name) || [];
+                    const lastEntry = history[history.length - 1];
+                    if (!lastEntry || lastEntry.timestamp !== newMetric.timestamp.toISOString()) {
+                        history.push({
+                            value: newMetric.value,
+                            timestamp: newMetric.timestamp.toISOString()
+                        });
+                        // Keep last 300 values (5 minutes at 1 value per second)
+                        if (history.length > 300) {
+                            history.shift();
+                        }
+                        this.metricHistory.set(newMetric.name, history);
+                    }
+
                     const index = currentData.findIndex(m => m.name === newMetric.name);
                     if (index >= 0) {
                         // Update existing metric
@@ -175,8 +231,34 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
                 // Update filtered data
                 this.latestMetrics = currentData;
                 this.dataSource.data = this.applyFilters(currentData);
+
+                // Update chart if there's a selected metric
+                if (this.selectedMetric) {
+                    this.updateChart(this.selectedMetric);
+                }
             }
         });
+    }
+
+    /**
+     * Updates the chart with the latest data for the selected metric.
+     *
+     * @param metricName - Name of the metric to update chart for
+     */
+    private updateChart(metricName: string): void {
+        const history = this.metricHistory.get(metricName);
+        if (history) {
+            this.chartData = {
+                datasets: [{
+                    data: history.map(h => h.value),
+                    label: metricName,
+                    borderColor: '#1976d2',
+                    tension: 0.1,
+                    fill: false
+                }],
+                labels: history.map(h => new Date(h.timestamp).toLocaleTimeString())
+            };
+        }
     }
 
     /**
@@ -184,6 +266,27 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     refreshMetrics() {
         this.dataSource.data = this.applyFilters(this.latestMetrics);
+    }
+
+    /**
+     * Applies filters to the metrics data.
+     *
+     * @param metrics - Metrics to filter
+     * @returns Filtered metrics
+     */
+    private applyFilters(metrics: Metric[]): Metric[] {
+        return metrics.filter(metric => {
+            const matchesName = !this.nameFilter ||
+                metric.name.toLowerCase().includes(this.nameFilter.toLowerCase());
+            const matchesValue = !this.valueFilter ||
+                metric.value.toString().includes(this.valueFilter);
+            const matchesType = !this.typeFilter ||
+                metric.type.toLowerCase().includes(this.typeFilter.toLowerCase());
+            const matchesTimestamp = !this.timestampFilter ||
+                metric.timestamp.toLocaleString().toLowerCase().includes(this.timestampFilter.toLowerCase());
+
+            return matchesName && matchesValue && matchesType && matchesTimestamp;
+        });
     }
 
     /**
@@ -203,6 +306,9 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     selectMetric(metric: Metric): void {
         this.selectedMetric = this.selectedMetric === metric.name ? undefined : metric.name;
+        if (this.selectedMetric) {
+            this.updateChart(this.selectedMetric);
+        }
     }
 
     /**
@@ -248,7 +354,7 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
             case 'uptime':
                 return 'uptime-metric';
             default:
-                return 'unknown-metric';
+                return '';
         }
     }
 
@@ -309,26 +415,5 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     applyFilter() {
         this.dataSource.data = this.applyFilters(this.latestMetrics);
-    }
-
-    /**
-     * Applies all active filters to a set of metrics.
-     *
-     * @param metrics - Metrics to filter
-     * @returns Filtered metrics
-     */
-    private applyFilters(metrics: Metric[]): Metric[] {
-        return metrics.filter(metric => {
-            const matchesName = !this.nameFilter ||
-                metric.name.toLowerCase().includes(this.nameFilter.toLowerCase());
-            const matchesValue = !this.valueFilter ||
-                metric.value.toString().includes(this.valueFilter);
-            const matchesType = !this.typeFilter ||
-                metric.type.toLowerCase().includes(this.typeFilter.toLowerCase());
-            const matchesTimestamp = !this.timestampFilter ||
-                metric.timestamp.toLocaleString().toLowerCase().includes(this.timestampFilter.toLowerCase());
-
-            return matchesName && matchesValue && matchesType && matchesTimestamp;
-        });
     }
 }
