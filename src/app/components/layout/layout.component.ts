@@ -9,12 +9,15 @@ import { MatListModule } from '@angular/material/list';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatSelectModule } from '@angular/material/select';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { animate, state, style, transition, trigger, group } from '@angular/animations';
 import { Observable, filter, map } from 'rxjs';
-import { ThemeService, Theme } from '../../services/theme.service';
+import { ThemeService, Theme, ColorPalette } from '../../services/theme.service';
 import { WebsocketService, ConnectionState, ConnectionDetails } from '../../services/websocket.service';
 import { ConnectionEventsDialogComponent } from '../connection-events-dialog/connection-events-dialog.component';
 import { routes, RouteData } from '../../app.routes';
+import { MatSelectChange } from '@angular/material/select';
 
 interface NavItem {
     path: string;
@@ -40,7 +43,9 @@ interface NavItem {
         MatListModule,
         MatTooltipModule,
         MatMenuModule,
-        MatDialogModule
+        MatDialogModule,
+        MatSelectModule,
+        MatFormFieldModule
     ],
     templateUrl: './layout.component.html',
     styleUrls: ['./layout.component.scss'],
@@ -65,6 +70,8 @@ export class LayoutComponent implements OnInit {
     isExpanded = true;
     /** Observable of the current theme */
     currentTheme$!: Observable<Theme>;
+    /** Observable of the current color palette */
+    currentColorPalette$!: Observable<ColorPalette>;
     /** Observable of the current page title */
     currentPageTitle$!: Observable<string>;
     /** Current WebSocket connection state */
@@ -95,6 +102,12 @@ export class LayoutComponent implements OnInit {
         this._activeToolbarContent = template;
     }
 
+    /** Available color palettes */
+    colorPalettes: ColorPalette[] = [
+        'red', 'green', 'blue', 'yellow', 'cyan', 'magenta',
+        'orange', 'chartreuse', 'spring-green', 'azure', 'violet', 'rose'
+    ];
+
     /**
      * Creates an instance of LayoutComponent.
      *
@@ -114,6 +127,7 @@ export class LayoutComponent implements OnInit {
      */
     ngOnInit() {
         this.currentTheme$ = this.themeService.theme$;
+        this.currentColorPalette$ = this.themeService.colorPalette$;
         this.currentPageTitle$ = this.router.events.pipe(
             filter(event => event instanceof NavigationEnd),
             map(() => {
@@ -293,5 +307,24 @@ export class LayoutComponent implements OnInit {
      */
     reconnect(): void {
         this.websocketService.connect();
+    }
+
+    /**
+     * Sets the color palette
+     * @param event The MatSelectChange event containing the selected palette
+     */
+    setColorPalette(palette: ColorPalette): void {
+        this.themeService.setColorPalette(palette);
+    }
+
+    /**
+     * Gets a formatted label for a color palette
+     * @param palette The color palette
+     * @returns The formatted label
+     */
+    getColorPaletteLabel(palette: ColorPalette): string {
+        return palette.split('-').map(word =>
+            word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
     }
 }

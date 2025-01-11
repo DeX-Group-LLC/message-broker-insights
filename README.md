@@ -21,7 +21,11 @@
 
 ## Features
 
-- 🌙 Dark/Light theme support with system preference detection
+- 🎨 Comprehensive Theme System:
+  - 🌙 Light/Dark mode with system preference detection
+  - 12 Material Design color palettes (Red, Green, Blue, Yellow, etc.)
+  - Persistent theme preferences
+  - Real-time theme switching
 - 📊 System Metrics and Analytics:
   - Real-time performance metrics visualization
   - Historical metrics tracking and trends
@@ -42,6 +46,26 @@
   - Subscription tracking and management
   - Advanced filtering and service controls
   - Expandable detailed views
+
+### Theme System
+The application supports both light/dark modes and multiple color themes:
+
+- **Mode Selection**: Choose between Light, Dark, or System mode
+- **Color Palettes**: Available color themes:
+  - Red
+  - Green
+  - Blue
+  - Yellow
+  - Cyan
+  - Magenta
+  - Orange
+  - Chartreuse
+  - Spring Green
+  - Azure
+  - Violet
+  - Rose
+
+Theme preferences are persisted in localStorage and will be restored on page reload.
 
 ## Prerequisites
 
