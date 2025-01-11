@@ -6,6 +6,7 @@ import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { LogService } from './services/log.service';
 import { MetricsService } from './services/metrics.service';
+import { TopicsService } from './services/topics.service';
 import { LayoutComponent } from './components/layout/layout.component';
 import { CommonModule } from '@angular/common';
 
@@ -28,9 +29,11 @@ export class AppComponent {
      *
      * @param logService - Service for managing logs
      * @param metricsService - Service for managing metrics
+     * @param topicsService - Service for managing topics
      */
     constructor(
         private logService: LogService,
-        private metricsService: MetricsService
+        private metricsService: MetricsService,
+        private topicsService: TopicsService
     ) {}
 }
