@@ -184,6 +184,9 @@
                         (click)="selectService(row)">
                     </tr>
                 </table>
+                <div class="no-data-message" *ngIf="!dataSource.data.length">
+                    No services available
+                </div>
             </div>
 
             <div class="paginator-container">
@@ -196,9 +199,9 @@
                             [matTooltip]="isPaused ? 'Resume updates' : 'Pause updates'">
                         <mat-icon>{{ isPaused ? 'play_arrow' : 'pause' }}</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="refreshServices()" [disabled]="!isPaused"
+                    <button mat-icon-button (click)="refreshServices()" [disabled]="!isPaused || loading"
                             matTooltip="Refresh services">
-                        <mat-icon>refresh</mat-icon>
+                        <mat-icon [class.rotating]="loading">refresh</mat-icon>
                     </button>
                 </div>
                 <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>

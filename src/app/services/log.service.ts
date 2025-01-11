@@ -28,8 +28,12 @@ export interface LogEntry {
 export class LogService implements OnDestroy {
     /** Subject holding the current logs */
     private logsSubject = new BehaviorSubject<LogEntry[]>([]);
+    /** Subject indicating whether logs are currently being loaded */
+    private loadingSubject = new BehaviorSubject<boolean>(false);
     /** Observable stream of log entries */
     logs$ = this.logsSubject.asObservable();
+    /** Observable indicating whether logs are currently being loaded */
+    public loading$ = this.loadingSubject.asObservable();
     /** Flag indicating if the service has been initialized */
     private isInitialized = false;
 
@@ -74,7 +78,12 @@ export class LogService implements OnDestroy {
      * Requests log updates from the server.
      */
     private async setupLogSubscription() {
-        return this.websocketService.request('system.log.subscribe', { levels: ['info', 'warn', 'error'] });
+        try {
+            this.loadingSubject.next(true);
+            return await this.websocketService.request('system.log.subscribe', { levels: ['info', 'warn', 'error'] });
+        } finally {
+            this.loadingSubject.next(false);
+        }
     }
     private _setupLogSubscription = this.setupLogSubscription.bind(this);
 
@@ -126,5 +135,15 @@ export class LogService implements OnDestroy {
      */
     getCachedLogs(): LogEntry[] {
         return this.logsSubject.value;
+    }
+
+    /**
+     * Manually triggers a log refresh.
+     * Returns a promise that resolves when the refresh is complete.
+     *
+     * @returns Promise that resolves when the refresh is complete
+     */
+    public async refresh(): Promise<void> {
+        return this.setupLogSubscription();
     }
 }

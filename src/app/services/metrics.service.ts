@@ -161,4 +161,14 @@ export class MetricsService implements OnDestroy {
         this.metrics = [];
         this.metricsSubject.next([]);
     }
+
+    /**
+     * Manually triggers a metrics refresh.
+     * Returns a promise that resolves when the refresh is complete.
+     *
+     * @returns Promise that resolves when the refresh is complete
+     */
+    public async refresh(): Promise<void> {
+        return await this.pollMetrics();
+    }
 }

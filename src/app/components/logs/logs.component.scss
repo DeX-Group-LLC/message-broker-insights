@@ -39,7 +39,7 @@ table {
 .paginator-container {
     display: flex;
     align-items: center;
-    border-top: 1px solid rgba(0, 0, 0, 0.12);
+    border-top: 1px solid var(--mat-sys-outline);
     background: var(--mat-sys-surface-container);
 
     .paginator-actions {
@@ -208,6 +208,28 @@ tr.expandable-row:hover + tr.detail-row {
 .debug-level {
     color: rgba(0, 0, 0, 0.54) !important;
     font-weight: bold;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.rotating {
+    animation: rotate 1s linear infinite;
+}
+
+.no-data-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--mat-sys-color-on-surface-variant);
+    font-size: 1em;
 }
 
 ::ng-deep {

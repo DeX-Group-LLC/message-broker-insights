@@ -127,6 +127,15 @@ tr.mat-mdc-row {
     color: var(--mat-sys-color-error);
 }
 
+.no-data-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--mat-sys-color-on-surface-variant);
+    font-size: 1em;
+}
+
 // Status styles
 .status-connected {
     color: #4caf50 !important;
@@ -282,6 +291,19 @@ tr.mat-mdc-row {
     padding: 24px;
     color: var(--mat-sys-color-on-surface-variant);
     font-style: italic;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.rotating {
+    animation: rotate 1s linear infinite;
 }
 
 ::ng-deep {

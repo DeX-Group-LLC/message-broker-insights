@@ -59,6 +59,8 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
     isMultiExpandEnabled = false;
     /** Whether log updates are paused */
     isPaused = false;
+    /** Loading state */
+    loading = false;
 
     /** Reference to the table's sort directive */
     @ViewChild(MatSort) sort!: MatSort;
@@ -78,6 +80,8 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
 
     /** Subject for handling component destruction */
     private destroy$ = new Subject<void>();
+    /** Subscription to loading state updates */
+    private loadingSubscription?: Subscription;
     /** Subscription to log updates */
     private logsSubscription?: Subscription;
     /** Latest logs received from the service */
@@ -139,6 +143,7 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
     ngOnDestroy() {
         this.destroy$.next();
         this.destroy$.complete();
+        this.loadingSubscription?.unsubscribe();
         this.logsSubscription?.unsubscribe();
         this.layout.activeToolbarContent = undefined;
     }
@@ -149,10 +154,15 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     private setupLogsSubscription() {
         // Unsubscribe from any existing subscription
-        if (this.logsSubscription) {
-            this.logsSubscription.unsubscribe();
-        }
+        this.loadingSubscription?.unsubscribe();
+        this.logsSubscription?.unsubscribe();
 
+        // Subscribe to loading state
+        this.loadingSubscription = this.logService.loading$.subscribe(
+            loading => this.loading = loading
+        );
+
+        // Subscribe to logs updates
         this.logsSubscription = this.logService.logs$.subscribe(logs => {
             this.latestLogs = logs;
             if (!this.isPaused) {
@@ -165,7 +175,9 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
      * Refreshes the logs display with current filters.
      */
     refreshLogs() {
-        this.dataSource.data = this.applyFilters(this.latestLogs);
+        this.logService.refresh().then(() => {
+            this.dataSource.data = this.applyFilters(this.latestLogs);
+        });
     }
 
     /**
@@ -319,7 +331,7 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
             const matchesMessage = !this.messageFilter ||
                 log.message.toLowerCase().includes(this.messageFilter.toLowerCase());
             const matchesTimestamp = !this.timestampFilter ||
-                log.timestamp.toLocaleString().toLowerCase().includes(this.timestampFilter.toLowerCase());
+                this.getFormattedDate(log.timestamp).toLowerCase().includes(this.timestampFilter.toLowerCase());
             const matchesMeta = !this.metaFilter ||
                 (log.meta && JSON.stringify(log.meta).toLowerCase().includes(this.metaFilter.toLowerCase()));
 

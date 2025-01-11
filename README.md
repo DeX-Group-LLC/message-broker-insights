@@ -46,6 +46,13 @@
   - Subscription tracking and management
   - Advanced filtering and service controls
   - Expandable detailed views
+- 📨 Topic Management and Monitoring:
+  - Real-time topic subscription tracking
+  - Priority range visualization
+  - Multi-subscriber management
+  - Expandable subscriber details
+  - Advanced filtering by topic name, subscribers, and priority
+  - Multi-expand support for comparing topics
 
 ### Theme System
 The application supports both light/dark modes and multiple color themes:
@@ -154,6 +161,7 @@ The web interface is built with a modular architecture:
   - `LogsComponent`: Real-time log viewing and filtering interface
   - `MetricsComponent`: System metrics visualization and analysis
   - `ServicesComponent`: Service management and monitoring interface
+  - `TopicsComponent`: Topic management and subscriber monitoring interface
 
 - **Features**
   - Real-time data updates via WebSocket
@@ -161,6 +169,7 @@ The web interface is built with a modular architecture:
   - Theme switching with system preference detection
   - Advanced filtering and sorting capabilities
   - Service monitoring and management
+  - Topic and subscriber management
   - Real-time metrics visualization
   - Log streaming and analysis
 
@@ -171,6 +180,20 @@ The web interface is built with a modular architecture:
   - Observable data streams
   - Event-driven communication
   - Singleton services
+
+- **Standardized Component Behavior**
+  - Consistent refresh mechanism across components:
+    - Automatic updates when component is active
+    - Manual refresh available when paused
+    - Visual loading indicators during updates
+  - Unified filtering system:
+    - Real-time filter application
+    - Clear individual or all filters
+    - Filter state indicators
+  - Common data management:
+    - Pause/Resume functionality
+    - Data persistence during paused state
+    - Automatic data refresh on resume
 
 ## Contributing
 

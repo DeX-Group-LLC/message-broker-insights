@@ -69,6 +69,8 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
     isMultiExpandEnabled = false;
     /** Whether service updates are paused */
     isPaused = false;
+    /** Loading state */
+    loading = false;
     /** Currently selected service */
     selectedService?: ServiceInfo;
     /** Current tab in the details panel */
@@ -100,6 +102,8 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
     private servicesSubscription?: Subscription;
     /** Latest services received from the service */
     private latestServices: ServiceInfo[] = [];
+    /** Subscription to loading state updates */
+    private loadingSubscription?: Subscription;
     /** Subscription to metrics updates */
     private metricsSubscription?: Subscription;
     /** Interval ID for polling subscriptions */
@@ -123,7 +127,8 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
         private timeFormatService: TimeFormatService,
         private metricsService: MetricsService,
         private layout: LayoutComponent
-    ) {}
+    ) {
+    }
 
     /**
      * Initializes the component.
@@ -177,10 +182,15 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
      * Updates the data source when new services are received.
      */
     private setupServicesSubscription() {
-        if (this.servicesSubscription) {
-            this.servicesSubscription.unsubscribe();
-        }
+        this.loadingSubscription?.unsubscribe();
+        this.servicesSubscription?.unsubscribe();
 
+        // Subscribe to loading state
+        this.loadingSubscription = this.servicesService.loading$.subscribe(
+            loading => this.loading = loading
+        );
+
+        // Subscribe to services updates
         this.servicesSubscription = this.servicesService.services$.subscribe(services => {
             if (!this.isPaused) {
                 // Update services in place
@@ -287,7 +297,9 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
      * Refreshes the services display with current filters.
      */
     refreshServices() {
-        this.dataSource.data = this.applyFilters(this.latestServices);
+        this.servicesService.refresh().then(() => {
+            this.dataSource.data = this.applyFilters(this.latestServices);
+        });
     }
 
     /**
@@ -460,9 +472,9 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
             const matchesDescription = !this.descriptionFilter ||
                 this.getDisplayDescription(service).toLowerCase().includes(this.descriptionFilter.toLowerCase());
             const matchesConnectedAt = !this.connectedAtFilter ||
-                service.connectedAt.toLocaleString().toLowerCase().includes(this.connectedAtFilter.toLowerCase());
+                this.getFormattedDate(service.connectedAt).toLowerCase().includes(this.connectedAtFilter.toLowerCase());
             const matchesHeartbeat = !this.heartbeatFilter ||
-                service.lastHeartbeat.toLocaleString().toLowerCase().includes(this.heartbeatFilter.toLowerCase());
+                this.getFormattedDate(service.lastHeartbeat).toLowerCase().includes(this.heartbeatFilter.toLowerCase());
             const matchesMeta = !this.metaFilter ||
                 (service.meta && JSON.stringify(service.meta).toLowerCase().includes(this.metaFilter.toLowerCase()));
             const matchesStatus = !this.statusFilter ||
@@ -541,14 +553,7 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
      * @returns Formatted date string
      */
     getFormattedDate(timestamp: Date): string {
-        return timestamp.toLocaleString(undefined, {
-            year: 'numeric',
-            month: 'numeric',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
+        return timestamp.toLocaleString();
     }
 
     /**

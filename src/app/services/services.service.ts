@@ -41,8 +41,12 @@ const SERVICE_INFO_BASE_FIELDS = new Set(['id', 'name', 'description', 'connecte
 export class ServicesService implements OnDestroy {
     /** Subject holding the current services */
     private servicesSubject = new BehaviorSubject<ServiceInfo[]>([]);
+    /** Subject indicating whether services are currently being loaded */
+    private loadingSubject = new BehaviorSubject<boolean>(false);
     /** Observable stream of services */
     services$ = this.servicesSubject.asObservable();
+    /** Observable indicating whether services are currently being loaded */
+    public loading$ = this.loadingSubject.asObservable();
     /** ID of the polling interval timer */
     private intervalId?: number;
     /** Map of disconnected services by ID */
@@ -96,6 +100,7 @@ export class ServicesService implements OnDestroy {
      */
     private async pollServices(): Promise<void> {
         try {
+            this.loadingSubject.next(true);
             const response = await this.websocketService.request('system.service.list', {});
             if (response && response.services && Array.isArray(response.services)) {
                 const currentServiceIds = new Set<string>();
@@ -181,6 +186,8 @@ export class ServicesService implements OnDestroy {
             }
         } catch (error) {
             console.error('Error polling services:', error);
+        } finally {
+            this.loadingSubject.next(false);
         }
     }
 
@@ -243,5 +250,15 @@ export class ServicesService implements OnDestroy {
         // Update the services list to remove disconnected services
         const currentServices = this.servicesSubject.value;
         this.servicesSubject.next(currentServices.filter(service => service.status === 'connected'));
+    }
+
+    /**
+     * Manually triggers a services refresh.
+     * Returns a promise that resolves when the refresh is complete.
+     *
+     * @returns Promise that resolves when the refresh is complete
+     */
+    public async refresh(): Promise<void> {
+        return this.pollServices();
     }
 }

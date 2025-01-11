@@ -111,6 +111,9 @@
                         class="detail-row">
                     </tr>
                 </table>
+                <div class="no-data-message" *ngIf="!dataSource.data.length">
+                    No logs available
+                </div>
             </div>
 
             <div class="paginator-container">
@@ -123,9 +126,9 @@
                             [matTooltip]="isPaused ? 'Resume logs' : 'Pause logs'">
                         <mat-icon>{{ isPaused ? 'play_arrow' : 'pause' }}</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="refreshLogs()" [disabled]="!isPaused"
+                    <button mat-icon-button (click)="refreshLogs()" [disabled]="!isPaused || loading"
                             matTooltip="Refresh logs">
-                        <mat-icon>refresh</mat-icon>
+                        <mat-icon [class.rotating]="loading">refresh</mat-icon>
                     </button>
                     <button mat-icon-button (click)="toggleMultiExpand()"
                             [matTooltip]="isMultiExpandEnabled ? 'Disable multi-expand' : 'Enable multi-expand'">

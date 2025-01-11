@@ -69,6 +69,8 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
     subscriberFilter = '';
     /** Filter for priority range column */
     priorityFilter = '';
+    /** Filter for last updated column */
+    lastUpdatedFilter = '';
 
     /** Subscription to topics updates */
     private topicsSubscription?: Subscription;
@@ -96,8 +98,8 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
      * Sets up subscriptions to topics and loading state.
      */
     ngOnInit(): void {
-        this.setupTopicsSubscription();
         this.setupLoadingSubscription();
+        this.setupTopicsSubscription();
     }
 
     /**
@@ -136,6 +138,7 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.refreshTopics();
             }
         });
+        this.refresh();
     }
 
     /**
@@ -168,19 +171,29 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
             const matchesName = !this.nameFilter ||
                 topic.name.toLowerCase().includes(this.nameFilter.toLowerCase());
             const matchesSubscriber = !this.subscriberFilter ||
-                topic.subscribers.some(s => s.serviceId.toLowerCase().includes(this.subscriberFilter.toLowerCase()));
+                topic.subscribers.some(s => s.serviceId.toLowerCase().includes(this.subscriberFilter.toLowerCase()) || s.priority.toString().includes(this.subscriberFilter.toLowerCase()));
             const matchesPriority = !this.priorityFilter ||
-                topic.subscribers.some(s => s.priority.toString().includes(this.priorityFilter));
+                (topic.subscribers.length > 0 && (
+                    // Match individual priority numbers
+                    topic.subscribers.some(s => s.priority.toString().includes(this.priorityFilter)) ||
+                    // Match the formatted range string
+                    this.getPriorityRange(topic).includes(this.priorityFilter)
+                ));
+            const matchesLastUpdated = !this.lastUpdatedFilter ||
+                this.getFormattedDate(topic.lastUpdated).toLowerCase().includes(this.lastUpdatedFilter.toLowerCase()) ||
+                this.getElapsedTime(topic.lastUpdated).toLowerCase().includes(this.lastUpdatedFilter.toLowerCase());
 
-            return matchesName && matchesSubscriber && matchesPriority;
+            return matchesName && matchesSubscriber && matchesPriority && matchesLastUpdated;
         });
     }
 
     /**
-     * Refreshes the topics display.
+     * Refreshes the topics display with current filters.
      */
-    refreshTopics(): void {
-        this.dataSource.data = this.applyFilters(this.latestTopics);
+    refreshTopics() {
+        this.topicsService.refresh().then(() => {
+            this.dataSource.data = this.applyFilters(this.latestTopics);
+        });
     }
 
     /**
@@ -193,7 +206,7 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
     /**
      * Toggles the pause state of topic updates.
      */
-    togglePause(): void {
+    togglePause() {
         this.isPaused = !this.isPaused;
         if (!this.isPaused) {
             this.refreshTopics();
@@ -293,12 +306,23 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     /**
+     * Gets the formatted date string for display.
+     *
+     * @param timestamp - Date object
+     * @returns Formatted date string
+     */
+    getFormattedDate(timestamp: Date): string {
+        return timestamp.toLocaleString();
+    }
+
+    /**
      * Clears all active filters.
      */
     clearFilters(): void {
         this.nameFilter = '';
         this.subscriberFilter = '';
         this.priorityFilter = '';
+        this.lastUpdatedFilter = '';
         this.applyFilter();
     }
 
@@ -327,11 +351,19 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     /**
+     * Clears the last updated filter.
+     */
+    clearLastUpdatedFilter(): void {
+        this.lastUpdatedFilter = '';
+        this.applyFilter();
+    }
+
+    /**
      * Checks if any filters are currently active.
      *
      * @returns Whether any filters are active
      */
     hasActiveFilters(): boolean {
-        return !!(this.nameFilter || this.subscriberFilter || this.priorityFilter);
+        return !!(this.nameFilter || this.subscriberFilter || this.priorityFilter || this.lastUpdatedFilter);
     }
 }

@@ -52,6 +52,8 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
     isPaused = false;
     /** Currently selected metric name */
     selectedMetric?: string;
+    /** Loading state */
+    loading = false;
 
     // Filter states
     /** Filter for metric names */
@@ -100,6 +102,8 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
 
     /** Subject for handling component destruction */
     private destroy$ = new Subject<void>();
+    /** Subscription to loading state updates */
+    private loadingSubscription?: Subscription;
     /** Subscription to metrics updates */
     private metricsSubscription?: Subscription;
     /** Latest unfiltered metrics data */
@@ -165,6 +169,7 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
     ngOnDestroy(): void {
         this.destroy$.next();
         this.destroy$.complete();
+        this.loadingSubscription?.unsubscribe();
         this.metricsSubscription?.unsubscribe();
         this.layout.activeToolbarContent = undefined;
     }
@@ -187,10 +192,15 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     private setupMetricsSubscription() {
         // Unsubscribe from any existing subscription
-        if (this.metricsSubscription) {
-            this.metricsSubscription.unsubscribe();
-        }
+        this.loadingSubscription?.unsubscribe();
+        this.metricsSubscription?.unsubscribe();
 
+        // Subscribe to loading state
+        this.loadingSubscription = this.metricsService.loading$.subscribe(
+            loading => this.loading = loading
+        );
+
+        // Subscribe to metrics updates
         this.metricsSubscription = this.metricsService.metrics$.subscribe(metrics => {
             if (!this.isPaused) {
                 // Update metrics in place
@@ -260,7 +270,7 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      * Refreshes the metrics display with the latest data.
      */
     refreshMetrics() {
-        this.dataSource.data = this.applyFilters(this.latestMetrics);
+        this.metricsService.refresh();
     }
 
     /**
@@ -278,7 +288,7 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
             const matchesType = !this.typeFilter ||
                 metric.type.toLowerCase().includes(this.typeFilter.toLowerCase());
             const matchesTimestamp = !this.timestampFilter ||
-                metric.timestamp.toLocaleString().toLowerCase().includes(this.timestampFilter.toLowerCase());
+                this.getFormattedDate(metric.timestamp).toLowerCase().includes(this.timestampFilter.toLowerCase());
 
             return matchesName && matchesValue && matchesType && matchesTimestamp;
         });
@@ -355,6 +365,16 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
             default:
                 return '';
         }
+    }
+
+    /**
+     * Gets the formatted date string for display.
+     *
+     * @param timestamp - Date object
+     * @returns Formatted date string
+     */
+    getFormattedDate(timestamp: Date): string {
+        return timestamp.toLocaleString();
     }
 
     /**
