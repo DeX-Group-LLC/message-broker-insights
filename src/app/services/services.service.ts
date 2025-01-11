@@ -234,4 +234,14 @@ export class ServicesService implements OnDestroy {
     async fetchServiceMetrics(): Promise<any> {
         return this.websocketService.request('system.metrics', { showAll: true });
     }
+
+    /**
+     * Clears the list of disconnected services
+     */
+    clearDisconnected(): void {
+        this.disconnectedServices.clear();
+        // Update the services list to remove disconnected services
+        const currentServices = this.servicesSubject.value;
+        this.servicesSubject.next(currentServices.filter(service => service.status === 'connected'));
+    }
 }

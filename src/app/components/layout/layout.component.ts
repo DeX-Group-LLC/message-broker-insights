@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd, Route } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -83,6 +83,17 @@ export class LayoutComponent implements OnInit {
             label: (route.data as RouteData).label,
             shortLabel: (route.data as RouteData).shortLabel
         }));
+
+    @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
+    private _activeToolbarContent?: TemplateRef<any>;
+
+    get activeToolbarContent(): TemplateRef<any> | undefined {
+        return this._activeToolbarContent;
+    }
+
+    set activeToolbarContent(template: TemplateRef<any> | undefined) {
+        this._activeToolbarContent = template;
+    }
 
     /**
      * Creates an instance of LayoutComponent.

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, OnInit, ViewChild, OnDestroy, AfterViewInit, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -17,6 +17,7 @@ import { animate, state, style, transition, trigger } from '@angular/animations'
 import { TimeFormatService } from '../../services/time-format.service';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MetricsService } from '../../services/metrics.service';
+import { LayoutComponent } from '../layout/layout.component';
 
 /** Tab index for service details */
 export enum ServiceDetailsTab {
@@ -107,17 +108,21 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
     /** Enum for tab indices */
     readonly ServiceDetailsTab = ServiceDetailsTab;
 
+    @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
+
     /**
      * Creates an instance of ServicesComponent.
      *
      * @param servicesService - Service for managing services
      * @param timeFormatService - Service for formatting time
      * @param metricsService - Service for fetching service metrics
+     * @param layout - Layout component for toolbar content
      */
     constructor(
         private servicesService: ServicesService,
         private timeFormatService: TimeFormatService,
-        private metricsService: MetricsService
+        private metricsService: MetricsService,
+        private layout: LayoutComponent
     ) {}
 
     /**
@@ -148,6 +153,10 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
                 disableClear: false
             });
         });
+
+        if (this.toolbarContent) {
+            this.layout.activeToolbarContent = this.toolbarContent;
+        }
     }
 
     /**
@@ -160,6 +169,7 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
             clearInterval(this.subscriptionsInterval);
             this.subscriptionsInterval = undefined;
         }
+        this.layout.activeToolbarContent = undefined;
     }
 
     /**
@@ -667,5 +677,12 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     getStatusClass(status: ServiceStatus): string {
         return `status-${status}`;
+    }
+
+    /**
+     * Clears the list of disconnected services
+     */
+    clearDisconnected(): void {
+        this.servicesService.clearDisconnected();
     }
 }
