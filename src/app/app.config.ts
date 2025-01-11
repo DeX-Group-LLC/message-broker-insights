@@ -1,20 +1,24 @@
-import { ApplicationConfig, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig } from '@angular/core';
 import { provideRouter } from '@angular/router';
-
 import { routes } from './app.routes';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import Chart from 'chart.js/auto';
+import { CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
 
-/**
- * Application configuration object.
- * Provides core Angular functionality and configuration:
- * - Zone.js change detection with event coalescing
- * - Router configuration with defined routes
- * - Async animations support
- */
+// Register Chart.js components
+Chart.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend
+);
+
 export const appConfig: ApplicationConfig = {
     providers: [
-        provideZoneChangeDetection({ eventCoalescing: true }),
         provideRouter(routes),
-        provideAnimationsAsync()
+        provideAnimations()
     ]
 };
