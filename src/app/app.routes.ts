@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { LogsComponent } from './components/logs/logs.component';
 import { MetricsComponent } from './components/metrics/metrics.component';
 import { ServicesComponent } from './components/services/services.component';
+import { TopicsComponent } from './components/topics/topics.component';
 
 /**
  * Interface defining the data structure for route metadata.
@@ -22,6 +23,7 @@ export interface RouteData {
  * - /logs: Displays system logs with filtering and sorting
  * - /metrics: Shows system metrics with real-time updates
  * - /services: Shows system services with status and details
+ * - /topics: Shows message topics and their subscribers
  */
 export const routes: Routes = [
     {
@@ -49,6 +51,15 @@ export const routes: Routes = [
             icon: 'settings_applications',
             label: 'System Services',
             shortLabel: 'Services'
+        }
+    },
+    {
+        path: 'topics',
+        component: TopicsComponent,
+        data: {
+            icon: 'topic',
+            label: 'Message Topics',
+            shortLabel: 'Topics'
         }
     },
     {

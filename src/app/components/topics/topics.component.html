@@ -1,0 +1,174 @@
+<div class="topics-container">
+    <mat-card>
+        <mat-card-content>
+            <div class="table-container">
+                <table mat-table [dataSource]="dataSource" matSort multiTemplateDataRows>
+                    <!-- Name Column -->
+                    <ng-container matColumnDef="name">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            <div class="header-cell-content">
+                                <span>Topic</span>
+                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="nameMenu" [class.active]="nameFilter"
+                                        (click)="$event.stopPropagation()">
+                                    <mat-icon>filter_alt</mat-icon>
+                                </button>
+                            </div>
+                        </th>
+                        <td mat-cell *matCellDef="let topic">{{topic.name}}</td>
+                    </ng-container>
+
+                    <!-- Subscriber Count Column -->
+                    <ng-container matColumnDef="subscriberCount">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            <div class="header-cell-content">
+                                <span>Subscribers</span>
+                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="subscriberMenu" [class.active]="subscriberFilter"
+                                        (click)="$event.stopPropagation()">
+                                    <mat-icon>filter_alt</mat-icon>
+                                </button>
+                            </div>
+                        </th>
+                        <td mat-cell *matCellDef="let topic">
+                            <div class="meta-container">
+                                <mat-icon class="expand-icon" [class.expanded]="isExpanded(topic)">expand_more</mat-icon>
+                                <span class="meta-preview">{{getSubscriberCountDisplay(topic)}}</span>
+                            </div>
+                        </td>
+                    </ng-container>
+
+                    <!-- Priority Range Column -->
+                    <ng-container matColumnDef="priorityRange">
+                        <th mat-header-cell *matHeaderCellDef>
+                            <div class="header-cell-content no-sort">
+                                <span>Priority Range</span>
+                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="priorityMenu" [class.active]="priorityFilter"
+                                        (click)="$event.stopPropagation()">
+                                    <mat-icon>filter_alt</mat-icon>
+                                </button>
+                            </div>
+                        </th>
+                        <td mat-cell *matCellDef="let topic">{{getPriorityRange(topic)}}</td>
+                    </ng-container>
+
+                    <!-- Last Updated Column -->
+                    <ng-container matColumnDef="lastUpdated">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>Last Updated</th>
+                        <td mat-cell *matCellDef="let topic">
+                            {{topic.lastUpdated | date:'medium'}}
+                            <span class="muted italic">({{getElapsedTime(topic.lastUpdated)}})</span>
+                        </td>
+                    </ng-container>
+
+                    <!-- Expanded Content Column -->
+                    <ng-container matColumnDef="expandedDetail">
+                        <td mat-cell *matCellDef="let topic" [attr.colspan]="displayedColumns.length">
+                            <div class="expanded-detail"
+                                [@detailExpand]="isExpanded(topic) ? 'expanded' : 'collapsed'">
+                                <div class="expanded-detail-content">
+                                    <h4>Subscribers</h4>
+                                    <table class="subscribers-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Service ID</th>
+                                                <th>Priority</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @for (subscriber of topic.subscribers; track subscriber.serviceId) {
+                                                <tr>
+                                                    <td>{{subscriber.serviceId}}</td>
+                                                    <td>{{subscriber.priority}}</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </td>
+                    </ng-container>
+
+                    <!-- Header and Row Definitions -->
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+                        class="expandable-row"
+                        [class.expanded-row]="isExpanded(row)"
+                        [class.has-meta]="row.subscribers.length"
+                        (click)="row.subscribers.length && toggleExpansion(row)">
+                    </tr>
+                    <tr mat-row *matRowDef="let row; columns: ['expandedDetail']"
+                        class="detail-row">
+                    </tr>
+
+                    <!-- Row shown when there is no matching data -->
+                    <tr class="mat-row" *matNoDataRow>
+                        <td class="mat-cell" colspan="4" style="text-align: center; padding: 16px;">
+                            No topics available
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="paginator-container">
+                <div class="paginator-actions">
+                    <button mat-icon-button (click)="clearFilters()" [disabled]="!hasActiveFilters()"
+                            matTooltip="Clear all filters">
+                        <mat-icon>filter_alt_off</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="togglePause()"
+                            [matTooltip]="isPaused ? 'Resume updates' : 'Pause updates'">
+                        <mat-icon>{{ isPaused ? 'play_arrow' : 'pause' }}</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="refresh()" [disabled]="loading"
+                            [matTooltip]="loading ? 'Refreshing...' : 'Refresh'">
+                        <mat-icon [class.rotating]="loading">refresh</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="toggleMultiExpand()"
+                            [matTooltip]="isMultiExpandEnabled ? 'Disable multi-expand' : 'Enable multi-expand'">
+                        <mat-icon>{{ isMultiExpandEnabled ? 'layers' : 'layers_clear' }}</mat-icon>
+                    </button>
+                </div>
+                <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]"
+                             showFirstLastButtons
+                             aria-label="Select page of topics">
+                </mat-paginator>
+            </div>
+        </mat-card-content>
+    </mat-card>
+
+    <!-- Filter Menus -->
+    <mat-menu #nameMenu="matMenu" class="filter-menu">
+        <div class="filter-menu-content" (click)="$event.stopPropagation()">
+            <mat-form-field>
+                <mat-label>Filter topic name</mat-label>
+                <input matInput [(ngModel)]="nameFilter" (ngModelChange)="applyFilter()" (keyup.enter)="nameMenu.closed.emit()">
+                <button *ngIf="nameFilter" matSuffix mat-icon-button (click)="clearNameFilter()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </mat-form-field>
+        </div>
+    </mat-menu>
+
+    <mat-menu #subscriberMenu="matMenu" class="filter-menu">
+        <div class="filter-menu-content" (click)="$event.stopPropagation()">
+            <mat-form-field>
+                <mat-label>Filter subscribers</mat-label>
+                <input matInput [(ngModel)]="subscriberFilter" (ngModelChange)="applyFilter()" (keyup.enter)="subscriberMenu.closed.emit()">
+                <button *ngIf="subscriberFilter" matSuffix mat-icon-button (click)="clearSubscriberFilter()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </mat-form-field>
+        </div>
+    </mat-menu>
+
+    <mat-menu #priorityMenu="matMenu" class="filter-menu">
+        <div class="filter-menu-content" (click)="$event.stopPropagation()">
+            <mat-form-field>
+                <mat-label>Filter priority</mat-label>
+                <input matInput [(ngModel)]="priorityFilter" (ngModelChange)="applyFilter()" (keyup.enter)="priorityMenu.closed.emit()">
+                <button *ngIf="priorityFilter" matSuffix mat-icon-button (click)="clearPriorityFilter()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </mat-form-field>
+        </div>
+    </mat-menu>
+</div>
