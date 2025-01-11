@@ -22,7 +22,9 @@
 ## Features
 
 - 🌙 Dark/Light theme support with system preference detection
-- 📊 Real-time system metrics visualization
+- 📊 System Metrics and Analytics:
+  - Real-time performance metrics visualization
+  - Historical metrics tracking and trends
 - 📝 Live log streaming with filtering and search
 - 📱 Responsive design with collapsible navigation
 - 🔄 WebSocket-based real-time updates with comprehensive connection monitoring:
@@ -34,6 +36,12 @@
 - 🎨 Material Design with Angular Material components
 - 🔍 Advanced filtering and sorting capabilities
 - ⚡ Optimized performance with virtual scrolling
+- 🔌 Service Management and Monitoring:
+  - Real-time status and heartbeat monitoring
+  - Service metrics and metadata visualization
+  - Subscription tracking and management
+  - Advanced filtering and service controls
+  - Expandable detailed views
 
 ## Prerequisites
 
@@ -109,21 +117,36 @@ ng test
 The web interface is built with a modular architecture:
 
 - **Core Services**
-  - `WebsocketService`: Manages WebSocket communication
-  - `LogService`: Handles log collection and filtering
-  - `MetricsService`: Manages system metrics polling and updates
-  - `ThemeService`: Controls application theming
+  - `LogService`: Handles log collection, streaming, and filtering
+  - `MetricsService`: Manages system metrics collection and visualization
+  - `ServicesService`: Manages service discovery, monitoring, and status tracking
+  - `ThemeService`: Controls application theming and user preferences
+  - `TimeFormatService`: Handles consistent time formatting across the application
+  - `WebsocketService`: Manages WebSocket communication and connection state
 
 - **Components**
-  - `LayoutComponent`: Main application layout and navigation
-  - `LogsComponent`: Log viewing and filtering interface
-  - `MetricsComponent`: Metrics visualization and monitoring
+  - `ConnectionEventsDialogComponent`: Connection status and event history dialog
+  - `LayoutComponent`: Main application layout with responsive navigation
+  - `LogsComponent`: Real-time log viewing and filtering interface
+  - `MetricsComponent`: System metrics visualization and analysis
+  - `ServicesComponent`: Service management and monitoring interface
 
 - **Features**
   - Real-time data updates via WebSocket
   - Responsive layout with Material Design
   - Theme switching with system preference detection
   - Advanced filtering and sorting capabilities
+  - Service monitoring and management
+  - Real-time metrics visualization
+  - Log streaming and analysis
+
+- **Design Patterns**
+  - Component-based architecture
+  - Reactive programming with RxJS
+  - Dependency injection
+  - Observable data streams
+  - Event-driven communication
+  - Singleton services
 
 ## Contributing
 
