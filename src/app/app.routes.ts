@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { LogsComponent } from './components/logs/logs.component';
 import { MetricsComponent } from './components/metrics/metrics.component';
+import { ServicesComponent } from './components/services/services.component';
 
 /**
  * Interface defining the data structure for route metadata.
@@ -20,6 +21,7 @@ export interface RouteData {
  * Defines the available routes and their components:
  * - /logs: Displays system logs with filtering and sorting
  * - /metrics: Shows system metrics with real-time updates
+ * - /services: Shows system services with status and details
  */
 export const routes: Routes = [
     {
@@ -38,6 +40,15 @@ export const routes: Routes = [
             icon: 'monitoring',
             label: 'System Metrics',
             shortLabel: 'Metrics'
+        }
+    },
+    {
+        path: 'services',
+        component: ServicesComponent,
+        data: {
+            icon: 'settings_applications',
+            label: 'System Services',
+            shortLabel: 'Services'
         }
     },
     {

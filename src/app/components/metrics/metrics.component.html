@@ -59,7 +59,10 @@
                                 </button>
                             </div>
                         </th>
-                        <td mat-cell *matCellDef="let metric">{{metric.timestamp | date:'medium'}}</td>
+                        <td mat-cell *matCellDef="let metric">
+                            {{metric.timestamp | date:'medium'}}
+                            <span class="muted italic">({{getElapsedTime(metric.timestamp)}})</span>
+                        </td>
                     </ng-container>
 
                     <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
@@ -142,7 +145,12 @@
     <!-- Chart Card -->
     <mat-card *ngIf="selectedMetric" class="metric-chart-card">
         <mat-card-header>
-            <mat-card-title>{{ selectedMetric }} Trend</mat-card-title>
+            <mat-card-title>
+                {{ selectedMetric }} Trend
+                <button mat-icon-button class="close-button" (click)="selectMetric(undefined)" matTooltip="Close chart">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </mat-card-title>
         </mat-card-header>
         <mat-card-content>
             <canvas baseChart
