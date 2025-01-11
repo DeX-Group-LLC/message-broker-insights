@@ -21,9 +21,20 @@
                     </a>
                 </mat-nav-list>
                 <mat-nav-list class="toggle-container">
+                    <a mat-list-item
+                       [matTooltip]="'Connection Status: ' + getConnectionLabel((connectionState$ | async) || connectionState.DISCONNECTED)"
+                       matTooltipPosition="right"
+                       matTooltipClass="connection-tooltip">
+                        <mat-icon matListItemIcon [class.connected]="(connectionState$ | async) === connectionState.CONNECTED"
+                                                [class.connecting]="(connectionState$ | async) === connectionState.CONNECTING"
+                                                [class.disconnected]="(connectionState$ | async) === connectionState.DISCONNECTED">
+                            {{ getConnectionIcon((connectionState$ | async) || connectionState.DISCONNECTED) }}
+                        </mat-icon>
+                        <span matListItemTitle>{{ getConnectionLabel((connectionState$ | async) || connectionState.DISCONNECTED) }}</span>
+                    </a>
                     <a mat-list-item [matMenuTriggerFor]="themeMenu"
                        (click)="$event.stopPropagation()"
-                       [matTooltip]="!isExpanded ? 'Change theme' : ''"
+                       [matTooltip]="'Change theme'"
                        matTooltipPosition="right">
                         <mat-icon matListItemIcon>{{ getThemeIcon((currentTheme$ | async) || 'system') }}</mat-icon>
                         <span matListItemTitle>{{ getThemeLabel((currentTheme$ | async) || 'system') }}</span>
