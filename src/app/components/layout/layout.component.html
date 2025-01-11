@@ -75,7 +75,7 @@
                         <mat-icon matListItemIcon>{{ getThemeIcon((currentTheme$ | async) || 'system') }}</mat-icon>
                         <span matListItemTitle>{{ getThemeLabel((currentTheme$ | async) || 'system') }}</span>
                     </a>
-                    <mat-menu #themeMenu="matMenu">
+                    <mat-menu #themeMenu="matMenu" class="theme-menu">
                         <button mat-menu-item (click)="setTheme('light')" [class.active]="(currentTheme$ | async) === 'light'">
                             <mat-icon>light_mode</mat-icon>
                             <span>Light</span>
@@ -88,6 +88,20 @@
                             <mat-icon>settings_suggest</mat-icon>
                             <span>System</span>
                         </button>
+                        <mat-divider></mat-divider>
+                        <div class="color-palette-section">
+                            <mat-form-field appearance="fill">
+                                <mat-label>Color Theme</mat-label>
+                                <mat-select [value]="currentColorPalette$ | async" (selectionChange)="setColorPalette($event.value)">
+                                    <mat-option *ngFor="let palette of colorPalettes" [value]="palette">
+                                        <div class="color-option">
+                                            <div class="color-preview" [class]="palette + '-palette'"></div>
+                                            <span>{{ getColorPaletteLabel(palette) }}</span>
+                                        </div>
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                        </div>
                     </mat-menu>
                     <a mat-list-item (click)="toggleNavbar(); $event.stopPropagation()"
                        [matTooltip]="!isExpanded ? 'Expand menu' : 'Collapse menu'"

@@ -28,3 +28,100 @@ body {
     transition: background-color 150ms ease;
     margin: 0;
 }
+
+// Color palette themes
+.red-palette {
+    @include mat.theme((
+        color: mat.$red-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.green-palette {
+    @include mat.theme((
+        color: mat.$green-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.blue-palette {
+    @include mat.theme((
+        color: mat.$blue-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.yellow-palette {
+    @include mat.theme((
+        color: mat.$yellow-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.cyan-palette {
+    @include mat.theme((
+        color: mat.$cyan-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.magenta-palette {
+    @include mat.theme((
+        color: mat.$magenta-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.orange-palette {
+    @include mat.theme((
+        color: mat.$orange-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.chartreuse-palette {
+    @include mat.theme((
+        color: mat.$chartreuse-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.spring-green-palette {
+    @include mat.theme((
+        color: mat.$spring-green-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.azure-palette {
+    @include mat.theme((
+        color: mat.$azure-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.violet-palette {
+    @include mat.theme((
+        color: mat.$violet-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
+
+.rose-palette {
+    @include mat.theme((
+        color: mat.$rose-palette,
+        typography: Roboto,
+        density: 0
+    ));
+}
