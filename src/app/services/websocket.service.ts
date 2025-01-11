@@ -107,7 +107,7 @@ export class WebsocketService extends EventEmitter {
     /** Heartbeat interval timer */
     private heartbeatInterval?: number;
     /** Heartbeat interval in milliseconds */
-    private readonly HEARTBEAT_INTERVAL = 5000;
+    private readonly HEARTBEAT_INTERVAL = 10000;
     /** Whether this is the first connection attempt */
     private isFirstConnection = true;
     /** Timeout for auto-reconnection */
