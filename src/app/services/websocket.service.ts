@@ -26,12 +26,56 @@ export interface BrokerMessage {
 
 /** Possible states of the WebSocket connection */
 export enum ConnectionState {
-    /** Not connected to the server */
-    DISCONNECTED = 'disconnected',
-    /** Currently attempting to connect */
-    CONNECTING = 'connecting',
     /** Successfully connected to the server */
-    CONNECTED = 'connected'
+    CONNECTED = 'connected',
+    /** Currently attempting to connect (first time) */
+    CONNECTING = 'connecting',
+    /** Attempting to reconnect after disconnection */
+    RECONNECTING = 'reconnecting',
+    /** Not connected to the server */
+    DISCONNECTED = 'disconnected'
+}
+
+/** Connection event types */
+export enum ConnectionEventType {
+    /** Connection established successfully */
+    CONNECTED = 'connected',
+    /** Initial connection attempt */
+    CONNECTING = 'connecting',
+    /** Attempting to reconnect */
+    RECONNECTING = 'reconnecting',
+    /** Connection lost */
+    DISCONNECTED = 'disconnected',
+    /** Error occurred */
+    ERROR = 'error'
+}
+
+/** Structure of connection events */
+export interface ConnectionEvent {
+    /** Type of event */
+    type: ConnectionEventType;
+    /** Timestamp of the event */
+    timestamp: Date;
+    /** Optional error message */
+    error?: string;
+    /** Optional attempt number for reconnection events */
+    attempt?: number;
+}
+
+/** Connection details */
+export interface ConnectionDetails {
+    /** Current connection state */
+    state: ConnectionState;
+    /** URL of the WebSocket server */
+    url: string;
+    /** Time of last successful connection */
+    lastConnected?: Date;
+    /** Number of reconnection attempts */
+    reconnectAttempts: number;
+    /** Latest connection latency in ms */
+    latency?: number;
+    /** Recent connection events */
+    recentEvents: ConnectionEvent[];
 }
 
 /**
@@ -48,10 +92,46 @@ export class WebsocketService extends EventEmitter {
     private pendingRequests = new Map<string, { resolve: (response: any) => void; reject: (error: any) => void }>();
     /** Current state of the WebSocket connection */
     private _state = ConnectionState.DISCONNECTED;
+    /** URL of the WebSocket server */
+    private _url = 'ws://localhost:3000';
+    /** Time of last successful connection */
+    private _lastConnected?: Date;
+    /** Number of reconnection attempts */
+    private _reconnectAttempts = 0;
+    /** Latest connection latency */
+    private _latency?: number;
+    /** Recent connection events */
+    private _recentEvents: ConnectionEvent[] = [];
+    /** Maximum number of recent events to keep */
+    private readonly MAX_RECENT_EVENTS = 50;
+    /** Heartbeat interval timer */
+    private heartbeatInterval?: number;
+    /** Heartbeat interval in milliseconds */
+    private readonly HEARTBEAT_INTERVAL = 5000;
+    /** Whether this is the first connection attempt */
+    private isFirstConnection = true;
+    /** Timeout for auto-reconnection */
+    private reconnectTimeout?: number;
+    /** Reconnection delay in milliseconds */
+    private readonly RECONNECT_DELAY = 5000;
+    /** Whether to suppress automatic reconnection */
+    private suppressReconnect = false;
 
     /** Gets the current connection state */
     get state(): ConnectionState {
         return this._state;
+    }
+
+    /** Gets the current connection details */
+    get details(): ConnectionDetails {
+        return {
+            state: this._state,
+            url: this._url,
+            lastConnected: this._lastConnected,
+            reconnectAttempts: this._reconnectAttempts,
+            latency: this._latency,
+            recentEvents: [...this._recentEvents]
+        };
     }
 
     /**
@@ -65,25 +145,119 @@ export class WebsocketService extends EventEmitter {
     }
 
     /**
+     * Adds a connection event to the recent events list.
+     *
+     * @param type - Type of event
+     * @param error - Optional error message
+     */
+    private addEvent(type: ConnectionEventType, error?: string): void {
+        const event: ConnectionEvent = {
+            type,
+            timestamp: new Date(),
+            error,
+            attempt: type === ConnectionEventType.RECONNECTING ? this._reconnectAttempts : undefined
+        };
+
+        this._recentEvents.unshift(event);
+        if (this._recentEvents.length > this.MAX_RECENT_EVENTS) {
+            this._recentEvents.pop();
+        }
+
+        this.emit('connectionEvent', event);
+    }
+
+    /**
+     * Starts the heartbeat interval.
+     */
+    private startHeartbeat(): void {
+        this.stopHeartbeat();
+        this.heartbeatInterval = window.setInterval(async () => {
+            try {
+                const start = new Date().getTime();
+                await this.request('system.heartbeat');
+                this._latency = new Date().getTime() - start;
+                this.emit('latencyUpdate', this._latency);
+            } catch (error) {
+                console.error('Heartbeat failed:', error);
+            }
+        }, this.HEARTBEAT_INTERVAL);
+    }
+
+    /**
+     * Stops the heartbeat interval.
+     */
+    private stopHeartbeat(): void {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = undefined;
+        }
+    }
+
+    /**
+     * Stops any pending reconnection attempt.
+     */
+    private stopReconnectTimeout(): void {
+        if (this.reconnectTimeout) {
+            window.clearTimeout(this.reconnectTimeout);
+            this.reconnectTimeout = undefined;
+        }
+    }
+
+    /**
      * Connects to the WebSocket server.
      * Handles reconnection and sets up event listeners.
      *
      * @param url - WebSocket server URL
      */
-    connect(url: string = 'ws://localhost:3000'): void {
+    connect(url: string = this._url): void {
+        // Stop any pending reconnection
+        this.stopReconnectTimeout();
+
         if (this.socket) {
+            // Suppress reconnection when manually closing
+            this.suppressReconnect = true;
             this.socket.close();
+            // Wait for the close event to complete before continuing
+            setTimeout(() => {
+                this.suppressReconnect = false;
+                this.initializeConnection(url);
+            }, 0);
+        } else {
+            this.initializeConnection(url);
+        }
+    }
+
+    /**
+     * Initializes a new WebSocket connection.
+     *
+     * @param url - WebSocket server URL
+     */
+    private initializeConnection(url: string): void {
+        this._url = url;
+        this._state = ConnectionState.CONNECTING;
+
+        if (this.isFirstConnection) {
+            // This is the first connection attempt
+            this.isFirstConnection = false;
+            this.addEvent(ConnectionEventType.CONNECTING);
+        } else {
+            // Only increment reconnection attempts if this isn't the first connection
+            this._reconnectAttempts++;
+            this._state = ConnectionState.RECONNECTING;
+            this.addEvent(ConnectionEventType.RECONNECTING);
         }
 
-        this._state = ConnectionState.CONNECTING;
         this.emit('stateChange', this._state);
-
         this.socket = new WebSocket(url);
 
         this.socket.onopen = () => {
             this._state = ConnectionState.CONNECTED;
+            this._lastConnected = new Date();
+            this._reconnectAttempts = 0;
+            this.addEvent(ConnectionEventType.CONNECTED);
             this.emit('stateChange', this._state);
             this.emit('connected');
+            this.startHeartbeat();
         };
 
         this.socket.onmessage = (event) => {
@@ -113,20 +287,27 @@ export class WebsocketService extends EventEmitter {
                 this.emit(header, message);
             } catch (error) {
                 console.error('Error parsing message:', error);
+                this.addEvent(ConnectionEventType.ERROR, error instanceof Error ? error.message : String(error));
             }
         };
 
         this.socket.onclose = () => {
             console.log('WebSocket connection closed');
             this._state = ConnectionState.DISCONNECTED;
+            this.addEvent(ConnectionEventType.DISCONNECTED);
             this.emit('stateChange', this._state);
             this.emit('disconnected');
-            // Attempt to reconnect after 5 seconds
-            setTimeout(() => this.connect(url), 5000);
+            this.stopHeartbeat();
+
+            // Only attempt to reconnect if not suppressed
+            if (!this.suppressReconnect) {
+                this.reconnectTimeout = window.setTimeout(() => this.connect(url), this.RECONNECT_DELAY);
+            }
         };
 
         this.socket.onerror = (error) => {
             console.error('WebSocket error:', error);
+            this.addEvent(ConnectionEventType.ERROR, error instanceof Error ? error.message : 'Unknown error');
             this.emit('error', error);
         };
     }

@@ -25,7 +25,12 @@
 - 📊 Real-time system metrics visualization
 - 📝 Live log streaming with filtering and search
 - 📱 Responsive design with collapsible navigation
-- 🔄 WebSocket-based real-time updates with connection status indicator
+- 🔄 WebSocket-based real-time updates with comprehensive connection monitoring:
+  - Visual connection status indicator (Connecting, Connected, Reconnecting, Disconnected)
+  - Connection details (server URL, latency, last connected time)
+  - Automatic reconnection with attempt tracking
+  - Real-time connection event history
+  - Manual reconnection option
 - 🎨 Material Design with Angular Material components
 - 🔍 Advanced filtering and sorting capabilities
 - ⚡ Optimized performance with virtual scrolling

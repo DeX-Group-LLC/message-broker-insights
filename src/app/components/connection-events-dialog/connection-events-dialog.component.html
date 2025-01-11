@@ -1,0 +1,19 @@
+<h2 mat-dialog-title>Connection History</h2>
+<mat-dialog-content>
+    <div class="events-list">
+        <div class="event" *ngFor="let event of events">
+            <div class="event-header">
+                <mat-icon [class]="getEventClass(event)">{{ getEventIcon(event) }}</mat-icon>
+                <span class="event-type">{{ getEventLabel(event) }}</span>
+                <span class="event-time">{{ formatDate(event.timestamp) }}</span>
+            </div>
+            <div class="event-details" *ngIf="event.error || event.attempt">
+                <div class="error" *ngIf="event.error">{{ event.error }}</div>
+                <div class="attempt" *ngIf="event.attempt">Attempt #{{ event.attempt }}</div>
+            </div>
+        </div>
+    </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+    <button mat-button mat-dialog-close>Close</button>
+</mat-dialog-actions>
