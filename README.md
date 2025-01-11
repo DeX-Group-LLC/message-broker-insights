@@ -25,7 +25,7 @@
 - 📊 Real-time system metrics visualization
 - 📝 Live log streaming with filtering and search
 - 📱 Responsive design with collapsible navigation
-- 🔄 WebSocket-based real-time updates
+- 🔄 WebSocket-based real-time updates with connection status indicator
 - 🎨 Material Design with Angular Material components
 - 🔍 Advanced filtering and sorting capabilities
 - ⚡ Optimized performance with virtual scrolling

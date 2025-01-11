@@ -157,3 +157,30 @@
         }
     }
 }
+
+.mat-icon {
+    &.connected {
+        color: #4caf50 !important; // Material green
+    }
+
+    &.connecting {
+        color: #ff9800 !important; // Material orange
+        animation: pulse 1.5s infinite;
+    }
+
+    &.disconnected {
+        color: #f44336 !important; // Material red
+    }
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        opacity: 1;
+    }
+}

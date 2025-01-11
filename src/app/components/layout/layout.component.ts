@@ -11,6 +11,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { animate, state, style, transition, trigger, group } from '@angular/animations';
 import { Observable, filter, map } from 'rxjs';
 import { ThemeService, Theme } from '../../services/theme.service';
+import { WebsocketService, ConnectionState } from '../../services/websocket.service';
 import { routes, RouteData } from '../../app.routes';
 
 interface NavItem {
@@ -63,6 +64,10 @@ export class LayoutComponent implements OnInit {
     currentTheme$!: Observable<Theme>;
     /** Observable of the current page title */
     currentPageTitle$!: Observable<string>;
+    /** Current WebSocket connection state */
+    connectionState = ConnectionState;
+    /** Observable of the current connection state */
+    connectionState$!: Observable<ConnectionState>;
 
     /** Navigation items derived from routes */
     navItems: NavItem[] = routes
@@ -82,7 +87,8 @@ export class LayoutComponent implements OnInit {
      */
     constructor(
         private themeService: ThemeService,
-        private router: Router
+        private router: Router,
+        private websocketService: WebsocketService
     ) {}
 
     /**
@@ -99,6 +105,19 @@ export class LayoutComponent implements OnInit {
                 return navItem?.label || 'Message Broker Monitor';
             })
         );
+
+        // Set up connection state observable
+        this.connectionState$ = new Observable<ConnectionState>(observer => {
+            // Initial state
+            observer.next(this.websocketService.state);
+
+            // Listen for state changes
+            const handler = (state: ConnectionState) => observer.next(state);
+            this.websocketService.on('stateChange', handler);
+
+            // Cleanup
+            return () => this.websocketService.off('stateChange', handler);
+        });
     }
 
     /**
@@ -145,5 +164,34 @@ export class LayoutComponent implements OnInit {
      */
     getThemeLabel(theme: Theme): string {
         return theme.charAt(0).toUpperCase() + theme.slice(1);
+    }
+
+    /**
+     * Gets the Material Icon name for the connection state.
+     *
+     * @param state - Connection state to get icon for
+     * @returns Material Icon name
+     */
+    getConnectionIcon(state: ConnectionState): string {
+        switch (state) {
+            case ConnectionState.CONNECTED:
+                return 'cloud_done';
+            case ConnectionState.CONNECTING:
+                return 'cloud_sync';
+            case ConnectionState.DISCONNECTED:
+                return 'cloud_off';
+            default:
+                return 'cloud_off';
+        }
+    }
+
+    /**
+     * Gets a display label for the connection state.
+     *
+     * @param state - Connection state to get label for
+     * @returns Formatted connection state label
+     */
+    getConnectionLabel(state: ConnectionState): string {
+        return state.charAt(0).toUpperCase() + state.slice(1);
     }
 }
