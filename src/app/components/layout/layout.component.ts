@@ -8,10 +8,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { animate, state, style, transition, trigger, group } from '@angular/animations';
 import { Observable, filter, map } from 'rxjs';
 import { ThemeService, Theme } from '../../services/theme.service';
-import { WebsocketService, ConnectionState } from '../../services/websocket.service';
+import { WebsocketService, ConnectionState, ConnectionDetails } from '../../services/websocket.service';
+import { ConnectionEventsDialogComponent } from '../connection-events-dialog/connection-events-dialog.component';
 import { routes, RouteData } from '../../app.routes';
 
 interface NavItem {
@@ -37,7 +39,8 @@ interface NavItem {
         MatIconModule,
         MatListModule,
         MatTooltipModule,
-        MatMenuModule
+        MatMenuModule,
+        MatDialogModule
     ],
     templateUrl: './layout.component.html',
     styleUrls: ['./layout.component.scss'],
@@ -68,6 +71,8 @@ export class LayoutComponent implements OnInit {
     connectionState = ConnectionState;
     /** Observable of the current connection state */
     connectionState$!: Observable<ConnectionState>;
+    /** Observable of the connection details */
+    connectionDetails$!: Observable<ConnectionDetails>;
 
     /** Navigation items derived from routes */
     navItems: NavItem[] = routes
@@ -88,7 +93,8 @@ export class LayoutComponent implements OnInit {
     constructor(
         private themeService: ThemeService,
         private router: Router,
-        private websocketService: WebsocketService
+        public websocketService: WebsocketService,
+        private dialog: MatDialog
     ) {}
 
     /**
@@ -117,6 +123,28 @@ export class LayoutComponent implements OnInit {
 
             // Cleanup
             return () => this.websocketService.off('stateChange', handler);
+        });
+
+        // Set up connection details observable
+        this.connectionDetails$ = new Observable<ConnectionDetails>(observer => {
+            // Initial details
+            observer.next(this.websocketService.details);
+
+            // Listen for state changes and latency updates
+            const stateHandler = () => observer.next(this.websocketService.details);
+            const latencyHandler = () => observer.next(this.websocketService.details);
+            const eventHandler = () => observer.next(this.websocketService.details);
+
+            this.websocketService.on('stateChange', stateHandler);
+            this.websocketService.on('latencyUpdate', latencyHandler);
+            this.websocketService.on('connectionEvent', eventHandler);
+
+            // Cleanup
+            return () => {
+                this.websocketService.off('stateChange', stateHandler);
+                this.websocketService.off('latencyUpdate', latencyHandler);
+                this.websocketService.off('connectionEvent', eventHandler);
+            };
         });
     }
 
@@ -193,5 +221,66 @@ export class LayoutComponent implements OnInit {
      */
     getConnectionLabel(state: ConnectionState): string {
         return state.charAt(0).toUpperCase() + state.slice(1);
+    }
+
+    /**
+     * Formats a date for display.
+     *
+     * @param date - Date to format
+     * @returns Formatted date string
+     */
+    formatDate(date?: Date): string {
+        if (!date) return 'Never';
+        return date.toLocaleString();
+    }
+
+    /**
+     * Formats latency for display.
+     *
+     * @param latency - Latency in milliseconds
+     * @returns Formatted latency string
+     */
+    formatLatency(latency?: number): string {
+        if (latency == null) return 'Unknown';
+        return `${latency}ms`;
+    }
+
+    /**
+     * Gets the tooltip text for the connection status.
+     *
+     * @param details - Connection details
+     * @returns Tooltip text
+     */
+    getConnectionTooltip(details: ConnectionDetails): string {
+        const lines = [
+            `Server: ${details.url}`,
+            `Status: ${this.getConnectionLabel(details.state)}`,
+            `Last Connected: ${this.formatDate(details.lastConnected)}`,
+            `Latency: ${this.formatLatency(details.latency)}`
+        ];
+
+        if (details.reconnectAttempts > 0) {
+            lines.push(`Reconnection Attempts: ${details.reconnectAttempts}`);
+        }
+
+        return lines.join('\n');
+    }
+
+    /**
+     * Shows the connection events dialog.
+     */
+    showConnectionEvents(): void {
+        this.dialog.open(ConnectionEventsDialogComponent, {
+            data: this.websocketService.details.recentEvents,
+            width: '600px',
+            autoFocus: false
+        });
+    }
+
+    /**
+     * Manually triggers a reconnection attempt.
+     */
+    reconnect(): void {
+        this.websocketService.connect();
     }
 }

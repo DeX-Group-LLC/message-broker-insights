@@ -22,16 +22,52 @@
                 </mat-nav-list>
                 <mat-nav-list class="toggle-container">
                     <a mat-list-item
-                       [matTooltip]="'Connection Status: ' + getConnectionLabel((connectionState$ | async) || connectionState.DISCONNECTED)"
+                       [matTooltip]="getConnectionTooltip((connectionDetails$ | async) || websocketService.details)"
                        matTooltipPosition="right"
-                       matTooltipClass="connection-tooltip">
+                       matTooltipClass="connection-tooltip"
+                       [matMenuTriggerFor]="connectionMenu"
+                       (click)="$event.stopPropagation()">
                         <mat-icon matListItemIcon [class.connected]="(connectionState$ | async) === connectionState.CONNECTED"
                                                 [class.connecting]="(connectionState$ | async) === connectionState.CONNECTING"
+                                                [class.reconnecting]="(connectionState$ | async) === connectionState.RECONNECTING"
                                                 [class.disconnected]="(connectionState$ | async) === connectionState.DISCONNECTED">
                             {{ getConnectionIcon((connectionState$ | async) || connectionState.DISCONNECTED) }}
                         </mat-icon>
                         <span matListItemTitle>{{ getConnectionLabel((connectionState$ | async) || connectionState.DISCONNECTED) }}</span>
                     </a>
+                    <mat-menu #connectionMenu="matMenu" class="connection-menu">
+                        <div class="connection-details">
+                            <div class="detail-row">
+                                <span class="label">Server:</span>
+                                <span class="value">{{ (connectionDetails$ | async)?.url }}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Status:</span>
+                                <span class="value">{{ getConnectionLabel((connectionState$ | async) || connectionState.DISCONNECTED) }}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Last Connected:</span>
+                                <span class="value">{{ formatDate((connectionDetails$ | async)?.lastConnected) }}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Latency:</span>
+                                <span class="value">{{ formatLatency((connectionDetails$ | async)?.latency) }}</span>
+                            </div>
+                            <div class="detail-row" *ngIf="(connectionDetails$ | async)?.reconnectAttempts">
+                                <span class="label">Reconnect Attempts:</span>
+                                <span class="value">{{ (connectionDetails$ | async)?.reconnectAttempts }}</span>
+                            </div>
+                        </div>
+                        <mat-divider></mat-divider>
+                        <button mat-menu-item (click)="showConnectionEvents()">
+                            <mat-icon>history</mat-icon>
+                            <span>View Connection History</span>
+                        </button>
+                        <button mat-menu-item (click)="reconnect()" *ngIf="(connectionState$ | async) === connectionState.DISCONNECTED">
+                            <mat-icon>refresh</mat-icon>
+                            <span>Reconnect</span>
+                        </button>
+                    </mat-menu>
                     <a mat-list-item [matMenuTriggerFor]="themeMenu"
                        (click)="$event.stopPropagation()"
                        [matTooltip]="'Change theme'"
