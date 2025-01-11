@@ -1,0 +1,192 @@
+<div class="logs-container">
+    <mat-card>
+        <mat-card-content>
+            <div class="table-container">
+                <table mat-table [dataSource]="dataSource" matSort multiTemplateDataRows>
+                    <!-- Timestamp Column -->
+                    <ng-container matColumnDef="timestamp">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            <div class="header-cell-content">
+                                <span>Timestamp</span>
+                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="timestampMenu" [class.active]="timestampFilter"
+                                        (click)="$event.stopPropagation()">
+                                    <mat-icon>filter_alt</mat-icon>
+                                </button>
+                            </div>
+                        </th>
+                        <td mat-cell *matCellDef="let log">{{log.timestamp | date:'medium'}}</td>
+                    </ng-container>
+
+                    <!-- Level Column -->
+                    <ng-container matColumnDef="level">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            <div class="header-cell-content">
+                                <span>Level</span>
+                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="levelMenu" [class.active]="levelFilter"
+                                        (click)="$event.stopPropagation()">
+                                    <mat-icon>filter_alt</mat-icon>
+                                </button>
+                            </div>
+                        </th>
+                        <td mat-cell *matCellDef="let log" [ngClass]="log.level.toLowerCase() + '-level'">{{log.level}}</td>
+                    </ng-container>
+
+                    <!-- Module Column -->
+                    <ng-container matColumnDef="module">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            <div class="header-cell-content">
+                                <span>Module</span>
+                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="moduleMenu" [class.active]="moduleFilter"
+                                        (click)="$event.stopPropagation()">
+                                    <mat-icon>filter_alt</mat-icon>
+                                </button>
+                            </div>
+                        </th>
+                        <td mat-cell *matCellDef="let log">{{log.module}}</td>
+                    </ng-container>
+
+                    <!-- Message Column -->
+                    <ng-container matColumnDef="message">
+                        <th mat-header-cell *matHeaderCellDef mat-sort-header>
+                            <div class="header-cell-content">
+                                <span>Message</span>
+                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="messageMenu" [class.active]="messageFilter"
+                                        (click)="$event.stopPropagation()">
+                                    <mat-icon>filter_alt</mat-icon>
+                                </button>
+                            </div>
+                        </th>
+                        <td mat-cell *matCellDef="let log">{{log.message}}</td>
+                    </ng-container>
+
+                    <!-- Meta Column -->
+                    <ng-container matColumnDef="meta">
+                        <th mat-header-cell *matHeaderCellDef>
+                            <div class="header-cell-content no-sort">
+                                <span>Meta</span>
+                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="metaMenu" [class.active]="metaFilter"
+                                        (click)="$event.stopPropagation()">
+                                    <mat-icon>filter_alt</mat-icon>
+                                </button>
+                            </div>
+                        </th>
+                        <td mat-cell *matCellDef="let log">
+                            <div *ngIf="log.meta" class="meta-container">
+                                <mat-icon class="expand-icon" [class.expanded]="isExpanded(log)">expand_more</mat-icon>
+                                <span class="meta-preview">{{getMetaPreview(log.meta)}}</span>
+                            </div>
+                        </td>
+                    </ng-container>
+
+                    <!-- Expanded Content Column -->
+                    <ng-container matColumnDef="expandedDetail">
+                        <td mat-cell *matCellDef="let log" [attr.colspan]="displayedColumns.length">
+                            <div class="expanded-detail"
+                                [@detailExpand]="isExpanded(log) ? 'expanded' : 'collapsed'">
+                                <div class="expanded-detail-content">
+                                    <pre class="meta-content">{{log.meta | json}}</pre>
+                                </div>
+                            </div>
+                        </td>
+                    </ng-container>
+
+                    <!-- Header and Row Definitions -->
+                    <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+                        class="expandable-row"
+                        [class.expanded-row]="isExpanded(row)"
+                        [class.has-meta]="row.meta"
+                        (click)="row.meta && toggleMetaExpansion(row)">
+                    </tr>
+                    <tr mat-row *matRowDef="let row; columns: ['expandedDetail']; when: hasMetaData"
+                        class="detail-row">
+                    </tr>
+                </table>
+            </div>
+
+            <div class="paginator-container">
+                <div class="paginator-actions">
+                    <button mat-icon-button (click)="clearFilters()" [disabled]="!hasActiveFilters()"
+                            matTooltip="Clear all filters">
+                        <mat-icon>filter_alt_off</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="togglePause()"
+                            [matTooltip]="isPaused ? 'Resume logs' : 'Pause logs'">
+                        <mat-icon>{{ isPaused ? 'play_arrow' : 'pause' }}</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="refreshLogs()" [disabled]="!isPaused"
+                            matTooltip="Refresh logs">
+                        <mat-icon>refresh</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="toggleMultiExpand()"
+                            [matTooltip]="isMultiExpandEnabled ? 'Disable multi-expand' : 'Enable multi-expand'">
+                        <mat-icon>{{ isMultiExpandEnabled ? 'layers' : 'layers_clear' }}</mat-icon>
+                    </button>
+                </div>
+                <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
+            </div>
+        </mat-card-content>
+    </mat-card>
+
+    <!-- Filter Menus -->
+    <mat-menu #timestampMenu="matMenu" class="filter-menu">
+        <div class="filter-menu-content" (click)="$event.stopPropagation()">
+            <mat-form-field>
+                <mat-label>Filter timestamp</mat-label>
+                <input matInput [(ngModel)]="timestampFilter" (ngModelChange)="applyFilter()" (keyup.enter)="timestampMenu.closed.emit()">
+                <button *ngIf="timestampFilter" matSuffix mat-icon-button (click)="clearTimestampFilter()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </mat-form-field>
+        </div>
+    </mat-menu>
+
+    <mat-menu #levelMenu="matMenu" class="filter-menu">
+        <div class="filter-menu-content" (click)="$event.stopPropagation()">
+            <mat-form-field>
+                <mat-label>Filter level</mat-label>
+                <input matInput [(ngModel)]="levelFilter" (ngModelChange)="applyFilter()" (keyup.enter)="levelMenu.closed.emit()">
+                <button *ngIf="levelFilter" matSuffix mat-icon-button (click)="clearLevelFilter()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </mat-form-field>
+        </div>
+    </mat-menu>
+
+    <mat-menu #moduleMenu="matMenu" class="filter-menu">
+        <div class="filter-menu-content" (click)="$event.stopPropagation()">
+            <mat-form-field>
+                <mat-label>Filter module</mat-label>
+                <input matInput [(ngModel)]="moduleFilter" (ngModelChange)="applyFilter()" (keyup.enter)="moduleMenu.closed.emit()">
+                <button *ngIf="moduleFilter" matSuffix mat-icon-button (click)="clearModuleFilter()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </mat-form-field>
+        </div>
+    </mat-menu>
+
+    <mat-menu #messageMenu="matMenu" class="filter-menu">
+        <div class="filter-menu-content" (click)="$event.stopPropagation()">
+            <mat-form-field>
+                <mat-label>Filter message</mat-label>
+                <input matInput [(ngModel)]="messageFilter" (ngModelChange)="applyFilter()" (keyup.enter)="messageMenu.closed.emit()">
+                <button *ngIf="messageFilter" matSuffix mat-icon-button (click)="clearMessageFilter()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </mat-form-field>
+        </div>
+    </mat-menu>
+
+    <!-- Meta Menu -->
+    <mat-menu #metaMenu="matMenu" class="filter-menu">
+        <div class="filter-menu-content" (click)="$event.stopPropagation()">
+            <mat-form-field>
+                <mat-label>Filter meta</mat-label>
+                <input matInput [(ngModel)]="metaFilter" (ngModelChange)="applyFilter()" (keyup.enter)="metaMenu.closed.emit()">
+                <button *ngIf="metaFilter" matSuffix mat-icon-button (click)="clearMetaFilter()">
+                    <mat-icon>close</mat-icon>
+                </button>
+            </mat-form-field>
+        </div>
+    </mat-menu>
+</div>

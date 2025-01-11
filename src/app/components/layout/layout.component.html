@@ -1,0 +1,64 @@
+<mat-sidenav-container class="sidenav-container">
+    <mat-sidenav #drawer class="sidenav" fixedInViewport
+            [mode]="'side'"
+            [opened]="true"
+            [@sidenavAnimation]="isExpanded ? 'expanded' : 'collapsed'"
+            [class.collapsed]="!isExpanded">
+        <div class="sidenav-click-layer">
+            <div class="click-background" (click)="toggleNavbar()"></div>
+            <div class="sidenav-content">
+                <mat-toolbar (click)="toggleNavbar()">
+                    <mat-icon>insights</mat-icon>
+                    <span *ngIf="isExpanded">Insights</span>
+                </mat-toolbar>
+                <mat-nav-list (click)="toggleNavbar()">
+                    <a mat-list-item [routerLink]="item.path" *ngFor="let item of navItems"
+                       (click)="$event.stopPropagation()"
+                       [matTooltip]="!isExpanded ? item.shortLabel : ''"
+                       matTooltipPosition="right">
+                        <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
+                        <span matListItemTitle>{{item.shortLabel}}</span>
+                    </a>
+                </mat-nav-list>
+                <mat-nav-list class="toggle-container">
+                    <a mat-list-item [matMenuTriggerFor]="themeMenu"
+                       (click)="$event.stopPropagation()"
+                       [matTooltip]="!isExpanded ? 'Change theme' : ''"
+                       matTooltipPosition="right">
+                        <mat-icon matListItemIcon>{{ getThemeIcon((currentTheme$ | async) || 'system') }}</mat-icon>
+                        <span matListItemTitle>{{ getThemeLabel((currentTheme$ | async) || 'system') }}</span>
+                    </a>
+                    <mat-menu #themeMenu="matMenu">
+                        <button mat-menu-item (click)="setTheme('light')" [class.active]="(currentTheme$ | async) === 'light'">
+                            <mat-icon>light_mode</mat-icon>
+                            <span>Light</span>
+                        </button>
+                        <button mat-menu-item (click)="setTheme('dark')" [class.active]="(currentTheme$ | async) === 'dark'">
+                            <mat-icon>dark_mode</mat-icon>
+                            <span>Dark</span>
+                        </button>
+                        <button mat-menu-item (click)="setTheme('system')" [class.active]="(currentTheme$ | async) === 'system'">
+                            <mat-icon>settings_suggest</mat-icon>
+                            <span>System</span>
+                        </button>
+                    </mat-menu>
+                    <a mat-list-item (click)="toggleNavbar(); $event.stopPropagation()"
+                       [matTooltip]="!isExpanded ? 'Expand menu' : 'Collapse menu'"
+                       matTooltipPosition="right">
+                        <mat-icon matListItemIcon>keyboard_arrow_left</mat-icon>
+                        <span matListItemTitle>Collapse</span>
+                    </a>
+                </mat-nav-list>
+            </div>
+        </div>
+    </mat-sidenav>
+    <mat-sidenav-content style="margin-left: 150px;">
+        <mat-toolbar color="primary">
+            <span>{{ currentPageTitle$ | async }}</span>
+            <div class="toolbar-spacer"></div>
+        </mat-toolbar>
+        <div class="content">
+            <router-outlet></router-outlet>
+        </div>
+    </mat-sidenav-content>
+</mat-sidenav-container>
