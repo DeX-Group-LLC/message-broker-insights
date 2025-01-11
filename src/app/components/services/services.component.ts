@@ -574,16 +574,36 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     /**
+     * Cleans up metrics subscription and subscriptions interval.
+     */
+    private cleanupSubscriptions(): void {
+        this.metricsSubscription?.unsubscribe();
+        this.metricsSubscription = undefined;
+        clearInterval(this.subscriptionsInterval);
+        this.subscriptionsInterval = undefined;
+    }
+
+    /**
      * Fetches additional details for a service.
      *
      * @param serviceId - ID of the service to fetch details for
      */
     private async fetchServiceDetails(serviceId: string): Promise<void> {
+        // Clean up existing subscriptions
+        this.cleanupSubscriptions();
+
         const service = this.dataSource.data.find(s => s.id === serviceId);
-        if (!service) return;
+        if (!service || service.status === 'disconnected') return;
 
         // Set up polling for subscriptions
         const pollSubscriptions = async () => {
+            // Check if service is still connected before polling
+            const currentService = this.dataSource.data.find(s => s.id === serviceId);
+            if (!currentService || currentService.status === 'disconnected') {
+                this.cleanupSubscriptions();
+                return;
+            }
+
             try {
                 const subsResponse = await this.servicesService.fetchServiceSubscriptions(serviceId);
                 if (subsResponse && subsResponse.subscriptions) {
@@ -604,6 +624,13 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
 
         // Subscribe to metrics to get service-specific metrics
         const metricsSubscription = this.metricsService.metrics$.subscribe(metrics => {
+            // Check if service is still connected before processing metrics
+            const currentService = this.dataSource.data.find(s => s.id === serviceId);
+            if (!currentService || currentService.status === 'disconnected') {
+                this.cleanupSubscriptions();
+                return;
+            }
+
             const serviceMetrics: Record<string, number> = {};
             for (const metric of metrics) {
                 if (metric.name.includes(`{serviceid:${serviceId}}`)) {
@@ -618,12 +645,6 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
         });
 
         // Store subscriptions to clean up later
-        if (this.metricsSubscription) {
-            this.metricsSubscription.unsubscribe();
-        }
-        if (this.subscriptionsInterval) {
-            clearInterval(this.subscriptionsInterval);
-        }
         this.metricsSubscription = metricsSubscription;
         this.subscriptionsInterval = subscriptionsInterval;
     }
@@ -643,11 +664,7 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     closeDetails(): void {
         this.selectedService = undefined;
-        this.metricsSubscription?.unsubscribe();
-        if (this.subscriptionsInterval) {
-            clearInterval(this.subscriptionsInterval);
-            this.subscriptionsInterval = undefined;
-        }
+        this.cleanupSubscriptions();
     }
 
     /**
