@@ -11,12 +11,11 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatMenuModule } from '@angular/material/menu';
-import { Observable, Subject, Subscription } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import { Subject, Subscription } from 'rxjs';
 import { MetricsService, Metric } from '../../services/metrics.service';
-import { Chart } from 'chart.js/auto';
 import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
+import { TimeFormatService } from '../../services/time-format.service';
 
 /**
  * Component for displaying and managing system metrics.
@@ -114,8 +113,12 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      * Creates an instance of MetricsComponent.
      *
      * @param metricsService - Service for managing system metrics
+     * @param timeFormatService - Service for formatting timestamps
      */
-    constructor(private metricsService: MetricsService) {
+    constructor(
+        private metricsService: MetricsService,
+        private timeFormatService: TimeFormatService
+    ) {
     }
 
     /**
@@ -262,7 +265,7 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
             const matchesName = !this.nameFilter ||
                 metric.name.toLowerCase().includes(this.nameFilter.toLowerCase());
             const matchesValue = !this.valueFilter ||
-                metric.value.toString().includes(this.valueFilter);
+                this.getMetricDisplayValue(metric).includes(this.valueFilter);
             const matchesType = !this.typeFilter ||
                 metric.type.toLowerCase().includes(this.typeFilter.toLowerCase());
             const matchesTimestamp = !this.timestampFilter ||
@@ -285,9 +288,13 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
     /**
      * Toggles the selection state of a metric.
      *
-     * @param metric - Metric to toggle selection for
+     * @param metric - Metric to toggle selection for, or undefined to clear selection
      */
-    selectMetric(metric: Metric): void {
+    selectMetric(metric?: Metric): void {
+        if (!metric) {
+            this.selectedMetric = undefined;
+            return;
+        }
         this.selectedMetric = this.selectedMetric === metric.name ? undefined : metric.name;
         if (this.selectedMetric) {
             this.updateChart(this.selectedMetric);
@@ -315,7 +322,7 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
             case 'rate':
                 return `${metric.value}/sec`;
             case 'uptime':
-                return `${metric.value}sec`;
+                return this.timeFormatService.getElapsedTime(new Date(Date.now() - metric.value * 1000));
             case 'gauge':
             default:
                 return metric.value.toString();
@@ -398,5 +405,15 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     applyFilter() {
         this.dataSource.data = this.applyFilters(this.latestMetrics);
+    }
+
+    /**
+     * Gets the elapsed time since a timestamp.
+     *
+     * @param timestamp - Timestamp to get elapsed time for
+     * @returns Formatted elapsed time string
+     */
+    getElapsedTime(timestamp: Date): string {
+        return this.timeFormatService.getElapsedTime(timestamp);
     }
 }

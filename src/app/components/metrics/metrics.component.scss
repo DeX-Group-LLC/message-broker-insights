@@ -129,6 +129,15 @@ tr.mat-mdc-row {
     }
 }
 
+// Text styles
+.muted {
+    opacity: 0.5;
+}
+
+.italic {
+    font-style: italic;
+}
+
 .gauge-metric {
     color: #66BB6A;
     font-weight: 500;

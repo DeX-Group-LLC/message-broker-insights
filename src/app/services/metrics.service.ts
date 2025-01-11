@@ -50,6 +50,8 @@ export class MetricsService implements OnDestroy {
     private intervalId?: number;
     // Store the last 5min of metrics to prevent memory issues
     private metrics: Metric[][] = [];
+    // Max number of metrics to store
+    private maxMetrics = 5*60;
 
     /**
      * Creates an instance of MetricsService.
@@ -102,7 +104,7 @@ export class MetricsService implements OnDestroy {
                     timestamp: new Date(info.timestamp)
                 }));
                 // Limit the number of metrics to 5min
-                if (this.metrics.length > 5*60) this.metrics.shift();
+                if (this.metrics.length > this.maxMetrics) this.metrics.shift();
                 // Add the new metrics to the buffer
                 this.metrics.push(metrics);
                 // Emit the latest metrics to subscribers

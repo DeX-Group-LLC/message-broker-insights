@@ -181,6 +181,15 @@ tr.expandable-row:hover + tr.detail-row {
     }
 }
 
+// Text styles
+.muted {
+    opacity: 0.5;
+}
+
+.italic {
+    font-style: italic;
+}
+
 .error-level {
     color: #f44336 !important;
     font-weight: bold;

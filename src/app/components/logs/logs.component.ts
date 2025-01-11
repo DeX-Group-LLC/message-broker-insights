@@ -11,9 +11,10 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
+import { Subject, Subscription } from 'rxjs';
 import { LogService, LogEntry } from '../../services/log.service';
 import { animate, state, style, transition, trigger } from '@angular/animations';
+import { TimeFormatService } from '../../services/time-format.service';
 
 /**
  * Component for displaying and managing log entries.
@@ -85,8 +86,12 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
      * Creates an instance of LogsComponent.
      *
      * @param logService - Service for managing logs
+     * @param timeFormatService - Service for formatting time
      */
-    constructor(private logService: LogService) {}
+    constructor(
+        private logService: LogService,
+        private timeFormatService: TimeFormatService
+    ) {}
 
     /**
      * Initializes the component.
@@ -290,29 +295,49 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     /**
-     * Applies filters to a set of log entries.
+     * Applies filters to a set of logs.
      *
-     * @param logs - Log entries to filter
-     * @returns Filtered log entries
+     * @param logs - Logs to filter
+     * @returns Filtered logs
      */
     private applyFilters(logs: LogEntry[]): LogEntry[] {
         return logs.filter(log => {
-            const matchesTimestamp = !this.timestampFilter ||
-                log.timestamp.toString().toLowerCase().includes(this.timestampFilter.toLowerCase());
             const matchesLevel = !this.levelFilter ||
                 log.level.toLowerCase().includes(this.levelFilter.toLowerCase());
             const matchesModule = !this.moduleFilter ||
-                (log.module || '').toLowerCase().includes(this.moduleFilter.toLowerCase());
+                log.module.toLowerCase().includes(this.moduleFilter.toLowerCase());
             const matchesMessage = !this.messageFilter ||
                 log.message.toLowerCase().includes(this.messageFilter.toLowerCase());
+            const matchesTimestamp = !this.timestampFilter ||
+                log.timestamp.toLocaleString().toLowerCase().includes(this.timestampFilter.toLowerCase());
             const matchesMeta = !this.metaFilter ||
                 (log.meta && JSON.stringify(log.meta).toLowerCase().includes(this.metaFilter.toLowerCase()));
 
-            return matchesTimestamp && matchesLevel && matchesModule && matchesMessage && matchesMeta;
+            return matchesLevel && matchesModule && matchesMessage && matchesTimestamp && matchesMeta;
         });
     }
 
     hasMetaData = (_index: number, row: LogEntry): boolean => {
         return !!row.meta;
     };
+
+    /**
+     * Gets the formatted date string for display.
+     *
+     * @param timestamp - Date object
+     * @returns Formatted date string
+     */
+    getFormattedDate(timestamp: Date): string {
+        return timestamp.toLocaleString();
+    }
+
+    /**
+     * Gets the elapsed time since a timestamp.
+     *
+     * @param timestamp - Date object
+     * @returns Formatted elapsed time string
+     */
+    getElapsedTime(timestamp: Date): string {
+        return this.timeFormatService.getElapsedTime(timestamp);
+    }
 }
