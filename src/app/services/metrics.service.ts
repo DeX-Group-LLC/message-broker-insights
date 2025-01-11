@@ -127,4 +127,28 @@ export class MetricsService implements OnDestroy {
             this.intervalId = undefined;
         }
     }
+
+    /**
+     * Gets the history of values for a specific metric.
+     * Returns an array of value and timestamp pairs.
+     * Filters out consecutive entries with the same timestamp.
+     *
+     * @param metricName - Name of the metric to get history for
+     * @returns Array of value and timestamp pairs
+     */
+    public getMetricHistory(metricName: string): { value: number, timestamp: Date }[] {
+        const history = this.metrics.map(metrics => {
+            const metric = metrics.find(m => m.name === metricName);
+            return metric ? { value: metric.value, timestamp: metric.timestamp } : null;
+        }).filter((entry): entry is { value: number, timestamp: Date } => entry !== null);
+
+        // Sort by timestamp
+        history.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+        // Filter out consecutive entries with the same timestamp
+        return history.filter((entry, index, array) => {
+            if (index === 0) return true;
+            return entry.timestamp.getTime() !== array[index - 1].timestamp.getTime();
+        });
+    }
 }

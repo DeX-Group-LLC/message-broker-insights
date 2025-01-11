@@ -104,8 +104,6 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
     private metricsSubscription?: Subscription;
     /** Latest unfiltered metrics data */
     private latestMetrics: Metric[] = [];
-    /** Historical metric values for charting */
-    private metricHistory = new Map<string, { value: number, timestamp: string }[]>();
 
     /** Reference to the paginator component */
     @ViewChild(MatPaginator) paginator!: MatPaginator;
@@ -189,21 +187,6 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
 
                 // Update existing metrics and add new ones
                 metrics.forEach(newMetric => {
-                    // Update history only if timestamp changed
-                    const history = this.metricHistory.get(newMetric.name) || [];
-                    const lastEntry = history[history.length - 1];
-                    if (!lastEntry || lastEntry.timestamp !== newMetric.timestamp.toISOString()) {
-                        history.push({
-                            value: newMetric.value,
-                            timestamp: newMetric.timestamp.toISOString()
-                        });
-                        // Keep last 300 values (5 minutes at 1 value per second)
-                        if (history.length > 300) {
-                            history.shift();
-                        }
-                        this.metricHistory.set(newMetric.name, history);
-                    }
-
                     const index = currentData.findIndex(m => m.name === newMetric.name);
                     if (index >= 0) {
                         // Update existing metric
@@ -246,8 +229,8 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      * @param metricName - Name of the metric to update chart for
      */
     private updateChart(metricName: string): void {
-        const history = this.metricHistory.get(metricName);
-        if (history) {
+        const history = this.metricsService.getMetricHistory(metricName);
+        if (history.length > 0) {
             this.chartData = {
                 datasets: [{
                     data: history.map(h => h.value),
@@ -256,7 +239,7 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
                     tension: 0.1,
                     fill: false
                 }],
-                labels: history.map(h => new Date(h.timestamp).toLocaleTimeString())
+                labels: history.map(h => h.timestamp.toLocaleTimeString())
             };
         }
     }
