@@ -171,16 +171,25 @@ export class WebsocketService extends EventEmitter {
      */
     private startHeartbeat(): void {
         this.stopHeartbeat();
-        this.heartbeatInterval = window.setInterval(async () => {
-            try {
-                const start = new Date().getTime();
-                await this.request('system.heartbeat');
-                this._latency = new Date().getTime() - start;
-                this.emit('latencyUpdate', this._latency);
-            } catch (error) {
-                console.error('Heartbeat failed:', error);
-            }
-        }, this.HEARTBEAT_INTERVAL);
+
+        // Send immediate heartbeat to get early latency info
+        this.sendHeartbeat();
+
+        this.heartbeatInterval = window.setInterval(() => this.sendHeartbeat(), this.HEARTBEAT_INTERVAL);
+    }
+
+    /**
+     * Sends a single heartbeat and updates latency.
+     */
+    private async sendHeartbeat(): Promise<void> {
+        try {
+            const start = new Date().getTime();
+            await this.request('system.heartbeat');
+            this._latency = new Date().getTime() - start;
+            this.emit('latencyUpdate', this._latency);
+        } catch (error) {
+            console.error('Heartbeat failed:', error);
+        }
     }
 
     /**
