@@ -153,4 +153,12 @@ export class MetricsService implements OnDestroy {
             return entry.timestamp.getTime() !== array[index - 1].timestamp.getTime();
         });
     }
+
+    /**
+     * Clears all metric history
+     */
+    public clearHistory(): void {
+        this.metrics = [];
+        this.metricsSubject.next([]);
+    }
 }

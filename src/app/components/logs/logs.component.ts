@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, OnInit, ViewChild, OnDestroy, AfterViewInit, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -15,6 +15,7 @@ import { Subject, Subscription } from 'rxjs';
 import { LogService, LogEntry } from '../../services/log.service';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { TimeFormatService } from '../../services/time-format.service';
+import { LayoutComponent } from '../layout/layout.component';
 
 /**
  * Component for displaying and managing log entries.
@@ -82,15 +83,19 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
     /** Latest logs received from the service */
     private latestLogs: LogEntry[] = [];
 
+    @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
+
     /**
      * Creates an instance of LogsComponent.
      *
      * @param logService - Service for managing logs
      * @param timeFormatService - Service for formatting time
+     * @param layout - Layout component instance
      */
     constructor(
         private logService: LogService,
-        private timeFormatService: TimeFormatService
+        private timeFormatService: TimeFormatService,
+        private layout: LayoutComponent
     ) {}
 
     /**
@@ -122,6 +127,10 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
                 disableClear: false
             });
         });
+
+        if (this.toolbarContent) {
+            this.layout.activeToolbarContent = this.toolbarContent;
+        }
     }
 
     /**
@@ -131,6 +140,7 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
         this.destroy$.next();
         this.destroy$.complete();
         this.logsSubscription?.unsubscribe();
+        this.layout.activeToolbarContent = undefined;
     }
 
     /**
@@ -339,5 +349,12 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     getElapsedTime(timestamp: Date): string {
         return this.timeFormatService.getElapsedTime(timestamp);
+    }
+
+    /**
+     * Clears all log history from the log service
+     */
+    clearHistory(): void {
+        this.logService.clearLogs();
     }
 }

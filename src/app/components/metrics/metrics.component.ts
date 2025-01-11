@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild, AfterViewInit, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +16,7 @@ import { MetricsService, Metric } from '../../services/metrics.service';
 import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 import { TimeFormatService } from '../../services/time-format.service';
+import { LayoutComponent } from '../layout/layout.component';
 
 /**
  * Component for displaying and managing system metrics.
@@ -108,16 +109,19 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
     @ViewChild(MatPaginator) paginator!: MatPaginator;
     /** Reference to the sort component */
     @ViewChild(MatSort) sort!: MatSort;
+    @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
 
     /**
      * Creates an instance of MetricsComponent.
      *
      * @param metricsService - Service for managing system metrics
      * @param timeFormatService - Service for formatting timestamps
+     * @param layout - Layout component instance
      */
     constructor(
         private metricsService: MetricsService,
-        private timeFormatService: TimeFormatService
+        private timeFormatService: TimeFormatService,
+        private layout: LayoutComponent
     ) {
     }
 
@@ -149,6 +153,10 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
                 disableClear: false
             });
         });
+
+        if (this.toolbarContent) {
+            this.layout.activeToolbarContent = this.toolbarContent;
+        }
     }
 
     /**
@@ -158,6 +166,7 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
         this.destroy$.next();
         this.destroy$.complete();
         this.metricsSubscription?.unsubscribe();
+        this.layout.activeToolbarContent = undefined;
     }
 
     /**
@@ -415,5 +424,12 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     getElapsedTime(timestamp: Date): string {
         return this.timeFormatService.getElapsedTime(timestamp);
+    }
+
+    /**
+     * Clears all metric history from the metrics service
+     */
+    clearHistory(): void {
+        this.metricsService.clearHistory();
     }
 }
