@@ -71,7 +71,7 @@
                                 </button>
                             </div>
                         </th>
-                        <td mat-cell *matCellDef="let service" [class.error]="getHeartbeatStatus(service)">
+                        <td mat-cell *matCellDef="let service" [class]="getHeartbeatStatus(service)">
                             {{getFormattedDate(service.lastHeartbeat)}}
                             <span class="muted italic">({{getCompactElapsedTime(service.lastHeartbeat)}})</span>
                         </td>
@@ -259,7 +259,7 @@
                             </div>
                             <div class="info-item">
                                 <span class="label">Last Heartbeat</span>
-                                <span class="value" [class.error]="selectedService.status === 'disconnected'">
+                                <span class="value" [class]="getHeartbeatStatus(selectedService)">
                                     {{getFormattedDate(selectedService.lastHeartbeat)}}
                                     <span class="muted italic">({{getCompactElapsedTime(selectedService.lastHeartbeat)}})</span>
                                 </span>

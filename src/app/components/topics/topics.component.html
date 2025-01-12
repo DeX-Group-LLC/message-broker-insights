@@ -31,7 +31,7 @@
                         <td mat-cell *matCellDef="let topic">
                             <div class="meta-container">
                                 <mat-icon class="expand-icon" [class.expanded]="isExpanded(topic)">expand_more</mat-icon>
-                                <span class="meta-preview">{{getSubscriberCountDisplay(topic)}}</span>
+                                <span class="meta-preview" class="muted italic">{{getSubscriberCountDisplay(topic)}}</span>
                             </div>
                         </td>
                     </ng-container>

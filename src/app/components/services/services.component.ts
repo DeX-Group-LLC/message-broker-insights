@@ -255,7 +255,9 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
     getHeartbeatStatus(service: ServiceInfo): string {
         const now = new Date();
         const elapsed = now.getTime() - service.lastHeartbeat.getTime();
-        return elapsed > 10000 ? 'error' : '';
+        if (elapsed >= 30000) return 'error';
+        if (elapsed >= 10000) return 'warning';
+        return '';
     }
 
     /**

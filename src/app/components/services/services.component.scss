@@ -123,8 +123,12 @@ tr.mat-mdc-row {
     font-style: italic;
 }
 
+.warning {
+    color: #ff9800;
+}
+
 .error {
-    color: var(--mat-sys-color-error);
+    color: #f44336;
 }
 
 .no-data-message {
