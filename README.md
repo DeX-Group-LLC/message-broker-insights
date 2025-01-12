@@ -8,6 +8,7 @@
 [![Install Size](https://packagephobia.com/badge?p=message-broker-insights?style=square)](https://packagephobia.com/result?p=message-broker-insights)
 
 🌐 A modern Angular-based web interface for the Message Broker, providing real-time monitoring, log viewing, and system metrics visualization. Built with Angular Material for a clean, responsive user experience.
+
 ![screenshot-2025-01-11-16-09-36](https://github.com/user-attachments/assets/226d26ad-b79c-46bb-b0d4-75afda1fc004)
 
 ## Table of Contents
