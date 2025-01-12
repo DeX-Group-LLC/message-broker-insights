@@ -11,8 +11,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSelectModule } from '@angular/material/select';
 import { Subject, Subscription } from 'rxjs';
-import { LogService, LogEntry } from '../../services/log.service';
+import { LogService, LogEntry, LogLevel } from '../../services/log.service';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { TimeFormatService } from '../../services/time-format.service';
 import { LayoutComponent } from '../layout/layout.component';
@@ -36,7 +37,8 @@ import { LayoutComponent } from '../layout/layout.component';
         MatMenuModule,
         MatFormFieldModule,
         MatInputModule,
-        MatTooltipModule
+        MatTooltipModule,
+        MatSelectModule
     ],
     templateUrl: './logs.component.html',
     styleUrls: ['./logs.component.scss'],
@@ -89,6 +91,12 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
 
     @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
 
+    /** Available log levels for the selector */
+    logLevels = Object.values(LogLevel);
+
+    /** Current minimum log level */
+    currentLogLevel = LogLevel.INFO;
+
     /**
      * Creates an instance of LogsComponent.
      *
@@ -100,7 +108,12 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
         private logService: LogService,
         private timeFormatService: TimeFormatService,
         private layout: LayoutComponent
-    ) {}
+    ) {
+        // Subscribe to current log level
+        this.logService.minLogLevel$.subscribe(level => {
+            this.currentLogLevel = level;
+        });
+    }
 
     /**
      * Initializes the component.
@@ -368,5 +381,13 @@ export class LogsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     clearHistory(): void {
         this.logService.clearLogs();
+    }
+
+    /**
+     * Updates the minimum log level
+     * @param level - The new minimum log level
+     */
+    onLogLevelChange(level: LogLevel): void {
+        this.logService.setMinLogLevel(level);
     }
 }

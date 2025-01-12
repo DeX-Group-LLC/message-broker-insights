@@ -1,4 +1,12 @@
 <ng-template #toolbarContent>
+    <mat-form-field appearance="outline" class="log-level-select">
+        <mat-label>Min Log Level</mat-label>
+        <mat-select [value]="currentLogLevel" (selectionChange)="onLogLevelChange($event.value)">
+            <mat-option *ngFor="let level of logLevels" [value]="level">
+                {{level}}
+            </mat-option>
+        </mat-select>
+    </mat-form-field>
     <button mat-icon-button (click)="clearHistory()" matTooltip="Clear Log History">
         <mat-icon>delete_sweep</mat-icon>
     </button>

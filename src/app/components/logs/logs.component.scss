@@ -206,7 +206,7 @@ tr.expandable-row:hover + tr.detail-row {
 }
 
 .debug-level {
-    color: rgba(0, 0, 0, 0.54) !important;
+    color: #808080 !important;
     font-weight: bold;
 }
 
@@ -256,5 +256,26 @@ tr.expandable-row:hover + tr.detail-row {
 
     .mat-sort-header-arrow svg {
         margin-left: -10px !important;
+    }
+}
+
+.log-level-select {
+    margin-right: 16px;
+    width: 150px;
+
+    ::ng-deep {
+        .mat-mdc-form-field-subscript-wrapper {
+            display: none;
+        }
+
+        .mat-mdc-form-field-infix {
+            padding-top: 8px !important;
+            padding-bottom: 8px !important;
+            min-height: unset !important;
+        }
+
+        .mat-mdc-text-field-wrapper {
+            padding: 0 8px !important;
+        }
     }
 }
