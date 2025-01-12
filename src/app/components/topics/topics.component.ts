@@ -135,7 +135,7 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
         this.topicsSubscription = this.topicsService.topics$.subscribe(topics => {
             this.latestTopics = topics;
             if (!this.isPaused) {
-                this.refreshTopics();
+                this.dataSource.data = this.applyFilters(this.latestTopics);
             }
         });
         this.refresh();
@@ -188,15 +188,6 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     /**
-     * Refreshes the topics display with current filters.
-     */
-    refreshTopics() {
-        this.topicsService.refresh().then(() => {
-            this.dataSource.data = this.applyFilters(this.latestTopics);
-        });
-    }
-
-    /**
      * Forces a refresh of the topics data.
      */
     async refresh(): Promise<void> {
@@ -209,7 +200,7 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
     togglePause() {
         this.isPaused = !this.isPaused;
         if (!this.isPaused) {
-            this.refreshTopics();
+            this.dataSource.data = this.applyFilters(this.latestTopics);
         }
     }
 

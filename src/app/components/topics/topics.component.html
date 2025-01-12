@@ -122,7 +122,7 @@
                             [matTooltip]="isPaused ? 'Resume topics' : 'Pause topics'">
                         <mat-icon>{{ isPaused ? 'play_arrow' : 'pause' }}</mat-icon>
                     </button>
-                    <button mat-icon-button (click)="refreshTopics()" [disabled]="!isPaused || loading"
+                    <button mat-icon-button (click)="refresh()" [disabled]="!isPaused || loading"
                             matTooltip="Refresh topics">
                         <mat-icon [class.rotating]="loading">refresh</mat-icon>
                     </button>

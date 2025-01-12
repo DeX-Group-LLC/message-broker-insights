@@ -2,13 +2,14 @@
  * Root component of the application.
  * Initializes core services and provides the main layout structure.
  */
+import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { LayoutComponent } from './components/layout/layout.component';
 import { LogService } from './services/log.service';
 import { MetricsService } from './services/metrics.service';
+import { ServicesService } from './services/services.service';
 import { TopicsService } from './services/topics.service';
-import { LayoutComponent } from './components/layout/layout.component';
-import { CommonModule } from '@angular/common';
 
 @Component({
     selector: 'app-root',
@@ -34,6 +35,7 @@ export class AppComponent {
     constructor(
         private logService: LogService,
         private metricsService: MetricsService,
+        private servicesService: ServicesService,
         private topicsService: TopicsService
     ) {}
 }
