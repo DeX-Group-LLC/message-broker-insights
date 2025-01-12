@@ -73,7 +73,7 @@
                         </th>
                         <td mat-cell *matCellDef="let service" [class]="getHeartbeatStatus(service)">
                             {{getFormattedDate(service.lastHeartbeat)}}
-                            <span class="muted italic">({{getCompactElapsedTime(service.lastHeartbeat)}})</span>
+                            <span class="muted italic">({{getElapsedTime(service.lastHeartbeat)}})</span>
                         </td>
                     </ng-container>
 
@@ -261,7 +261,7 @@
                                 <span class="label">Last Heartbeat</span>
                                 <span class="value" [class]="getHeartbeatStatus(selectedService)">
                                     {{getFormattedDate(selectedService.lastHeartbeat)}}
-                                    <span class="muted italic">({{getCompactElapsedTime(selectedService.lastHeartbeat)}})</span>
+                                    <span class="muted italic">({{getElapsedTime(selectedService.lastHeartbeat)}})</span>
                                 </span>
                             </div>
                         </div>
