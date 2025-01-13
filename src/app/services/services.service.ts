@@ -163,7 +163,7 @@ export class ServicesService implements OnDestroy {
                     this.disconnectedServices.set(service.id, disconnectedService);
 
                     // Keep only the last MAX_DISCONNECTED_SERVICES
-                    if (this.disconnectedServices.size > MAX_DISCONNECTED_SERVICES) {
+                    if (this.disconnectedServices.size >= MAX_DISCONNECTED_SERVICES) {
                         let oldestHeartbeat = new Date();
                         let oldestService: ServiceInfo | undefined;
                         for (const service of this.disconnectedServices.values()) {

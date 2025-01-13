@@ -104,7 +104,7 @@ export class MetricsService implements OnDestroy {
                     timestamp: new Date(info.timestamp)
                 }));
                 // Limit the number of metrics to 5min
-                if (this.metrics.length > this.maxMetrics) this.metrics.shift();
+                if (this.metrics.length >= this.maxMetrics) this.metrics.shift();
                 // Add the new metrics to the buffer
                 this.metrics.push(metrics);
                 // Emit the latest metrics to subscribers

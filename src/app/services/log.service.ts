@@ -48,6 +48,8 @@ export class LogService implements OnDestroy {
     public minLogLevel$ = this.minLogLevelSubject.asObservable();
     /** Flag indicating if the service has been initialized */
     private isInitialized = false;
+    /** Maximum number of log entries to store */
+    private maxLogEntries = 10000;
 
     /** Map of log levels to their severity order */
     private readonly logLevelSeverity = {
@@ -165,9 +167,9 @@ export class LogService implements OnDestroy {
             }
         }
 
-        // Limit the number of latest logs to 10000 to prevent memory issues
+        // Limit the number of latest logs to maxLogEntries to prevent memory issues
         const currentLogs = this.logsSubject.value;
-        if (currentLogs.length > 10000) currentLogs.shift();
+        if (currentLogs.length >= this.maxLogEntries) currentLogs.shift();
 
         // Add the log to the logs subject
         currentLogs.push(log);
