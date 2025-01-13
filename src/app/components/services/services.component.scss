@@ -170,8 +170,10 @@ tr.mat-mdc-row {
             font-size: 20px;
         }
 
-        .close-button {
-            margin-left: 16px;
+        .header-actions {
+            display: flex;
+            gap: 0px;
+            margin-left: auto;
         }
     }
 

@@ -1,3 +1,13 @@
+<ng-template #toolbarContent>
+    <app-export
+        [data]="getExportData()"
+        filename="topics-export"
+        tooltip="Export Topics"
+        [customizable]="true"
+        [disabled]="!dataSource.data.length">
+    </app-export>
+</ng-template>
+
 <div class="topics-container">
     <mat-card>
         <mat-card-content>

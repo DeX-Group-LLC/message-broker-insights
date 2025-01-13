@@ -7,6 +7,13 @@
             </mat-option>
         </mat-select>
     </mat-form-field>
+    <app-export
+        [data]="dataSource.data"
+        filename="logs-export"
+        tooltip="Export Logs"
+        [customizable]="true"
+        [disabled]="!dataSource.data.length">
+    </app-export>
     <button mat-icon-button (click)="clearHistory()" matTooltip="Clear Log History">
         <mat-icon>delete_sweep</mat-icon>
     </button>

@@ -13,12 +13,12 @@ export interface ServiceInfo {
     name: string;
     /** Service description */
     description: string;
+    /** Current status of the service */
+    status: ServiceStatus;
     /** Timestamp when the service connected */
     connectedAt: Date;
     /** Timestamp of the last heartbeat received */
     lastHeartbeat: Date;
-    /** Current status of the service */
-    status: ServiceStatus;
     /** List of topics the service is subscribed to */
     subscriptions?: string[];
     /** Service-specific metrics */
@@ -110,11 +110,14 @@ export class ServicesService implements OnDestroy {
                         id: service.id,
                         name: service.name,
                         description: service.description || '',
-                        connectedAt: new Date(service.connectedAt),
-                        lastHeartbeat: new Date(service.lastHeartbeat),
                         status: 'connected',
-                        meta: this.extractMeta(service)
+                        connectedAt: new Date(service.connectedAt),
+                        lastHeartbeat: new Date(service.lastHeartbeat)
                     };
+                    const meta = this.extractMeta(service);
+                    if (meta) {
+                        serviceInfo.meta = meta;
+                    }
 
                     // Only fetch additional details for the selected service
                     if (service.id === this.selectedServiceId) {
@@ -155,7 +158,8 @@ export class ServicesService implements OnDestroy {
                 const disconnectedServices = currentServices.filter(s => !currentServiceIds.has(s.id));
 
                 disconnectedServices.forEach(service => {
-                    const disconnectedService = { ...service, status: 'disconnected' as ServiceStatus };
+                    const disconnectedService = { ...service };
+                    disconnectedService.status = 'disconnected';
                     this.disconnectedServices.set(service.id, disconnectedService);
 
                     // Keep only the last MAX_DISCONNECTED_SERVICES

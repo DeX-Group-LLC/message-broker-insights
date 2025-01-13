@@ -1,0 +1,142 @@
+<h2 mat-dialog-title>Customize {{data.format.toUpperCase()}} Export</h2>
+
+<mat-dialog-content>
+    <div class="customizer-layout">
+        <!-- Left Column: Fields Selection -->
+        <div class="fields-section">
+            <h3>Fields to Export</h3>
+            <div class="fields-list">
+                <ng-container *ngTemplateOutlet="fieldTree; context: { $implicit: selectedFields }"></ng-container>
+            </div>
+        </div>
+
+        <!-- Right Column: Options and Preview -->
+        <div class="options-section">
+            <div class="cover">
+                <!-- Common Options -->
+                <mat-expansion-panel>
+                    <mat-expansion-panel-header>
+                        <mat-panel-title>Common Options</mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <!-- Date Format -->
+                    <mat-form-field>
+                        <mat-label>Date Format</mat-label>
+                        <mat-select [(ngModel)]="options.dateFormat" (selectionChange)="onOptionChange()">
+                            <mat-option value="iso">ISO</mat-option>
+                            <mat-option value="local">Local</mat-option>
+                            <mat-option value="unix">Unix Timestamp</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- Max Array Items -->
+                    <mat-form-field>
+                        <mat-label>Max Array Items</mat-label>
+                        <mat-select [(ngModel)]="options.maxArrayItems" (selectionChange)="updatePreview()">
+                            <mat-option [value]="5">5</mat-option>
+                            <mat-option [value]="10">10</mat-option>
+                            <mat-option [value]="20">20</mat-option>
+                            <mat-option [value]="50">50</mat-option>
+                            <mat-option [value]="100">100</mat-option>
+                            <mat-option [value]="null">All</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- Max Object Keys -->
+                    <mat-form-field>
+                        <mat-label>Max Object Keys</mat-label>
+                        <mat-select [(ngModel)]="options.maxObjectKeys" (selectionChange)="updatePreview()">
+                            <mat-option [value]="5">5</mat-option>
+                            <mat-option [value]="10">10</mat-option>
+                            <mat-option [value]="20">20</mat-option>
+                            <mat-option [value]="50">50</mat-option>
+                            <mat-option [value]="100">100</mat-option>
+                            <mat-option [value]="null">All</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </mat-expansion-panel>
+
+                <!-- CSV Options -->
+                <mat-expansion-panel *ngIf="data.format === 'csv'">
+                    <mat-expansion-panel-header>
+                        <mat-panel-title>CSV Options</mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <!-- Field Delimiter -->
+                    <mat-form-field>
+                        <mat-label>Field Delimiter</mat-label>
+                        <mat-select [(ngModel)]="options.fieldDelimiter" (selectionChange)="updatePreview()">
+                            <mat-option value=",">Comma (,)</mat-option>
+                            <mat-option value=";">Semicolon (;)</mat-option>
+                            <mat-option value="\t">Tab</mat-option>
+                            <mat-option value=" ">Space</mat-option>
+                            <mat-option value="|">Pipe (|)</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- Array Format -->
+                    <mat-form-field>
+                        <mat-label>Array Format</mat-label>
+                        <mat-select [(ngModel)]="options.arrayFormat" (selectionChange)="updatePreview()">
+                            <mat-option value="json">JSON</mat-option>
+                            <mat-option value="comma-list">Comma-separated List</mat-option>
+                        </mat-select>
+                        <mat-hint>How arrays should be formatted in the CSV</mat-hint>
+                    </mat-form-field>
+
+                    <!-- Object Format -->
+                    <mat-form-field>
+                        <mat-label>Object Format</mat-label>
+                        <mat-select [(ngModel)]="options.objectFormat" (selectionChange)="updatePreview()">
+                            <mat-option value="json">JSON</mat-option>
+                            <mat-option value="flatten">Flatten objects</mat-option>
+                        </mat-select>
+                        <mat-hint>How objects should be formatted in the CSV</mat-hint>
+                    </mat-form-field>
+                </mat-expansion-panel>
+
+                <!-- JSON Options -->
+                <mat-expansion-panel *ngIf="data.format === 'json'">
+                    <mat-expansion-panel-header>
+                        <mat-panel-title>JSON Options</mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <p class="muted italic">No additional JSON options available</p>
+                </mat-expansion-panel>
+
+                <div class="preview-section">
+                    <h3>Preview</h3>
+                    <pre class="preview-content">{{preview}}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</mat-dialog-content>
+
+<!-- Field Tree Template -->
+<ng-template #fieldTree let-fields>
+    <div class="field-group">
+        <div *ngFor="let field of fields" class="field-item" [style.margin-left.px]="field.level * 24">
+            <mat-checkbox [(ngModel)]="field.included"
+                        [indeterminate]="isFieldIndeterminate(field)"
+                        (change)="toggleField(field, $event)">
+                <span class="field-name">{{field.name}}</span>
+                <span class="field-type">
+                    <ng-container [ngSwitch]="field.type">
+                        <ng-container *ngSwitchCase="'object'">{{ '{' }}object{{ '}' }}</ng-container>
+                        <ng-container *ngSwitchCase="'array'">[array]</ng-container>
+                        <ng-container *ngSwitchDefault>: {{getPreviewValue(field)}}</ng-container>
+                    </ng-container>
+                </span>
+            </mat-checkbox>
+            <ng-container *ngIf="field.children?.length">
+                <ng-container *ngTemplateOutlet="fieldTree; context: { $implicit: field.children }"></ng-container>
+            </ng-container>
+        </div>
+    </div>
+</ng-template>
+
+<mat-dialog-actions align="end">
+    <button mat-button (click)="dialogRef.close()">Cancel</button>
+    <button mat-button color="primary" (click)="save()">Export</button>
+</mat-dialog-actions>

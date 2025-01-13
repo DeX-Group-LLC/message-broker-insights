@@ -1,4 +1,11 @@
 <ng-template #toolbarContent>
+    <app-export
+        [data]="dataSource.data"
+        filename="services-export"
+        tooltip="Export Services"
+        [customizable]="true"
+        [disabled]="!dataSource.data.length">
+    </app-export>
     <button mat-icon-button (click)="clearDisconnected()" matTooltip="Clear Disconnected Services">
         <mat-icon>delete_sweep</mat-icon>
     </button>
@@ -214,11 +221,21 @@
         <mat-card-header>
             <mat-card-title>
                 {{ selectedService.name || selectedService.id }}
+            </mat-card-title>
+            <div class="header-actions">
+                <app-export
+                    [data]="selectedService"
+                    filename="service-details"
+                    tooltip="Export Service Details"
+                    [customizable]="true"
+                    [disabled]="!selectedService">
+                </app-export>
                 <button mat-icon-button class="close-button" (click)="closeDetails()" matTooltip="Close details">
                     <mat-icon>close</mat-icon>
                 </button>
-            </mat-card-title>
+            </div>
         </mat-card-header>
+
         <mat-card-content>
             <mat-tab-group [(selectedIndex)]="selectedTab" (selectedIndexChange)="onTabChange($event)">
                 <!-- Overview Tab -->

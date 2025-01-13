@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatSortModule, MatSort, Sort } from '@angular/material/sort';
+import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,13 +11,14 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { BehaviorSubject, Observable, Subject, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { ServicesService, ServiceInfo, ServiceStatus } from '../../services/services.service';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { TimeFormatService } from '../../services/time-format.service';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MetricsService } from '../../services/metrics.service';
 import { LayoutComponent } from '../layout/layout.component';
+import { ExportComponent } from '../export/export.component';
 
 /** Tab index for service details */
 export enum ServiceDetailsTab {
@@ -46,7 +47,8 @@ export enum ServiceDetailsTab {
         MatFormFieldModule,
         MatInputModule,
         MatTooltipModule,
-        MatTabsModule
+        MatTabsModule,
+        ExportComponent
     ],
     templateUrl: './services.component.html',
     styleUrls: ['./services.component.scss'],
@@ -97,7 +99,7 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
     statusFilter = '';
 
     /** Subject for handling component destruction */
-    private destroy$ = new Subject<void>();
+    //private destroy$ = new Subject<void>();
     /** Subscription to services updates */
     private servicesSubscription?: Subscription;
     /** Latest services received from the service */

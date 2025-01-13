@@ -1,4 +1,9 @@
 <ng-template #toolbarContent>
+    <app-export
+        [data]="dataSource.data"
+        filename="metrics-export"
+        tooltip="Export Metrics"
+        [customizable]="true"/>
     <button mat-icon-button (click)="clearHistory()" matTooltip="Clear Metrics History">
         <mat-icon>delete_sweep</mat-icon>
     </button>
@@ -154,12 +159,18 @@
     <!-- Chart Card -->
     <mat-card *ngIf="selectedMetric" class="metric-chart-card">
         <mat-card-header>
-            <mat-card-title>
-                {{ selectedMetric }} Trend
+            <mat-card-title>{{ selectedMetric }}</mat-card-title>
+            <div class="header-actions">
+                <app-export
+                    [data]="getChartExportData()"
+                    filename="metric-history-{{selectedMetric}}"
+                    tooltip="Export Chart Data"
+                    [customizable]="true"
+                    [disabled]="!selectedMetric"/>
                 <button mat-icon-button class="close-button" (click)="selectMetric(undefined)" matTooltip="Close chart">
                     <mat-icon>close</mat-icon>
                 </button>
-            </mat-card-title>
+            </div>
         </mat-card-header>
         <mat-card-content>
             <canvas baseChart
