@@ -1,9 +1,10 @@
 <ng-template #toolbarContent>
     <app-export
-        [data]="dataSource.data"
+        [data]="table.data"
         filename="metrics-export"
         tooltip="Export Metrics"
-        [customizable]="true"/>
+        [customizable]="true"
+        [disabled]="!table.data.length"/>
     <button mat-icon-button (click)="clearHistory()" matTooltip="Clear Metrics History">
         <mat-icon>delete_sweep</mat-icon>
     </button>
@@ -11,163 +12,66 @@
 
 <div class="metrics-container">
     <!-- Metrics Table -->
-    <mat-card>
+    <mat-card class="metrics-table-card">
         <mat-card-content>
-            <div class="table-container">
-                <table mat-table [dataSource]="dataSource" matSort>
-                    <!-- Name Column -->
-                    <ng-container matColumnDef="name">
-                        <th mat-header-cell *matHeaderCellDef mat-sort-header>
-                            <div class="header-cell-content">
-                                <span>Name</span>
-                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="nameMenu" [class.active]="nameFilter"
-                                        (click)="$event.stopPropagation()">
-                                    <mat-icon>filter_alt</mat-icon>
-                                </button>
-                            </div>
-                        </th>
-                        <td mat-cell *matCellDef="let metric">{{metric.name}}</td>
-                    </ng-container>
+            <app-table
+                [data$]="metricsService.metrics$"
+                [columns]="columns"
+                [defaultSort]="{ active: 'name', direction: 'asc' }"
+                [refreshFn]="refreshMetrics.bind(this)"
+                [selectable]="true"
+                [multiSelect]="false"
+                [canExpand]="canExpand"
+                (selectionChange)="onSelectionChange($event)"
+                (onDataChange)="updateChart()"
+                [paginationConfig]="{
+                    pageSizeOptions: [10, 25, 50, 100],
+                    defaultPageSize: 25,
+                    showFirstLastButtons: true
+                }">
 
-                    <!-- Value Column -->
-                    <ng-container matColumnDef="value">
-                        <th mat-header-cell *matHeaderCellDef mat-sort-header>
-                            <div class="header-cell-content">
-                                <span>Value</span>
-                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="valueMenu" [class.active]="valueFilter"
-                                        (click)="$event.stopPropagation()">
-                                    <mat-icon>filter_alt</mat-icon>
-                                </button>
-                            </div>
-                        </th>
-                        <td mat-cell *matCellDef="let metric" [ngClass]="getMetricClass(metric.type)">
-                            {{getMetricDisplayValue(metric)}}
-                        </td>
-                    </ng-container>
+                <!-- Cell Templates -->
+                <ng-template #cellTemplate let-metric let-column="column">
+                    <ng-container [ngSwitch]="column.name">
+                        <ng-container *ngSwitchCase="'name'">
+                            {{metric.name}}
+                        </ng-container>
 
-                    <!-- Type Column -->
-                    <ng-container matColumnDef="type">
-                        <th mat-header-cell *matHeaderCellDef mat-sort-header>
-                            <div class="header-cell-content">
-                                <span>Type</span>
-                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="typeMenu" [class.active]="typeFilter"
-                                        (click)="$event.stopPropagation()">
-                                    <mat-icon>filter_alt</mat-icon>
-                                </button>
-                            </div>
-                        </th>
-                        <td mat-cell *matCellDef="let metric" [ngClass]="getMetricClass(metric.type)">{{metric.type}}</td>
-                    </ng-container>
+                        <ng-container *ngSwitchCase="'value'">
+                            <span [ngClass]="getMetricClass(metric.type)">
+                                {{getMetricDisplayValue(metric)}}
+                            </span>
+                        </ng-container>
 
-                    <!-- Timestamp Column -->
-                    <ng-container matColumnDef="timestamp">
-                        <th mat-header-cell *matHeaderCellDef mat-sort-header>
-                            <div class="header-cell-content">
-                                <span>Last Updated</span>
-                                <button mat-icon-button class="filter-icon" [matMenuTriggerFor]="timestampMenu" [class.active]="timestampFilter"
-                                        (click)="$event.stopPropagation()">
-                                    <mat-icon>filter_alt</mat-icon>
-                                </button>
-                            </div>
-                        </th>
-                        <td mat-cell *matCellDef="let metric">
+                        <ng-container *ngSwitchCase="'type'">
+                            <span [ngClass]="getMetricClass(metric.type)">
+                                {{metric.type}}
+                            </span>
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'timestamp'">
                             {{getFormattedDate(metric.timestamp)}}
                             <span class="muted italic">({{getElapsedTime(metric.timestamp)}})</span>
-                        </td>
+                        </ng-container>
                     </ng-container>
-
-                    <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
-                    <tr mat-row *matRowDef="let row; columns: displayedColumns"
-                        [class.selected-row]="isSelected(row)"
-                        (click)="selectMetric(row)">
-                    </tr>
-                </table>
-                <div class="no-data-message" *ngIf="!dataSource.data.length">
-                    No metrics available
-                </div>
-            </div>
-
-            <div class="paginator-container">
-                <div class="paginator-actions">
-                    <button mat-icon-button (click)="clearFilters()" [disabled]="!hasActiveFilters()"
-                            matTooltip="Clear all filters">
-                        <mat-icon>filter_alt_off</mat-icon>
-                    </button>
-                    <button mat-icon-button (click)="togglePolling()"
-                            [matTooltip]="isPaused ? 'Resume metrics' : 'Pause metrics'">
-                        <mat-icon>{{ isPaused ? 'play_arrow' : 'pause' }}</mat-icon>
-                    </button>
-                    <button mat-icon-button (click)="refreshMetrics()" [disabled]="!isPaused || loading"
-                            matTooltip="Refresh metrics">
-                        <mat-icon [class.rotating]="loading">refresh</mat-icon>
-                    </button>
-                </div>
-                <mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" [pageSize]="25" showFirstLastButtons></mat-paginator>
-            </div>
+                </ng-template>
+            </app-table>
         </mat-card-content>
     </mat-card>
 
-    <!-- Filter Menus -->
-    <mat-menu #nameMenu="matMenu" class="filter-menu">
-        <div class="filter-menu-content" (click)="$event.stopPropagation()">
-            <mat-form-field>
-                <mat-label>Filter name</mat-label>
-                <input matInput [(ngModel)]="nameFilter" (ngModelChange)="applyFilter()" (keyup.enter)="nameMenu.closed.emit()">
-                <button *ngIf="nameFilter" matSuffix mat-icon-button (click)="clearNameFilter()">
-                    <mat-icon>close</mat-icon>
-                </button>
-            </mat-form-field>
-        </div>
-    </mat-menu>
-
-    <mat-menu #valueMenu="matMenu" class="filter-menu">
-        <div class="filter-menu-content" (click)="$event.stopPropagation()">
-            <mat-form-field>
-                <mat-label>Filter value</mat-label>
-                <input matInput [(ngModel)]="valueFilter" (ngModelChange)="applyFilter()" (keyup.enter)="valueMenu.closed.emit()">
-                <button *ngIf="valueFilter" matSuffix mat-icon-button (click)="clearValueFilter()">
-                    <mat-icon>close</mat-icon>
-                </button>
-            </mat-form-field>
-        </div>
-    </mat-menu>
-
-    <mat-menu #typeMenu="matMenu" class="filter-menu">
-        <div class="filter-menu-content" (click)="$event.stopPropagation()">
-            <mat-form-field>
-                <mat-label>Filter type</mat-label>
-                <input matInput [(ngModel)]="typeFilter" (ngModelChange)="applyFilter()" (keyup.enter)="typeMenu.closed.emit()">
-                <button *ngIf="typeFilter" matSuffix mat-icon-button (click)="clearTypeFilter()">
-                    <mat-icon>close</mat-icon>
-                </button>
-            </mat-form-field>
-        </div>
-    </mat-menu>
-
-    <mat-menu #timestampMenu="matMenu" class="filter-menu">
-        <div class="filter-menu-content" (click)="$event.stopPropagation()">
-            <mat-form-field>
-                <mat-label>Filter timestamp</mat-label>
-                <input matInput [(ngModel)]="timestampFilter" (ngModelChange)="applyFilter()" (keyup.enter)="timestampMenu.closed.emit()">
-                <button *ngIf="timestampFilter" matSuffix mat-icon-button (click)="clearTimestampFilter()">
-                    <mat-icon>close</mat-icon>
-                </button>
-            </mat-form-field>
-        </div>
-    </mat-menu>
 
     <!-- Chart Card -->
     <mat-card *ngIf="selectedMetric" class="metric-chart-card">
         <mat-card-header>
-            <mat-card-title>{{ selectedMetric }}</mat-card-title>
+            <mat-card-title>{{ selectedMetric.name }}</mat-card-title>
             <div class="header-actions">
                 <app-export
                     [data]="getChartExportData()"
-                    filename="metric-history-{{selectedMetric}}"
+                    filename="metric-history-{{selectedMetric.name}}"
                     tooltip="Export Chart Data"
                     [customizable]="true"
                     [disabled]="!selectedMetric"/>
-                <button mat-icon-button class="close-button" (click)="selectMetric(undefined)" matTooltip="Close chart">
+                <button mat-icon-button class="close-button" (click)="table.clearSelection()" matTooltip="Close chart">
                     <mat-icon>close</mat-icon>
                 </button>
             </div>

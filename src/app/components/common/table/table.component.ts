@@ -22,9 +22,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable, Subscription } from 'rxjs';
+import { SelectionModel } from '@angular/cdk/collections';
 
 /**
  * Configuration for table pagination
@@ -84,7 +86,8 @@ export interface TableSortConfig {
         MatMenuModule,
         MatFormFieldModule,
         MatInputModule,
-        MatTooltipModule
+        MatTooltipModule,
+        MatCheckboxModule
     ],
     templateUrl: './table.component.html',
     styleUrls: ['./table.component.scss'],
@@ -117,6 +120,9 @@ export class TableComponent implements AfterViewInit, OnDestroy {
 
     /** Function to determine if a row can be expanded */
     @Input() canExpand: (row: any) => boolean = () => false;
+
+    /** Function to determine if a row can be selected */
+    @Input() canSelect: (row: any) => boolean = () => true;
 
     /** Whether multiple rows can be expanded simultaneously */
     multiExpand = false;
@@ -158,14 +164,39 @@ export class TableComponent implements AfterViewInit, OnDestroy {
     @Input() refreshFn?: () => Promise<any[]>;
 
     /** Event emitted when pause state changes */
-    @Output() pauseStateChange = new EventEmitter<boolean>();
+    @Output() onPauseStateChange = new EventEmitter<boolean>();
 
     /** Event emitted when refresh is requested */
-    @Output() refresh = new EventEmitter<void>();
+    @Output() onRefresh = new EventEmitter<void>();
 
-    /** Displayed columns */
+    @Output() onDataChange = new EventEmitter<any[]>();
+
+    /** Whether row selection is enabled */
+    @Input() selectable = false;
+
+    /** Whether multiple rows can be selected */
+    @Input()
+    set multiSelect(value: boolean) {
+        // Create a new selection model with the updated multiple setting
+        const selected = this.selection?.selected || [];
+        this.selection = new SelectionModel<any>(value, selected);
+        this._multiSelect = value;
+    }
+    get multiSelect(): boolean {
+        return this._multiSelect;
+    }
+    private _multiSelect = false;
+
+    /** Event emitted when selection changes */
+    @Output() selectionChange = new EventEmitter<any[]>();
+
+    /** Selection model for managing selected rows */
+    selection = new SelectionModel<any>(false, []);
+
+    /** Displayed columns including selection if enabled */
     get displayedColumns(): string[] {
-        return this.columns.map(col => col.name);
+        const columns = this.columns.map(col => col.name);
+        return this.selectable ? ['select', ...columns] : columns;
     }
 
     /**
@@ -191,20 +222,20 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         this.dataSource.paginator = this.paginator;
         this.dataSource.sort = this.sort;
 
-        // Apply default sort if specified
-        if (this.defaultSort && this.sort) {
-            const { active, direction } = this.defaultSort;
-            setTimeout(() => {
+        setTimeout(() => {
+            // Apply default sort if specified
+            if (this.defaultSort && this.sort) {
+                const { active, direction } = this.defaultSort;
                 this.sort.sort({
                     id: active,
                     start: direction,
                     disableClear: false
                 });
-            });
-        }
+            }
 
-        this.setupFilterPredicate();
-        this.setupDataSubscription();
+            this.setupFilterPredicate();
+            this.setupDataSubscription();
+        });
     }
 
     ngOnDestroy() {
@@ -219,6 +250,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         if (this.data$) {
             this.dataSubscription = this.data$.subscribe(data => {
                 this.cachedData = data;
+                this.onDataChange.emit(data);
                 if (!this.isPaused) {
                     this.dataSource.data = data;
                 }
@@ -288,18 +320,24 @@ export class TableComponent implements AfterViewInit, OnDestroy {
      * @param row - Clicked row
      */
     handleRowClick(row: any): void {
-        if (!this.canExpand(row)) return;
-
-        if (this.isExpanded(row)) {
-            this.expandedRows.delete(row);
-        } else {
-            if (!this.multiExpand) {
-                this.expandedRows.clear();
+        // If row is expandable, handle expansion
+        if (this.canExpand(row)) {
+            if (this.isExpanded(row)) {
+                this.expandedRows.delete(row);
+            } else {
+                if (!this.multiExpand) {
+                    this.expandedRows.clear();
+                }
+                this.expandedRows.add(row);
             }
-            this.expandedRows.add(row);
+            this.rowExpanded.emit(row);
+            return;
         }
 
-        this.rowExpanded.emit(row);
+        // If row is selectable but not expandable, handle selection
+        if (this.selectable && this.canSelect(row)) {
+            this.toggleSelection(row);
+        }
     }
 
     /**
@@ -372,5 +410,62 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         } finally {
             this.loading = false;
         }
+    }
+
+    /**
+     * Whether all rows are selected
+     */
+    isAllSelected(): boolean {
+        const numSelected = this.selection.selected.length;
+        const numSelectableRows = this.dataSource.data.filter(row => this.canSelect(row)).length;
+        return numSelected === numSelectableRows && numSelectableRows > 0;
+    }
+
+    /**
+     * Selects all rows if they are not all selected; otherwise clear selection
+     */
+    masterToggle(): void {
+        if (this.isAllSelected()) {
+            this.selection.clear();
+        } else {
+            this.dataSource.data
+                .filter(row => this.canSelect(row))
+                .forEach(row => this.selection.select(row));
+        }
+        this.selectionChange.emit(this.selection.selected);
+    }
+
+    /**
+     * Toggles selection of a row
+     * @param row - Row to toggle
+     * @param event - Click event
+     */
+    toggleSelection(row: any, event?: MouseEvent): void {
+        event?.stopPropagation();
+
+        if (!this.canSelect(row)) return;
+
+        if (!this.multiSelect) {
+            // If the row is already selected, just clear selection
+            if (this.selection.isSelected(row)) {
+                this.selection.clear();
+            } else {
+                // Otherwise clear and select the new row
+                this.selection.clear();
+                this.selection.select(row);
+            }
+        } else {
+            this.selection.toggle(row);
+        }
+
+        this.selectionChange.emit(this.selection.selected);
+    }
+
+    /**
+     * Clears the current selection and emits the change
+     */
+    clearSelection(): void {
+        this.selection.clear();
+        this.selectionChange.emit(this.selection.selected);
     }
 }

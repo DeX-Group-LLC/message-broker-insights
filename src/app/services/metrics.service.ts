@@ -97,18 +97,44 @@ export class MetricsService implements OnDestroy {
             const metricsMap = payload.metrics as Record<string, MetricInfo>;
             if (metricsMap && typeof metricsMap === 'object') {
                 // Transform metrics from server format to application format
-                const metrics = Object.entries(metricsMap).map(([name, info]) => ({
+                const newMetrics = Object.entries(metricsMap).map(([name, info]) => ({
                     name,
                     type: info.type,
                     value: info.value,
                     timestamp: new Date(info.timestamp)
                 }));
+
+                // Update metrics in place to maintain object references
+                const currentMetrics = this.metricsSubject.getValue();
+                const newMetricNames = new Set(newMetrics.map(m => m.name));
+
+                // Update existing metrics and add new ones
+                newMetrics.forEach(newMetric => {
+                    const index = currentMetrics.findIndex(m => m.name === newMetric.name);
+                    if (index >= 0) {
+                        // Update existing metric in place
+                        Object.assign(currentMetrics[index], newMetric);
+                    } else {
+                        // Add new metric
+                        currentMetrics.push(newMetric);
+                    }
+                });
+
+                // Remove metrics that no longer exist
+                const toRemove = currentMetrics.filter(m => !newMetricNames.has(m.name));
+                toRemove.forEach(metric => {
+                    const index = currentMetrics.indexOf(metric);
+                    if (index >= 0) {
+                        currentMetrics.splice(index, 1);
+                    }
+                });
+
                 // Limit the number of metrics to 5min
                 if (this.metrics.length >= this.maxMetrics) this.metrics.shift();
                 // Add the new metrics to the buffer
-                this.metrics.push(metrics);
-                // Emit the latest metrics to subscribers
-                this.metricsSubject.next(metrics);
+                this.metrics.push(newMetrics);
+                // Emit the updated metrics to subscribers
+                this.metricsSubject.next(currentMetrics);
             } else {
                 console.error('Invalid metrics response:', metricsMap);
             }
@@ -160,6 +186,14 @@ export class MetricsService implements OnDestroy {
     public clearHistory(): void {
         this.metrics = [];
         this.metricsSubject.next([]);
+    }
+
+    /**
+     * Gets the current metrics value
+     * @returns Current metrics array
+     */
+    public getCurrentMetrics(): Metric[] {
+        return this.metricsSubject.getValue();
     }
 
     /**

@@ -1,5 +1,23 @@
 <div class="table-container">
     <table mat-table [dataSource]="dataSource" matSort multiTemplateDataRows>
+        <!-- Selection Column -->
+        <ng-container matColumnDef="select" *ngIf="selectable">
+            <th mat-header-cell *matHeaderCellDef>
+                <mat-checkbox *ngIf="multiSelect"
+                            [checked]="isAllSelected()"
+                            [indeterminate]="selection.hasValue() && !isAllSelected()"
+                            (change)="$event ? masterToggle() : null">
+                </mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let row">
+                <mat-checkbox *ngIf="canSelect(row)"
+                            [checked]="selection.isSelected(row)"
+                            (click)="toggleSelection(row, $event)"
+                            (change)="$event ? toggleSelection(row) : null">
+                </mat-checkbox>
+            </td>
+        </ng-container>
+
         <!-- Dynamic Columns -->
         <ng-container *ngFor="let column of columns" [matColumnDef]="column.name">
             <th mat-header-cell *matHeaderCellDef [mat-sort-header]="column.sortable ? column.name : ''">
@@ -42,7 +60,7 @@
 
         <!-- Expanded Content Column -->
         <ng-container matColumnDef="expandedDetail">
-            <td mat-cell *matCellDef="let row" [attr.colspan]="columns.length">
+            <td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumns.length">
                 <div class="expanded-detail"
                     [@detailExpand]="isExpanded(row) ? 'expanded' : 'collapsed'">
                     <ng-container *ngTemplateOutlet="
@@ -58,6 +76,8 @@
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"
             [class.expandable-row]="canExpand(row)"
             [class.expanded-row]="isExpanded(row)"
+            [class.selected-row]="selection.isSelected(row)"
+            [class.selectable-row]="selectable && canSelect(row) && !canExpand(row)"
             (click)="handleRowClick(row)">
         </tr>
         <tr mat-row *matRowDef="let row; columns: ['expandedDetail']"

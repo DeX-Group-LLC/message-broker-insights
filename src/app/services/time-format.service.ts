@@ -36,7 +36,16 @@ export class TimeFormatService implements OnDestroy {
     getElapsedTime(timestamp: string | Date): string {
         const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
         const elapsed = Math.max(0, this.currentTimestamp.value - date.getTime());
+        return this.renderElapsedTime(elapsed);
+    }
 
+    /**
+     * Renders elapsed time in a human readable format.
+     *
+     * @param elapsed - Elapsed time in milliseconds
+     * @returns Formatted elapsed time string
+     */
+    renderElapsedTime(elapsed: number): string {
         const seconds = Math.floor(elapsed / 1000);
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
