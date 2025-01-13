@@ -340,6 +340,8 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     getMetricDisplayValue(metric: Metric): string {
         switch (metric.type.toLowerCase()) {
+            case 'percent':
+                return `${(metric.value * 100).toFixed(2)}%`;
             case 'rate':
                 return `${metric.value}/sec`;
             case 'uptime':
@@ -357,16 +359,7 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      * @returns CSS class name
      */
     getMetricClass(type: string): string {
-        switch (type.toLowerCase()) {
-            case 'gauge':
-                return 'gauge-metric';
-            case 'rate':
-                return 'rate-metric';
-            case 'uptime':
-                return 'uptime-metric';
-            default:
-                return '';
-        }
+        return type.toLowerCase() + '-metric';
     }
 
     /**

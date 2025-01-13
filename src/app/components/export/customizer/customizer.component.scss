@@ -28,7 +28,7 @@
     min-width: 600px;
     width: fit-content;
     max-width: calc(100vw - 2em);
-    min-height: 200px;
+    min-height: 300px;
     height: fit-content;
     max-height: calc(100vh - 2em);
 
@@ -55,7 +55,7 @@
 
 .fields-list {
     height: fit-content;
-    min-height: 200px;
+    min-height: 300px;
     border: 1px solid var(--mat-sys-outline-variant);
     border-radius: 4px;
     padding: 8px;
@@ -136,6 +136,7 @@ mat-form-field {
     white-space: pre;
     word-break: normal;
     word-wrap: normal;
+    min-height: 7em;
 }
 
 .muted {

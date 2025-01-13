@@ -6,7 +6,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { ExportCustomizerComponent } from '../../components/export/customizer/customizer.component';
-import { CSVSerializationOptions, ExportData } from '../../components/export/models/export.model';
+import { ExportData, SerializationOptions } from '../../components/export/models/export.model';
 import { exportToCsv, exportToJson } from '../../components/export/utils/export.utils';
 
 /**
@@ -45,7 +45,7 @@ export class ExportComponent {
     /** Whether the export functionality is disabled */
     @Input() disabled: boolean = false;
     /** Default CSV serialization options */
-    @Input() defaultOptions?: CSVSerializationOptions;
+    @Input() defaultOptions?: SerializationOptions;
 
     constructor(private dialog: MatDialog) {}
 

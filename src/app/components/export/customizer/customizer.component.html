@@ -13,32 +13,23 @@
         <!-- Right Column: Options and Preview -->
         <div class="options-section">
             <div class="cover">
-                <!-- CSV Options -->
-                <mat-expansion-panel *ngIf="data.format === 'csv'">
+                <!-- Common Options -->
+                <mat-expansion-panel>
                     <mat-expansion-panel-header>
-                        <mat-panel-title>CSV Options</mat-panel-title>
+                        <mat-panel-title>Common Options</mat-panel-title>
                     </mat-expansion-panel-header>
 
                     <!-- Date Format -->
                     <mat-form-field>
                         <mat-label>Date Format</mat-label>
-                        <mat-select [(ngModel)]="options.dateFormat" (selectionChange)="updatePreview()">
+                        <mat-select [(ngModel)]="options.dateFormat" (selectionChange)="onOptionChange()">
                             <mat-option value="iso">ISO</mat-option>
                             <mat-option value="local">Local</mat-option>
                             <mat-option value="unix">Unix Timestamp</mat-option>
                         </mat-select>
                     </mat-form-field>
 
-                    <!-- Array Options -->
-                    <mat-form-field>
-                        <mat-label>Array Delimiter</mat-label>
-                        <mat-select [(ngModel)]="options.arrayDelimiter" (selectionChange)="updatePreview()">
-                            <mat-option value=",">Comma (,)</mat-option>
-                            <mat-option value=";">Semicolon (;)</mat-option>
-                            <mat-option value="|">Pipe (|)</mat-option>
-                        </mat-select>
-                    </mat-form-field>
-
+                    <!-- Max Array Items -->
                     <mat-form-field>
                         <mat-label>Max Array Items</mat-label>
                         <mat-select [(ngModel)]="options.maxArrayItems" (selectionChange)="updatePreview()">
@@ -47,7 +38,50 @@
                             <mat-option [value]="20">20</mat-option>
                             <mat-option [value]="50">50</mat-option>
                             <mat-option [value]="100">100</mat-option>
+                            <mat-option [value]="null">All</mat-option>
                         </mat-select>
+                    </mat-form-field>
+
+                    <!-- Max Object Keys -->
+                    <mat-form-field>
+                        <mat-label>Max Object Keys</mat-label>
+                        <mat-select [(ngModel)]="options.maxObjectKeys" (selectionChange)="updatePreview()">
+                            <mat-option [value]="5">5</mat-option>
+                            <mat-option [value]="10">10</mat-option>
+                            <mat-option [value]="20">20</mat-option>
+                            <mat-option [value]="50">50</mat-option>
+                            <mat-option [value]="100">100</mat-option>
+                            <mat-option [value]="null">All</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+                </mat-expansion-panel>
+
+                <!-- CSV Options -->
+                <mat-expansion-panel *ngIf="data.format === 'csv'">
+                    <mat-expansion-panel-header>
+                        <mat-panel-title>CSV Options</mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <!-- Field Delimiter -->
+                    <mat-form-field>
+                        <mat-label>Field Delimiter</mat-label>
+                        <mat-select [(ngModel)]="options.fieldDelimiter" (selectionChange)="updatePreview()">
+                            <mat-option value=",">Comma (,)</mat-option>
+                            <mat-option value=";">Semicolon (;)</mat-option>
+                            <mat-option value="\t">Tab</mat-option>
+                            <mat-option value=" ">Space</mat-option>
+                            <mat-option value="|">Pipe (|)</mat-option>
+                        </mat-select>
+                    </mat-form-field>
+
+                    <!-- Array Format -->
+                    <mat-form-field>
+                        <mat-label>Array Format</mat-label>
+                        <mat-select [(ngModel)]="options.arrayFormat" (selectionChange)="updatePreview()">
+                            <mat-option value="json">JSON</mat-option>
+                            <mat-option value="comma-list">Comma-separated List</mat-option>
+                        </mat-select>
+                        <mat-hint>How arrays should be formatted in the CSV</mat-hint>
                     </mat-form-field>
 
                     <!-- Object Format -->
@@ -55,9 +89,9 @@
                         <mat-label>Object Format</mat-label>
                         <mat-select [(ngModel)]="options.objectFormat" (selectionChange)="updatePreview()">
                             <mat-option value="json">JSON</mat-option>
-                            <mat-option value="flatten">Flattened</mat-option>
-                            <mat-option value="keyValue">Key=Value</mat-option>
+                            <mat-option value="flatten">Flatten objects</mat-option>
                         </mat-select>
+                        <mat-hint>How objects should be formatted in the CSV</mat-hint>
                     </mat-form-field>
                 </mat-expansion-panel>
 
@@ -67,8 +101,7 @@
                         <mat-panel-title>JSON Options</mat-panel-title>
                     </mat-expansion-panel-header>
 
-                    <!-- JSON-specific options can be added here -->
-                    <p class="muted italic">JSON formatting options coming soon...</p>
+                    <p class="muted italic">No additional JSON options available</p>
                 </mat-expansion-panel>
 
                 <div class="preview-section">
