@@ -267,6 +267,7 @@ export class WebsocketService extends EventEmitter {
             this.emit('stateChange', this._state);
             this.emit('connected');
             this.startHeartbeat();
+            this.request('system.service.register', { name: 'Insights Client', description: 'A Message Broker Insights client' });
         };
 
         this.socket.onmessage = (event) => {
