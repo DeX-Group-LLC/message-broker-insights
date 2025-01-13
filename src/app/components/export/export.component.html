@@ -23,8 +23,12 @@
     <!-- CSV Export -->
     <div class="export-menu-item" *ngIf="!formats?.length || formats?.includes('csv')">
         <button mat-menu-item (click)="exportCsv()">
-            <mat-icon>description</mat-icon>
+            <mat-icon class="material-symbols-outlined">table_chart</mat-icon>
             <span>Export as CSV</span>
+        </button>
+        <button mat-icon-button (click)="copyCsv(); $event.stopPropagation()"
+                matTooltip="Copy as CSV">
+            <mat-icon>content_copy</mat-icon>
         </button>
         <button mat-icon-button *ngIf="customizable"
                 (click)="openCustomizer($event, 'csv')"
@@ -38,6 +42,10 @@
         <button mat-menu-item (click)="exportJson()">
             <mat-icon>data_object</mat-icon>
             <span>Export as JSON</span>
+        </button>
+        <button mat-icon-button (click)="copyJson(); $event.stopPropagation()"
+                matTooltip="Copy as JSON">
+            <mat-icon>content_copy</mat-icon>
         </button>
         <button mat-icon-button *ngIf="customizable"
                 (click)="openCustomizer($event, 'json')"

@@ -1,4 +1,5 @@
 import { SerializationOptions, ExportData, FieldSelection } from '../models/export.model';
+import { initializeFieldSelection } from './field-analysis.utils';
 
 /** Default CSV serialization options */
 const defaultCSVOptions: SerializationOptions = {
@@ -84,8 +85,14 @@ export function exportToJson(exportData: ExportData): void {
  * Converts data to CSV string
  */
 export function toCsv(exportData: ExportData, options?: SerializationOptions): string {
-    const { data, fields } = exportData;
-    if (!fields) throw new Error('Fields are required for CSV export');
+    const { data } = exportData;
+    let { fields } = exportData;
+
+    // If no fields provided, analyze the data structure
+    if (!fields) {
+        fields = initializeFieldSelection(data);
+    }
+
     const opts = { ...defaultCSVOptions, ...options };
     const delimiter = opts.fieldDelimiter || ',';
 

@@ -5,9 +5,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ExportCustomizerComponent } from '../../components/export/customizer/customizer.component';
 import { ExportData, SerializationOptions } from '../../components/export/models/export.model';
-import { exportToCsv, exportToJson } from '../../components/export/utils/export.utils';
+import { exportToCsv, exportToJson, toCsv, toJson } from '../../components/export/utils/export.utils';
 
 /**
  * Reusable component for export functionality
@@ -22,7 +23,8 @@ import { exportToCsv, exportToJson } from '../../components/export/utils/export.
         MatIconModule,
         MatMenuModule,
         MatTooltipModule,
-        MatDialogModule
+        MatDialogModule,
+        MatSnackBarModule
     ],
     templateUrl: './export.component.html',
     styleUrls: ['./export.component.scss']
@@ -47,7 +49,10 @@ export class ExportComponent {
     /** Default CSV serialization options */
     @Input() defaultOptions?: SerializationOptions;
 
-    constructor(private dialog: MatDialog) {}
+    constructor(
+        private dialog: MatDialog,
+        private snackBar: MatSnackBar
+    ) {}
 
     /**
      * Gets the export data in the required format
@@ -102,5 +107,35 @@ export class ExportComponent {
     exportJson(): void {
         const exportData = this.getExportData();
         exportToJson(exportData);
+    }
+
+    /**
+     * Copies the data as CSV to clipboard
+     */
+    copyCsv(): void {
+        const exportData = this.getExportData();
+        const csv = toCsv(exportData, this.defaultOptions);
+        navigator.clipboard.writeText(csv).then(() => {
+            this.snackBar.open('CSV copied to clipboard', 'Close', {
+                duration: 2000,
+                horizontalPosition: 'center',
+                verticalPosition: 'bottom'
+            });
+        });
+    }
+
+    /**
+     * Copies the data as JSON to clipboard
+     */
+    copyJson(): void {
+        const exportData = this.getExportData();
+        const json = toJson(exportData.data);
+        navigator.clipboard.writeText(json).then(() => {
+            this.snackBar.open('JSON copied to clipboard', 'Close', {
+                duration: 2000,
+                horizontalPosition: 'center',
+                verticalPosition: 'bottom'
+            });
+        });
     }
 }

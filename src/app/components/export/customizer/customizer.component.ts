@@ -6,9 +6,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
-import { ExportData, FieldSelection } from '../models/export.model';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ExportData, FieldSelection, SerializationOptions } from '../models/export.model';
 import { exportToCsv, exportToJson, toCsv, toJson } from '../utils/export.utils';
+import { initializeFieldSelection } from '../utils/field-analysis.utils';
 
 interface CustomizerData {
     format: 'csv' | 'json';
@@ -34,12 +37,14 @@ interface ExportOptions {
     imports: [
         CommonModule,
         FormsModule,
-        MatDialogModule,
         MatButtonModule,
-        MatCheckboxModule,
+        MatDialogModule,
         MatExpansionModule,
         MatFormFieldModule,
-        MatSelectModule
+        MatIconModule,
+        MatSelectModule,
+        MatCheckboxModule,
+        MatSnackBarModule
     ],
     templateUrl: './customizer.component.html',
     styleUrls: ['./customizer.component.scss']
@@ -61,7 +66,12 @@ export class ExportCustomizerComponent implements OnInit, AfterViewInit {
 
     constructor(
         public dialogRef: MatDialogRef<ExportCustomizerComponent>,
-        @Inject(MAT_DIALOG_DATA) public data: CustomizerData
+        private snackBar: MatSnackBar,
+        @Inject(MAT_DIALOG_DATA) public data: {
+            exportData: ExportData;
+            options?: SerializationOptions;
+            format: 'csv' | 'json';
+        }
     ) {
         this.options = {
             // Common defaults
@@ -97,141 +107,10 @@ export class ExportCustomizerComponent implements OnInit, AfterViewInit {
     }
 
     /**
-     * Analyzes the data structure and creates a hierarchical field selection
+     * Initializes field selection from the data
      */
     private initializeFieldSelection(): void {
-        if (Array.isArray(this.data.exportData.data)) {
-            // Sample up to 10 items, evenly distributed through the array
-            const data = this.data.exportData.data;
-            const sampleSize = Math.min(10000, data.length);
-            const step = Math.max(1, Math.floor(data.length / sampleSize));
-            const samples = Array.from({ length: sampleSize }, (_, i) => data[i * step]);
-
-            // Merge the structures of all samples
-            this.selectedFields = samples.reduce((mergedFields, sample) => {
-                const sampleFields = this.analyzeStructure(sample);
-                return this.mergeFieldStructures(mergedFields, sampleFields);
-            }, [] as FieldSelection[]);
-        } else {
-            this.selectedFields = this.analyzeStructure(this.data.exportData.data);
-        }
-    }
-
-    /**
-     * Merges two field structures, combining their children and preserving all unique fields
-     */
-    private mergeFieldStructures(fields1: FieldSelection[], fields2: FieldSelection[]): FieldSelection[] {
-        const merged = new Map<string, FieldSelection>();
-
-        // Helper to add fields to the map
-        const addFields = (fields: FieldSelection[]) => {
-            fields.forEach(field => {
-                const key = field.path.join('.');
-                if (!merged.has(key)) {
-                    merged.set(key, { ...field, children: [] });
-                }
-                const existing = merged.get(key)!;
-
-                // Merge children if both have them
-                if (field.children?.length || existing.children?.length) {
-                    existing.children = this.mergeFieldStructures(
-                        existing.children || [],
-                        field.children || []
-                    );
-                    // Update parent references
-                    existing.children.forEach(child => child.parent = existing);
-                }
-
-                // Update type if the existing field is null and the new one isn't
-                if (existing.type === 'null' && field.type !== 'null') {
-                    existing.type = field.type;
-                }
-            });
-        };
-
-        addFields(fields1);
-        addFields(fields2);
-
-        // Convert map back to array, preserving order from fields1
-        const result: FieldSelection[] = [];
-        const seen = new Set<string>();
-
-        // First add all fields from fields1 in their original order
-        fields1.forEach(field => {
-            const key = field.path.join('.');
-            if (merged.has(key) && !seen.has(key)) {
-                result.push(merged.get(key)!);
-                seen.add(key);
-            }
-        });
-
-        // Then add any new fields from fields2
-        fields2.forEach(field => {
-            const key = field.path.join('.');
-            if (merged.has(key) && !seen.has(key)) {
-                result.push(merged.get(key)!);
-                seen.add(key);
-            }
-        });
-
-        return result;
-    }
-
-    /**
-     * Recursively analyzes an object's structure to create field selections
-     */
-    private analyzeStructure(obj: any, parentPath: string[] = [], level: number = 0): FieldSelection[] {
-        if (!obj || typeof obj !== 'object') return [];
-
-        return Object.entries(obj).map(([key, value]): FieldSelection => {
-            const path = [...parentPath, key];
-            const type = this.getValueType(value);
-            const field: FieldSelection = {
-                name: key,
-                path,
-                included: true,
-                type,
-                level,
-                children: []
-            };
-
-            if (type === 'object' && value) {
-                field.children = this.analyzeStructure(value, path, level + 1);
-                field.children.forEach(child => child.parent = field);
-            } else if (type === 'array' && Array.isArray(value) && value.length > 0) {
-                // For arrays, analyze multiple items if they're objects
-                if (value.some(item => item && typeof item === 'object')) {
-                    // Sample up to 3 items from the array
-                    const sampleSize = Math.min(3, value.length);
-                    const step = Math.max(1, Math.floor(value.length / sampleSize));
-                    const samples = Array.from({ length: sampleSize }, (_, i) => value[i * step])
-                        .filter(item => item && typeof item === 'object');
-
-                    field.children = samples.reduce((mergedFields, sample) => {
-                        const sampleFields = this.analyzeStructure(sample, path, level + 1);
-                        return this.mergeFieldStructures(mergedFields, sampleFields);
-                    }, [] as FieldSelection[]);
-
-                    field.children?.forEach(child => child.parent = field);
-                }
-            }
-
-            return field;
-        });
-    }
-
-    /**
-     * Determines the type of a value
-     */
-    private getValueType(value: any): 'string' | 'number' | 'boolean' | 'date' | 'object' | 'array' | 'null' {
-        if (value === undefined || value === null) return 'null';
-        if (Array.isArray(value)) return 'array';
-        if (value instanceof Date) return 'date';
-        if (typeof value === 'object') return 'object';
-        if (typeof value === 'string') return 'string';
-        if (typeof value === 'number') return 'number';
-        if (typeof value === 'boolean') return 'boolean';
-        return 'string';
+        this.selectedFields = initializeFieldSelection(this.data.exportData.data);
     }
 
     /**
@@ -345,24 +224,6 @@ export class ExportCustomizerComponent implements OnInit, AfterViewInit {
     }
 
     /**
-     * Converts a camelCase or snake_case string to Title Case
-     */
-    private toTitleCase(str: string): string {
-        // First handle snake_case
-        const spacedStr = str.replace(/_/g, ' ');
-
-        // Then handle camelCase
-        const withSpaces = spacedStr.replace(/([A-Z])/g, ' $1');
-
-        // Convert to title case
-        return withSpaces
-            .split(' ')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-            .join(' ')
-            .trim();
-    }
-
-    /**
      * Gets the filtered export data based on field selection
      */
     private getExportData(): ExportData {
@@ -372,13 +233,6 @@ export class ExportCustomizerComponent implements OnInit, AfterViewInit {
         const filteredData = Array.isArray(this.data.exportData.data)
             ? this.data.exportData.data.map((item: any) => this.filterObjectByPaths(item, includedPaths))
             : this.filterObjectByPaths(this.data.exportData.data, includedPaths);
-
-        // Generate headers from the field paths
-        /*const headers = includedPaths.reduce((acc, path) => {
-            const key = path.join('.');  // Use dot notation as the key
-            acc[key] = path;  // Store the full path array
-            return acc;
-        }, {} as Record<string, string[]>);*/
 
         return {
             data: filteredData,
@@ -578,5 +432,32 @@ export class ExportCustomizerComponent implements OnInit, AfterViewInit {
 
         // Update the preview content
         this.updatePreview();
+    }
+
+    /**
+     * Copies the current preview to clipboard
+     */
+    copyPreview(): void {
+        navigator.clipboard.writeText(this.preview).then(() => {
+            this.snackBar.open('Preview copied to clipboard', 'Close', {
+                duration: 2000,
+                horizontalPosition: 'center',
+                verticalPosition: 'bottom'
+            });
+        });
+    }
+
+    copy(): void {
+        navigator.clipboard.writeText(toCsv(this.getExportFormattedData(), {
+            fieldDelimiter: this.options.fieldDelimiter,
+            arrayFormat: this.options.arrayFormat,
+            objectFormat: this.options.objectFormat
+        })).then(() => {
+            this.snackBar.open('Preview copied to clipboard', 'Close', {
+                duration: 2000,
+                horizontalPosition: 'center',
+                verticalPosition: 'bottom'
+            });
+        });
     }
 }

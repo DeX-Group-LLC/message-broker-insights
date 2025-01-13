@@ -176,3 +176,19 @@ pre {
     gap: 1em;
     height: inherit;
 }
+
+.preview-section {
+    .preview-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        h3 {
+            margin: 0;
+        }
+
+        button {
+            overflow: hidden;
+        }
+    }
+}

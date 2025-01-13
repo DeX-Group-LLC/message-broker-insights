@@ -105,7 +105,12 @@
                 </mat-expansion-panel>
 
                 <div class="preview-section">
-                    <h3>Preview</h3>
+                    <div class="preview-header">
+                        <h3>Preview</h3>
+                        <button mat-icon-button (click)="copyPreview()" matTooltip="Copy preview">
+                            <mat-icon>content_copy</mat-icon>
+                        </button>
+                    </div>
                     <pre class="preview-content">{{preview}}</pre>
                 </div>
             </div>
@@ -138,5 +143,6 @@
 
 <mat-dialog-actions align="end">
     <button mat-button (click)="dialogRef.close()">Cancel</button>
+    <button mat-button (click)="copy()" color="accent">Copy</button>
     <button mat-button color="primary" (click)="save()">Export</button>
 </mat-dialog-actions>
