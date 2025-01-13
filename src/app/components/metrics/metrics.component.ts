@@ -17,6 +17,7 @@ import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 import { TimeFormatService } from '../../services/time-format.service';
 import { LayoutComponent } from '../layout/layout.component';
+import { ExportComponent } from '../export/export.component';
 
 /**
  * Component for displaying and managing system metrics.
@@ -38,7 +39,8 @@ import { LayoutComponent } from '../layout/layout.component';
         MatInputModule,
         MatFormFieldModule,
         MatMenuModule,
-        NgChartsModule
+        NgChartsModule,
+        ExportComponent
     ],
     templateUrl: './metrics.component.html',
     styleUrls: ['./metrics.component.scss']
@@ -451,5 +453,23 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     clearHistory(): void {
         this.metricsService.clearHistory();
+    }
+
+    /**
+     * Exports the current chart data.
+     */
+    getChartExportData(): any {
+        if (!this.selectedMetric) return [];
+
+        const latestMetric = this.latestMetrics.find(m => m.name === this.selectedMetric);
+        if (!latestMetric) return [];
+
+        const history = this.metricsService.getMetricHistory(this.selectedMetric);
+        return history.map(h => ({
+            name: latestMetric.name,
+            value: h.value,
+            type: latestMetric.type,
+            timestamp: h.timestamp
+        }));
     }
 }

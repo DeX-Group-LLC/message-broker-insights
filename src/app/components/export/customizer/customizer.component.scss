@@ -1,0 +1,176 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    min-width: 20em;
+    max-width: calc(100vw - 2em);
+    max-height: calc(100vh - 2em);
+    background-color: var(--mat-sys-surface-container);
+
+    ::ng-deep {
+        .mat-mdc-dialog-content {
+            display: flex;
+            margin: 0;
+            padding: 16px;
+            overflow: hidden;
+        }
+
+        .mat-mdc-dialog-actions {
+            padding: 16px;
+            margin: 0;
+            flex-shrink: 0;
+        }
+    }
+}
+
+.customizer-layout {
+    display: flex;
+    gap: 1em;
+    min-width: 600px;
+    width: fit-content;
+    max-width: calc(100vw - 2em);
+    min-height: 200px;
+    height: fit-content;
+    max-height: calc(100vh - 2em);
+
+    @media (min-width: 800px) {
+        flex-direction: row;
+    }
+}
+
+.fields-section {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+
+    /*@media (min-width: 800px) {
+        width: 300px;
+    }*/
+
+    h3 {
+        margin: 0;
+        font-weight: 500;
+    }
+}
+
+.fields-list {
+    height: fit-content;
+    min-height: 200px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.options-section {
+    overflow-y: auto;
+
+    .cover {
+        height: 0;
+        min-height: 100%;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+    }
+
+    mat-expansion-panel {
+        flex-shrink: 0;
+    }
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.field-item {
+    display: flex;
+    flex-direction: column;
+    width: fit-content;
+
+    .field-name {
+        margin-right: 8px;
+    }
+
+    .field-type {
+        font-size: 12px;
+        opacity: 0.7;
+        font-family: monospace;
+    }
+
+    ::ng-deep .mat-checkbox-label {
+        display: flex;
+        align-items: center;
+    }
+}
+
+mat-form-field {
+    width: 100%;
+    margin-bottom: 16px;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+.preview-section {
+    display: flex;
+    flex-direction: column;
+    height: fit-content;
+    padding: 0;
+
+    h3 {
+        margin: 0;
+        font-weight: 500;
+    }
+}
+
+.preview-content {
+    overflow: auto;
+    background-color: var(--mat-sys-surface-container-highest);
+    padding: 12px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre;
+    word-break: normal;
+    word-wrap: normal;
+}
+
+.muted {
+    opacity: 0.5;
+}
+
+.italic {
+    font-style: italic;
+}
+
+mat-expansion-panel {
+    background-color: var(--mat-sys-surface-container-highest);
+}
+
+mat-dialog-content {
+    padding: 0 2em !important;
+}
+
+// Add styles for the customize button alignment
+:host ::ng-deep {
+    .customize-button {
+        margin-left: 8px;
+        vertical-align: middle;
+        line-height: 36px; // Match the height of mat-menu-item
+    }
+}
+
+pre {
+    margin: 0;
+}
+
+.preview-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 1em;
+    height: inherit;
+}

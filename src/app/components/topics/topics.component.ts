@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -15,6 +15,8 @@ import { Subscription } from 'rxjs';
 import { Topic, TopicsService } from '../../services/topics.service';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { TimeFormatService } from '../../services/time-format.service';
+import { LayoutComponent } from '../../components/layout/layout.component';
+import { ExportComponent } from '../export/export.component';
 
 /**
  * Component for displaying and managing topics.
@@ -35,7 +37,8 @@ import { TimeFormatService } from '../../services/time-format.service';
         MatSortModule,
         MatTableModule,
         MatTooltipModule,
-        MatMenuModule
+        MatMenuModule,
+        ExportComponent
     ],
     templateUrl: './topics.component.html',
     styleUrls: ['./topics.component.scss'],
@@ -82,15 +85,19 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
     /** Reference to the sort header */
     @ViewChild(MatSort) sort!: MatSort;
 
+    @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
+
     /**
      * Creates an instance of TopicsComponent.
      *
      * @param topicsService - Service for managing topics
      * @param timeFormatService - Service for formatting time
+     * @param layout - Layout component
      */
     constructor(
         private topicsService: TopicsService,
-        private timeFormatService: TimeFormatService
+        private timeFormatService: TimeFormatService,
+        private layout: LayoutComponent
     ) {}
 
     /**
@@ -118,6 +125,10 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
                 disableClear: false
             });
         });
+
+        if (this.toolbarContent) {
+            this.layout.activeToolbarContent = this.toolbarContent;
+        }
     }
 
     /**
@@ -126,6 +137,7 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
     ngOnDestroy(): void {
         this.topicsSubscription?.unsubscribe();
         this.loadingSubscription?.unsubscribe();
+        this.layout.activeToolbarContent = undefined;
     }
 
     /**
@@ -356,5 +368,20 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     hasActiveFilters(): boolean {
         return !!(this.nameFilter || this.subscriberFilter || this.priorityFilter || this.lastUpdatedFilter);
+    }
+
+    /**
+     * Exports the current data source.
+     */
+    getExportData(): any {
+        return this.dataSource.data.map(topic => ({
+            name: topic.name,
+            subscribers: topic.subscribers.map(s => ({
+                serviceId: s.serviceId,
+                priority: s.priority
+            })),
+            priorityRange: this.getPriorityRange(topic),
+            lastUpdated: topic.lastUpdated
+        }));
     }
 }

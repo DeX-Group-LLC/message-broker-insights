@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatSortModule, MatSort, Sort } from '@angular/material/sort';
+import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,6 +17,7 @@ import { LogService, LogEntry, LogLevel } from '../../services/log.service';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { TimeFormatService } from '../../services/time-format.service';
 import { LayoutComponent } from '../layout/layout.component';
+import { ExportComponent } from '../export/export.component';
 
 /**
  * Component for displaying and managing log entries.
@@ -38,7 +39,8 @@ import { LayoutComponent } from '../layout/layout.component';
         MatFormFieldModule,
         MatInputModule,
         MatTooltipModule,
-        MatSelectModule
+        MatSelectModule,
+        ExportComponent
     ],
     templateUrl: './logs.component.html',
     styleUrls: ['./logs.component.scss'],

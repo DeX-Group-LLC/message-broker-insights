@@ -1,0 +1,48 @@
+<ng-container [ngSwitch]="position || 'button'">
+    <!-- Standalone button with menu -->
+    <button *ngSwitchCase="'button'"
+            mat-icon-button
+            [matMenuTriggerFor]="exportMenu"
+            [matTooltip]="tooltip || 'Export'"
+            [disabled]="disabled">
+        <mat-icon>{{icon || 'download'}}</mat-icon>
+    </button>
+
+    <!-- Menu item (for nested menus) -->
+    <button *ngSwitchCase="'menu-item'"
+            mat-menu-item
+            [matMenuTriggerFor]="exportMenu"
+            [disabled]="disabled">
+        <mat-icon>{{icon || 'download'}}</mat-icon>
+        <span>Export</span>
+    </button>
+</ng-container>
+
+<!-- Export Menu -->
+<mat-menu #exportMenu="matMenu">
+    <!-- CSV Export -->
+    <div class="export-menu-item" *ngIf="!formats?.length || formats?.includes('csv')">
+        <button mat-menu-item (click)="exportCsv()">
+            <mat-icon>description</mat-icon>
+            <span>Export as CSV</span>
+        </button>
+        <button mat-icon-button *ngIf="customizable"
+                (click)="openCustomizer($event, 'csv')"
+                matTooltip="Customize CSV Export">
+            <mat-icon>tune</mat-icon>
+        </button>
+    </div>
+
+    <!-- JSON Export -->
+    <div class="export-menu-item" *ngIf="!formats?.length || formats?.includes('json')">
+        <button mat-menu-item (click)="exportJson()">
+            <mat-icon>data_object</mat-icon>
+            <span>Export as JSON</span>
+        </button>
+        <button mat-icon-button *ngIf="customizable"
+                (click)="openCustomizer($event, 'json')"
+                matTooltip="Customize JSON Export">
+            <mat-icon>tune</mat-icon>
+        </button>
+    </div>
+</mat-menu>
