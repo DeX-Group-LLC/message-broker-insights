@@ -11,6 +11,8 @@ import { TopicsComponent } from './components/topics/topics.component';
 export interface RouteData {
     /** Icon name from Material Icons library */
     icon: string;
+    /** Icon class for custom icons */
+    iconClass?: string;
     /** Full label for the route in navigation */
     label: string;
     /** Short label for collapsed navigation state */
@@ -40,6 +42,7 @@ export const routes: Routes = [
         component: MetricsComponent,
         data: {
             icon: 'monitoring',
+            iconClass: 'material-symbols-outlined',
             label: 'System Metrics',
             shortLabel: 'Metrics'
         }
@@ -48,7 +51,7 @@ export const routes: Routes = [
         path: 'services',
         component: ServicesComponent,
         data: {
-            icon: 'settings_applications',
+            icon: 'lan',
             label: 'System Services',
             shortLabel: 'Services'
         }

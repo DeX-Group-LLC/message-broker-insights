@@ -22,6 +22,7 @@ import { MatSelectChange } from '@angular/material/select';
 interface NavItem {
     path: string;
     icon: string;
+    iconClass?: string;
     label: string;
     shortLabel: string;
 }
@@ -87,6 +88,7 @@ export class LayoutComponent implements OnInit {
         .map((route: Route) => ({
             path: `/${route.path}`,
             icon: (route.data as RouteData).icon,
+            iconClass: (route.data as RouteData).iconClass,
             label: (route.data as RouteData).label,
             shortLabel: (route.data as RouteData).shortLabel
         }));

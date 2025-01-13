@@ -16,7 +16,7 @@
                        (click)="$event.stopPropagation()"
                        [matTooltip]="!isExpanded ? item.shortLabel : ''"
                        matTooltipPosition="right">
-                        <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
+                        <mat-icon matListItemIcon [class]="item.iconClass">{{item.icon}}</mat-icon>
                         <span matListItemTitle>{{item.shortLabel}}</span>
                     </a>
                 </mat-nav-list>
