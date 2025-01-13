@@ -14,9 +14,34 @@
 
     // Selection column styles
     .mat-column-select {
-        width: 48px;
-        padding: 0 8px;
+        width: 36px;
+        padding: 0 4px;
         text-align: center;
+
+        .mat-mdc-checkbox {
+            margin: 0;
+            padding: 0;
+        }
+    }
+
+    // Expand column styles
+    .mat-column-expand {
+        width: 18px;
+        padding: 0;
+        text-align: center;
+
+        .expand-icon {
+            transition: transform 150ms ease-in-out;
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            margin: 0;
+
+            &.expanded {
+                transform: rotate(180deg);
+            }
+        }
     }
 }
 
@@ -129,11 +154,6 @@ table {
             width: 14px;
             height: 14px;
             line-height: 14px;
-            opacity: 0.7;
-        }
-
-        &:hover mat-icon {
-            opacity: 1;
         }
     }
 
@@ -167,6 +187,30 @@ tr {
 
     &.selectable-row {
         cursor: pointer;
+    }
+
+    &.group-row {
+        font-weight: 500;
+
+        td {
+            padding: 0 16px;
+            border-bottom: none;
+        }
+
+        .group-row-content {
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+        }
+
+        &:hover {
+            background: var(--mat-sys-surface-container);
+        }
+
+        & + tr:not(.group-row) {
+            background: var(--mat-sys-surface-container-highest);
+            border-bottom: 1px solid var(--mat-sys-outline-variant);
+        }
     }
 
     &.expanded-row {

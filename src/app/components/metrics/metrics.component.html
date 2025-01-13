@@ -22,6 +22,8 @@
                 [selectable]="true"
                 [multiSelect]="false"
                 [canExpand]="canExpand"
+                [getGroupName]="getMetricGroup"
+                [groupDisplayColumn]="'name'"
                 (selectionChange)="onSelectionChange($event)"
                 (onDataChange)="updateChart()"
                 [paginationConfig]="{

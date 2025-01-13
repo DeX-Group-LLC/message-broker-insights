@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subject, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { MetricsService, Metric } from '../../services/metrics.service';
 import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
@@ -48,7 +48,19 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
     selectedMetric?: Metric;
 
     /** Function that always returns false since we don't want expansion when using selection */
-    canExpand = () => false;
+    canExpand = (row: any): boolean => {
+        // Allow expansion for group rows
+        return row?.__isGroup === true;
+    };
+
+    /** Function to get the group name for a metric */
+    getMetricGroup = (metric: Metric): string => {
+        if (!metric?.name) return 'Other';
+        const parts = metric.name.split('.');
+        const groupName = parts[0];
+        console.log('Grouping metric:', metric.name, 'into group:', groupName);
+        return groupName;
+    };
 
     /** Subscription for metrics updates */
     private metricsSubscription?: Subscription;
@@ -105,7 +117,8 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         });
 
         // Subscribe to metrics updates
-        this.metricsSubscription = this.metricsService.metrics$.subscribe(() => {
+        this.metricsSubscription = this.metricsService.metrics$.subscribe(metrics => {
+            console.log('Received metrics update:', metrics);
             this.updateChart();
         });
     }
