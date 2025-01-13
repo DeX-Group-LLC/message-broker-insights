@@ -55,6 +55,18 @@
   - Expandable subscriber details
   - Advanced filtering by topic name, subscribers, and priority
   - Multi-expand support for comparing topics
+- 📥 Data Export Capabilities:
+  - Export data to CSV or JSON formats
+  - Customizable field selection
+  - Advanced formatting options:
+    - Array formatting (JSON or comma-separated list)
+    - Object formatting (JSON or flattened structure)
+    - Date formatting (ISO, Local, or Unix timestamp)
+    - Custom field delimiters for CSV
+  - Preview functionality
+  - Hierarchical field selection with parent/child relationships
+  - Smart handling of nested arrays and objects
+  - Configurable array size limits
 
 ### Theme System
 The application supports both light/dark modes and multiple color themes:
@@ -164,6 +176,8 @@ The web interface is built with a modular architecture:
   - `MetricsComponent`: System metrics visualization and analysis
   - `ServicesComponent`: Service management and monitoring interface
   - `TopicsComponent`: Topic management and subscriber monitoring interface
+  - `ExportComponent`: Reusable data export interface with customization options
+  - `ExportCustomizerComponent`: Advanced export configuration dialog with field selection and format options
 
 - **Features**
   - Real-time data updates via WebSocket
@@ -182,6 +196,8 @@ The web interface is built with a modular architecture:
   - Observable data streams
   - Event-driven communication
   - Singleton services
+  - Recursive data processing for nested structures
+  - Smart data cloning with type preservation
 
 - **Standardized Component Behavior**
   - Consistent refresh mechanism across components:
@@ -196,6 +212,12 @@ The web interface is built with a modular architecture:
     - Pause/Resume functionality
     - Data persistence during paused state
     - Automatic data refresh on resume
+  - Export functionality:
+    - Consistent export interface across components
+    - Field customization with hierarchical selection
+    - Format options with live preview
+    - Smart handling of complex data structures
+    - Configurable size limits and formatting
 
 ## Contributing
 
