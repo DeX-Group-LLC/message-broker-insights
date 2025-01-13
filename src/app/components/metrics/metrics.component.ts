@@ -341,14 +341,17 @@ export class MetricsComponent implements OnInit, AfterViewInit, OnDestroy {
     getMetricDisplayValue(metric: Metric): string {
         switch (metric.type.toLowerCase()) {
             case 'percent':
-                return `${(Math.round(metric.value * 10000) / 100).toLocaleString()}%`;
+                return `${(metric.value * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
             case 'rate':
-                return `${metric.value.toLocaleString()}/sec`;
+                return `${metric.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}/sec`;
             case 'uptime':
                 return this.timeFormatService.getElapsedTime(new Date(Date.now() - metric.value * 1000));
+            case 'average':
             case 'gauge':
+            case 'maximum':
+            case 'minimum':
             default:
-                return metric.value.toLocaleString();
+                return metric.value.toLocaleString(undefined, { maximumFractionDigits: 2 });
         }
     }
 
