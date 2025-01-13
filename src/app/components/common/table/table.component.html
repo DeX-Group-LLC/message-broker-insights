@@ -1,0 +1,99 @@
+<div class="table-container">
+    <table mat-table [dataSource]="dataSource" matSort multiTemplateDataRows>
+        <!-- Dynamic Columns -->
+        <ng-container *ngFor="let column of columns" [matColumnDef]="column.name">
+            <th mat-header-cell *matHeaderCellDef [mat-sort-header]="column.sortable ? column.name : ''">
+                <div class="header-cell-content" [class.no-sort]="!column.sortable">
+                    <span>{{column.label}}</span>
+                    <button *ngIf="column.filterable"
+                            mat-icon-button
+                            class="filter-icon"
+                            [class.active]="hasColumnFilter(column.name)"
+                            [matMenuTriggerFor]="filterMenu"
+                            (click)="$event.stopPropagation()">
+                        <mat-icon>filter_alt</mat-icon>
+                    </button>
+                    <mat-menu #filterMenu="matMenu" class="filter-menu">
+                        <div class="filter-menu-content" (click)="$event.stopPropagation()">
+                            <mat-form-field>
+                                <mat-label>Filter {{column.label.toLowerCase()}}</mat-label>
+                                <input matInput
+                                       [ngModel]="filters.get(column.name)"
+                                       (ngModelChange)="setFilter(column.name, $event)"
+                                       (keyup.enter)="filterMenu.closed.emit()">
+                                <button *ngIf="filters.get(column.name)"
+                                        matSuffix
+                                        mat-icon-button
+                                        (click)="setFilter(column.name, '')">
+                                    <mat-icon>close</mat-icon>
+                                </button>
+                            </mat-form-field>
+                        </div>
+                    </mat-menu>
+                </div>
+            </th>
+            <td mat-cell *matCellDef="let row">
+                <ng-container *ngTemplateOutlet="
+                    cellTemplate;
+                    context: { $implicit: row, column: column }
+                "></ng-container>
+            </td>
+        </ng-container>
+
+        <!-- Expanded Content Column -->
+        <ng-container matColumnDef="expandedDetail">
+            <td mat-cell *matCellDef="let row" [attr.colspan]="columns.length">
+                <div class="expanded-detail"
+                    [@detailExpand]="isExpanded(row) ? 'expanded' : 'collapsed'">
+                    <ng-container *ngTemplateOutlet="
+                        expandedTemplate;
+                        context: { $implicit: row }
+                    "></ng-container>
+                </div>
+            </td>
+        </ng-container>
+
+        <!-- Header and Row Definitions -->
+        <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            [class.expandable-row]="canExpand(row)"
+            [class.expanded-row]="isExpanded(row)"
+            (click)="handleRowClick(row)">
+        </tr>
+        <tr mat-row *matRowDef="let row; columns: ['expandedDetail']"
+            class="sub-row">
+        </tr>
+    </table>
+
+    <div class="no-data-message" *ngIf="!dataSource.data.length">
+        {{noDataMessage}}
+    </div>
+</div>
+
+<div class="paginator-container" *ngIf="paginationConfig?.enabled !== false">
+    <div class="paginator-actions">
+        <button mat-icon-button (click)="clearFilters()" [disabled]="!filters.size"
+                matTooltip="Clear all filters">
+            <mat-icon>filter_alt_off</mat-icon>
+        </button>
+        <button mat-icon-button (click)="togglePause()"
+                [matTooltip]="isPaused ? 'Resume' : 'Pause'">
+            <mat-icon>{{ isPaused ? 'play_arrow' : 'pause' }}</mat-icon>
+        </button>
+        <button mat-icon-button (click)="refreshData()"
+                [disabled]="!isPaused || loading"
+                matTooltip="Refresh">
+            <mat-icon [class.rotating]="loading">refresh</mat-icon>
+        </button>
+        <button mat-icon-button (click)="toggleMultiExpand()"
+                [matTooltip]="multiExpand ? 'Disable multi-expand' : 'Enable multi-expand'">
+            <mat-icon>{{ multiExpand ? 'layers' : 'layers_clear' }}</mat-icon>
+        </button>
+        <ng-content select="[tableActions]"></ng-content>
+    </div>
+    <mat-paginator
+        [pageSizeOptions]="paginationConfig?.pageSizeOptions || [10, 25, 50, 100]"
+        [pageSize]="paginationConfig?.defaultPageSize || 25"
+        [showFirstLastButtons]="paginationConfig?.showFirstLastButtons !== false">
+    </mat-paginator>
+</div>
