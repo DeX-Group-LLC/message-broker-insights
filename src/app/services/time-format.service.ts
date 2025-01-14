@@ -27,6 +27,20 @@ export class TimeFormatService implements OnDestroy {
         this.currentTimestamp.complete();
     }
 
+    /**
+     * Gets a date object from current timestamp minus seconds
+     * @param seconds - Timestamp in seconds
+     * @returns Date object
+     */
+    getDate(seconds: number): Date {
+        return new Date(this.currentTimestamp.value - seconds * 1000);
+    }
+
+    /**
+     * Gets the time elapsed since a timestamp in seconds
+     * @param timestamp - Timestamp in seconds
+     * @returns Time elapsed in seconds
+     */
     getElapsed(timestamp: string | Date): number {
         const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
         return Math.max(0, this.currentTimestamp.value - date.getTime());

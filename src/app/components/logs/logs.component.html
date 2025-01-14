@@ -19,54 +19,52 @@
     </button>
 </ng-template>
 
-<div class="logs-container">
-    <mat-card>
-        <mat-card-content>
-            <app-table
-                [data$]="logService.logs$"
-                [columns]="columns"
-                [canExpand]="hasMetaData"
-                [defaultSort]="{ active: 'timestamp', direction: 'desc' }"
-                [paginationConfig]="{
-                    pageSizeOptions: [10, 25, 50, 100],
-                    defaultPageSize: 25,
-                    showFirstLastButtons: true
-                }">
+<mat-card>
+    <mat-card-content>
+        <app-table
+            [data$]="logService.logs$"
+            [columns]="columns"
+            [canExpand]="hasMetaData"
+            [defaultSort]="{ active: 'timestamp', direction: 'desc' }"
+            [paginationConfig]="{
+                pageSizeOptions: [10, 25, 50, 100],
+                defaultPageSize: 25,
+                showFirstLastButtons: true
+            }">
 
-                <!-- Cell Templates -->
-                <ng-template #cellTemplate let-log let-column="column">
-                    <ng-container [ngSwitch]="column.name">
-                        <ng-container *ngSwitchCase="'timestamp'">
-                            {{getFormattedDate(log.timestamp)}}
-                            <span class="muted italic">({{getElapsedTime(log.timestamp)}})</span>
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'level'">
-                            <span [ngClass]="log.level.toLowerCase() + '-level'">{{log.level}}</span>
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'module'">
-                            {{log.module}}
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'message'">
-                            {{log.message}}
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'meta'">
-                            <div *ngIf="log.meta" class="meta-container">
-                                <mat-icon class="expand-icon" [class.expanded]="isExpanded(log)">expand_more</mat-icon>
-                                <span class="meta-preview" class="muted italic">{{getMetaPreview(log.meta)}}</span>
-                            </div>
-                        </ng-container>
+            <!-- Cell Templates -->
+            <ng-template #cellTemplate let-log let-column="column">
+                <ng-container [ngSwitch]="column.name">
+                    <ng-container *ngSwitchCase="'timestamp'">
+                        {{getFormattedDate(log.timestamp)}}
+                        <span class="muted italic">({{getElapsedTime(log.timestamp)}})</span>
                     </ng-container>
-                </ng-template>
 
-                <!-- Expanded Content Template -->
-                <ng-template #expandedContent let-log>
-                    <pre class="meta-content">{{log.meta | json}}</pre>
-                </ng-template>
-            </app-table>
-        </mat-card-content>
-    </mat-card>
-</div>
+                    <ng-container *ngSwitchCase="'level'">
+                        <span [ngClass]="log.level.toLowerCase() + '-level'">{{log.level}}</span>
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'module'">
+                        {{log.module}}
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'message'">
+                        {{log.message}}
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'meta'">
+                        <div *ngIf="log.meta" class="meta-container">
+                            <mat-icon class="expand-icon" [class.expanded]="isExpanded(log)">expand_more</mat-icon>
+                            <span class="meta-preview" class="muted italic">{{getMetaPreview(log.meta)}}</span>
+                        </div>
+                    </ng-container>
+                </ng-container>
+            </ng-template>
+
+            <!-- Expanded Content Template -->
+            <ng-template #expandedContent let-log>
+                <pre class="meta-content">{{log.meta | json}}</pre>
+            </ng-template>
+        </app-table>
+    </mat-card-content>
+</mat-card>

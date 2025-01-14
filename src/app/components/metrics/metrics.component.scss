@@ -1,10 +1,11 @@
-.metrics-container {
-    margin: 16px;
-    width: calc(100% - 32px);
-    height: calc(100% - 32px);
+:host {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    margin: 16px;
+    width: calc(100% - 32px);
+    min-height: fit-content;
+    height: calc(100% - 32px);
+    gap: 1em;
 }
 
 mat-card {

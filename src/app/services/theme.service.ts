@@ -46,7 +46,6 @@ export class ThemeService {
             }
         });
 
-        // Apply initial theme
         this.applyTheme(this.currentTheme.value);
     }
 

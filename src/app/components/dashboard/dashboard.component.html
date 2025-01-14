@@ -1,0 +1,98 @@
+<div class="dashboard-row">
+    <mat-card>
+        <mat-card-content class="charts-container">
+            <div class="chart-card">
+                <canvas baseChart
+                    [data]="chartData"
+                    [options]="chartOptions"
+                    [type]="'line'">
+                </canvas>
+            </div>
+        </mat-card-content>
+    </mat-card>
+</div>
+
+<div class="dashboard-row">
+    <mat-card>
+        <mat-card-header>
+            <mat-card-title>System Uptime</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="metrics-container">
+            <div class="metric-row">
+                <span class="metric-label">System:</span>
+                <span class="metric-value">{{metrics.systemUptime ? formatUptime(metrics.systemUptime.value) : 'N/A'}}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Process:</span>
+                <span class="metric-value">{{metrics.processUptime ? formatUptime(metrics.processUptime.value) : 'N/A'}}</span>
+            </div>
+        </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+        <mat-card-header>
+            <mat-card-title>Connected Services</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+            <div class="metric-content">
+                <div class="metric-value large">
+                    {{metrics.connectedServices ? metrics.connectedServices.value : 'N/A'}}
+                </div>
+            </div>
+        </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+        <mat-card-header>
+            <mat-card-title>Message Router Stats</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="metrics-container">
+            <div class="metric-row">
+                <span class="metric-label">Message Rate:</span>
+                <span class="metric-value">{{metrics.messageRate ? formatNumber(metrics.messageRate.value) + '/s' : 'N/A'}}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Error Count:</span>
+                <span class="metric-value">{{metrics.errorCount ? metrics.errorCount.value : 'N/A'}}</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Avg Message Size:</span>
+                <span class="metric-value">{{metrics.avgMessageSize ? formatNumber(metrics.avgMessageSize.value) + ' bytes' : 'N/A'}}</span>
+            </div>
+        </mat-card-content>
+    </mat-card>
+</div>
+
+<div class="dashboard-row">
+    <mat-card>
+        <mat-card-content>
+            <app-table
+                [data$]="logService.logs$"
+                [columns]="columns"
+                [defaultSort]="{ active: 'timestamp', direction: 'desc' }">
+
+                <!-- Cell Templates -->
+                <ng-template #cellTemplate let-log let-column="column">
+                    <ng-container [ngSwitch]="column.name">
+                        <ng-container *ngSwitchCase="'timestamp'">
+                            {{getFormattedDate(log.timestamp)}}
+                            <span class="muted italic">({{getElapsedTime(log.timestamp)}})</span>
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'level'">
+                            <span [ngClass]="log.level.toLowerCase() + '-level'">{{log.level}}</span>
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'module'">
+                            {{log.module}}
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'message'">
+                            {{log.message}}
+                        </ng-container>
+                    </ng-container>
+                </ng-template>
+            </app-table>
+        </mat-card-content>
+    </mat-card>
+</div>

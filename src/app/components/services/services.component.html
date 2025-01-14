@@ -11,187 +11,185 @@
     </button>
 </ng-template>
 
-<div class="services-container">
-    <mat-card>
-        <mat-card-content>
-            <app-table
-                #table
-                [data$]="servicesService.services$"
-                [columns]="columns"
-                [defaultSort]="{ active: 'name', direction: 'asc' }"
-                [paginationConfig]="{
-                    pageSizeOptions: [10, 25, 50, 100],
-                    defaultPageSize: 25,
-                    showFirstLastButtons: true
-                }"
-                [selectable]="true"
-                [multiSelect]="false"
-                (selectionChange)="selectService($event[0])">
+<mat-card>
+    <mat-card-content>
+        <app-table
+            #table
+            [data$]="servicesService.services$"
+            [columns]="columns"
+            [defaultSort]="{ active: 'name', direction: 'asc' }"
+            [paginationConfig]="{
+                pageSizeOptions: [10, 25, 50, 100],
+                defaultPageSize: 25,
+                showFirstLastButtons: true
+            }"
+            [selectable]="true"
+            [multiSelect]="false"
+            (selectionChange)="selectService($event[0])">
 
-                <!-- Cell Templates -->
-                <ng-template #cellTemplate let-service let-column="column">
-                    <ng-container [ngSwitch]="column.name">
+            <!-- Cell Templates -->
+            <ng-template #cellTemplate let-service let-column="column">
+                <ng-container [ngSwitch]="column.name">
 
-                        <ng-container *ngSwitchCase="'id'">
-                            {{service.id}}
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'name'">
-                            @if (service.name) {
-                                {{service.name}}
-                            } @else {
-                                <span class="muted italic">{{service.id}}</span>
-                            }
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'description'">
-                            @if (service.description) {
-                                {{service.description}}
-                            } @else {
-                                <span class="muted italic">No description</span>
-                            }
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'status'">
-                            <span [class]="getStatusClass(service.status)">
-                                {{getFormattedStatus(service.status)}}
-                                @if (service.status === 'disconnected') {
-                                    <span class="muted italic">({{getElapsedTime(service.lastHeartbeat)}})</span>
-                                }
-                            </span>
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'connectedAt'">
-                            {{getFormattedDate(service.connectedAt)}}
-                            <span class="muted italic">({{getElapsedTime(service.connectedAt)}})</span>
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'heartbeat'">
-                            <span class="heartbeat-status" [class]="getHeartbeatStatus(service)">
-                                {{getFormattedDate(service.lastHeartbeat)}}
-                                <span class="muted italic">({{getElapsedTime(service.lastHeartbeat)}})</span>
-                            </span>
-                        </ng-container>
+                    <ng-container *ngSwitchCase="'id'">
+                        {{service.id}}
                     </ng-container>
-                </ng-template>
-            </app-table>
-        </mat-card-content>
-    </mat-card>
 
-    <!-- Service Details Panel -->
-    <mat-card *ngIf="selectedService" class="service-details-card">
-        <mat-card-header>
-            <mat-card-title>
-                {{ selectedService.name || selectedService.id }}
-            </mat-card-title>
-            <div class="header-actions">
-                <app-export
-                    [data]="selectedService"
-                    filename="service-details"
-                    tooltip="Export Service Details"
-                    [customizable]="true"
-                    [disabled]="!selectedService">
-                </app-export>
-                <button mat-icon-button class="close-button" (click)="closeDetails()" matTooltip="Close details">
-                    <mat-icon>close</mat-icon>
-                </button>
-            </div>
-        </mat-card-header>
+                    <ng-container *ngSwitchCase="'name'">
+                        @if (service.name) {
+                            {{service.name}}
+                        } @else {
+                            <span class="muted italic">{{service.id}}</span>
+                        }
+                    </ng-container>
 
-        <mat-card-content>
-            <mat-tab-group [(selectedIndex)]="selectedTab" (selectedIndexChange)="onTabChange($event)">
-                <!-- Overview Tab -->
-                <mat-tab label="Overview">
-                    <div class="tab-content">
-                        <div class="pill-section">
-                            <div class="pill-item">
-                                <span class="label">ID</span>
-                                <span class="value">{{selectedService.id}}</span>
-                            </div>
-                            <div class="pill-item">
-                                <span class="label">Name</span>
-                                <span class="value" [class.muted]="!selectedService.name" [class.italic]="!selectedService.name">
-                                    {{selectedService.name || selectedService.id}}
-                                </span>
-                            </div>
-                            <div class="pill-item">
-                                <span class="label">Description</span>
-                                 <span class="value" [class.muted]="!selectedService.description" [class.italic]="!selectedService.description">
-                                    {{selectedService.description || 'No description'}}
-                                </span>
-                            </div>
-                            <div class="pill-item">
-                                <span class="label">Status</span>
-                                <span class="value" [class]="getStatusClass(selectedService.status)">
-                                    {{getFormattedStatus(selectedService.status)}}
-                                </span>
-                            </div>
-                            <div class="pill-item">
-                                <span class="label">Connected At</span>
-                                <span class="value">
-                                    {{getFormattedDate(selectedService.connectedAt)}}
-                                    <span class="muted italic">({{getElapsedTime(selectedService.connectedAt)}})</span>
-                                </span>
-                            </div>
-                            <div class="pill-item">
-                                <span class="label">Last Heartbeat</span>
-                                <span class="value" [class]="getHeartbeatStatus(selectedService)">
-                                    {{getFormattedDate(selectedService.lastHeartbeat)}}
-                                    <span class="muted italic">({{getElapsedTime(selectedService.lastHeartbeat)}})</span>
-                                </span>
-                            </div>
+                    <ng-container *ngSwitchCase="'description'">
+                        @if (service.description) {
+                            {{service.description}}
+                        } @else {
+                            <span class="muted italic">No description</span>
+                        }
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'status'">
+                        <span [class]="getStatusClass(service.status)">
+                            {{getFormattedStatus(service.status)}}
+                            @if (service.status === 'disconnected') {
+                                <span class="muted italic">({{getElapsedTime(service.lastHeartbeat)}})</span>
+                            }
+                        </span>
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'connectedAt'">
+                        {{getFormattedDate(service.connectedAt)}}
+                        <span class="muted italic">({{getElapsedTime(service.connectedAt)}})</span>
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'heartbeat'">
+                        <span class="heartbeat-status" [class]="getHeartbeatStatus(service)">
+                            {{getFormattedDate(service.lastHeartbeat)}}
+                            <span class="muted italic">({{getElapsedTime(service.lastHeartbeat)}})</span>
+                        </span>
+                    </ng-container>
+                </ng-container>
+            </ng-template>
+        </app-table>
+    </mat-card-content>
+</mat-card>
+
+<!-- Service Details Panel -->
+<mat-card *ngIf="selectedService" class="service-details-card">
+    <mat-card-header>
+        <mat-card-title>
+            {{ selectedService.name || selectedService.id }}
+        </mat-card-title>
+        <div class="header-actions">
+            <app-export
+                [data]="selectedService"
+                filename="service-details"
+                tooltip="Export Service Details"
+                [customizable]="true"
+                [disabled]="!selectedService">
+            </app-export>
+            <button mat-icon-button class="close-button" (click)="closeDetails()" matTooltip="Close details">
+                <mat-icon>close</mat-icon>
+            </button>
+        </div>
+    </mat-card-header>
+
+    <mat-card-content>
+        <mat-tab-group [(selectedIndex)]="selectedTab" (selectedIndexChange)="onTabChange($event)">
+            <!-- Overview Tab -->
+            <mat-tab label="Overview">
+                <div class="tab-content">
+                    <div class="pill-section">
+                        <div class="pill-item">
+                            <span class="label">ID</span>
+                            <span class="value">{{selectedService.id}}</span>
                         </div>
-
-                        @if (selectedService.meta) {
-                            <div class="meta-section">
-                                <h3>Additional Metadata</h3>
-                                <pre class="pill-item">{{selectedService.meta | json}}</pre>
-                            </div>
-                        }
+                        <div class="pill-item">
+                            <span class="label">Name</span>
+                            <span class="value" [class.muted]="!selectedService.name" [class.italic]="!selectedService.name">
+                                {{selectedService.name || selectedService.id}}
+                            </span>
+                        </div>
+                        <div class="pill-item">
+                            <span class="label">Description</span>
+                                <span class="value" [class.muted]="!selectedService.description" [class.italic]="!selectedService.description">
+                                {{selectedService.description || 'No description'}}
+                            </span>
+                        </div>
+                        <div class="pill-item">
+                            <span class="label">Status</span>
+                            <span class="value" [class]="getStatusClass(selectedService.status)">
+                                {{getFormattedStatus(selectedService.status)}}
+                            </span>
+                        </div>
+                        <div class="pill-item">
+                            <span class="label">Connected At</span>
+                            <span class="value">
+                                {{getFormattedDate(selectedService.connectedAt)}}
+                                <span class="muted italic">({{getElapsedTime(selectedService.connectedAt)}})</span>
+                            </span>
+                        </div>
+                        <div class="pill-item">
+                            <span class="label">Last Heartbeat</span>
+                            <span class="value" [class]="getHeartbeatStatus(selectedService)">
+                                {{getFormattedDate(selectedService.lastHeartbeat)}}
+                                <span class="muted italic">({{getElapsedTime(selectedService.lastHeartbeat)}})</span>
+                            </span>
+                        </div>
                     </div>
-                </mat-tab>
 
-                <!-- Metrics Tab -->
-                <mat-tab label="Metrics">
-                    <div class="tab-content">
-                        @if (selectedService.metrics) {
-                            <div class="pill-section">
-                                @for (metric of selectedService.metrics; track metric.name) {
-                                    <div class="pill-item">
-                                        <span class="label">{{metric.name}}</span>
-                                        <span class="property">Value: {{getMetricDisplayValue(metric)}}</span>
-                                        <span class="property">Type: {{metric.type}}</span>
-                                        <span class="property">
-                                            Timestamp: {{getFormattedDate(metric.timestamp)}}
-                                            <span class="muted italic">({{getElapsedTime(metric.timestamp)}})</span>
-                                        </span>
-                                    </div>
-                                }
-                            </div>
-                        } @else {
-                            <div class="no-data-message">No metrics available</div>
-                        }
-                    </div>
-                </mat-tab>
+                    @if (selectedService.meta) {
+                        <div class="meta-section">
+                            <h3>Additional Metadata</h3>
+                            <pre class="pill-item">{{selectedService.meta | json}}</pre>
+                        </div>
+                    }
+                </div>
+            </mat-tab>
 
-                <!-- Subscriptions Tab -->
-                <mat-tab label="Subscriptions">
-                    <div class="tab-content">
-                        @if (selectedService.subscriptions?.length) {
-                            <div class="pill-section">
-                                @for (subscription of selectedService.subscriptions; track subscription) {
-                                    <div class="pill-item subscription-pill">
-                                        <span class="label">{{subscription.topic}}</span>
-                                        <div class="property">Priority: {{subscription.priority}}</div>
-                                    </div>
-                                }
-                            </div>
-                        } @else {
-                            <div class="no-data-message">No subscriptions</div>
-                        }
-                    </div>
-                </mat-tab>
-            </mat-tab-group>
-        </mat-card-content>
-    </mat-card>
-</div>
+            <!-- Metrics Tab -->
+            <mat-tab label="Metrics">
+                <div class="tab-content">
+                    @if (selectedService.metrics) {
+                        <div class="pill-section">
+                            @for (metric of selectedService.metrics; track metric.name) {
+                                <div class="pill-item">
+                                    <span class="label">{{metric.name}}</span>
+                                    <span class="property">Value: {{getMetricDisplayValue(metric)}}</span>
+                                    <span class="property">Type: {{metric.type}}</span>
+                                    <span class="property">
+                                        Timestamp: {{getFormattedDate(metric.timestamp)}}
+                                        <span class="muted italic">({{getElapsedTime(metric.timestamp)}})</span>
+                                    </span>
+                                </div>
+                            }
+                        </div>
+                    } @else {
+                        <div class="no-data-message">No metrics available</div>
+                    }
+                </div>
+            </mat-tab>
+
+            <!-- Subscriptions Tab -->
+            <mat-tab label="Subscriptions">
+                <div class="tab-content">
+                    @if (selectedService.subscriptions?.length) {
+                        <div class="pill-section">
+                            @for (subscription of selectedService.subscriptions; track subscription) {
+                                <div class="pill-item subscription-pill">
+                                    <span class="label">{{subscription.topic}}</span>
+                                    <div class="property">Priority: {{subscription.priority}}</div>
+                                </div>
+                            }
+                        </div>
+                    } @else {
+                        <div class="no-data-message">No subscriptions</div>
+                    }
+                </div>
+            </mat-tab>
+        </mat-tab-group>
+    </mat-card-content>
+</mat-card>

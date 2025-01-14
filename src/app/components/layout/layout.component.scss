@@ -44,7 +44,6 @@
         background-color: var(--mat-sys-surface-container);
         border-bottom: 1px solid var(--mat-sys-outline);
         flex-shrink: 0;
-        cursor: pointer;
 
         span {
             white-space: nowrap;
@@ -56,7 +55,6 @@
     mat-nav-list {
         padding: 0;
         overflow-y: auto;
-        cursor: pointer;
 
         &:not(.toggle-container) {
             flex-grow: 1;
@@ -140,6 +138,8 @@
 .content {
     height: calc(100vh - 64px);
     overflow: auto;
+    position: relative;
+    display: flex;
 }
 
 ::ng-deep {
@@ -175,7 +175,9 @@
             background-color: var(--mat-sys-surface-container-highest);
 
             &::after {
-                content: '►';
+                font-size: 1.5em;
+                font-weight: 500;
+                content: '✔';//'►';
                 margin-left: auto;
             }
         }

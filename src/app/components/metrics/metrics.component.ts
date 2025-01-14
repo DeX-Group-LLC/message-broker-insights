@@ -6,13 +6,16 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription } from 'rxjs';
-import { MetricsService, Metric } from '../../services/metrics.service';
 import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
+import 'chartjs-adapter-moment';
+import { MetricsService, Metric } from '../../services/metrics.service';
+import { ThemeService } from '../../services/theme.service';
 import { TimeFormatService } from '../../services/time-format.service';
 import { LayoutComponent } from '../layout/layout.component';
 import { ExportComponent } from '../common/export/export.component';
 import { TableComponent, TableColumn } from '../common/table/table.component';
+import { cssvar } from '../utils/style.utils';
 
 /**
  * Component for displaying and managing system metrics.
@@ -44,6 +47,8 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         { name: 'timestamp', label: 'Last Updated', sortable: true, filterable: true }
     ];
 
+    private subscriptions: Subscription[] = [];
+
     /** Currently selected metric */
     selectedMetric?: Metric;
 
@@ -69,7 +74,10 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         datasets: [{
             data: [],
             label: 'Value',
-            borderColor: '#1976d2',
+            borderColor: cssvar('--mat-sys-primary'),
+            backgroundColor: cssvar('--mat-sys-primary-container'),
+            pointBackgroundColor: cssvar('--mat-sys-primary'),
+            pointBorderColor: cssvar('--mat-sys-primary'),
             tension: 0.1,
             fill: false
         }],
@@ -81,21 +89,44 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         responsive: true,
         maintainAspectRatio: false,
         animation: false,
+        interaction: {
+            intersect: false,
+            mode: 'nearest'
+        },
         scales: {
             y: {
-                beginAtZero: true
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    color: cssvar('--mat-sys-on-surface')
+                },
+                grid: {
+                    color: cssvar('--mat-sys-outline-variant')
+                },
+                ticks: {
+                    color: cssvar('--mat-sys-on-surface-variant')
+                }
             },
             x: {
+                type: 'time',
+                time: {
+                    unit: 'second'
+                },
                 reverse: false,
+                grid: {
+                    display: true,
+                    color: cssvar('--mat-sys-outline-variant')
+                },
                 ticks: {
-                    maxTicksLimit: 10
+                    maxTicksLimit: 10,
+                    color: cssvar('--mat-sys-on-surface-variant')
                 }
             }
         },
         plugins: {
             legend: {
                 display: false
-            }
+            },
         }
     };
 
@@ -105,8 +136,25 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
     constructor(
         public metricsService: MetricsService,
         private timeFormatService: TimeFormatService,
-        private layout: LayoutComponent
+        private layout: LayoutComponent,
+        private themeService: ThemeService
     ) {}
+
+    ngOnInit(): void {
+        // Subscribe to theme changes
+        this.subscriptions.push(
+            this.themeService.theme$.subscribe(() => {
+                setTimeout(() => {
+                    this.updateChartColors();
+                });
+            }),
+            this.themeService.colorPalette$.subscribe(() => {
+                setTimeout(() => {
+                    this.updateChartColors();
+                });
+            })
+        );
+    }
 
     ngAfterViewInit(): void {
         setTimeout(() => {
@@ -199,16 +247,47 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         if (!history.length) return;
 
         // Create a new dataset to trigger change detection
-        this.chartData = {
-            datasets: [{
-                data: history.map(h => h.value),
-                label: 'Value',
-                borderColor: '#1976d2',
-                tension: 0.1,
-                fill: false
-            }],
-            labels: history.map(h => h.timestamp.toLocaleTimeString())
-        };
+        this.chartData.datasets[0].data = history.map(h => ({ x: h.timestamp.getTime(), y: h.value }));
+        // Force update
+        this.chartData = { ...this.chartData };
+    }
+
+
+    /**
+     * Updates the chart colors based on the current theme
+     */
+    private updateChartColors(): void {
+        const scales = this.chartOptions.scales as any;
+        const plugins = this.chartOptions.plugins;
+
+        if (scales?.['y']?.grid) {
+            scales['y'].grid.color = cssvar('--mat-sys-outline-variant');
+        }
+        if (scales?.['y']?.ticks) {
+            scales['y'].ticks.color = cssvar('--mat-sys-on-surface-variant');
+        }
+        if (scales?.['y']?.title) {
+            scales['y'].title.color = cssvar('--mat-sys-on-surface');
+        }
+        if (scales?.['x']?.grid) {
+            scales['x'].grid.color = cssvar('--mat-sys-outline-variant');
+        }
+        if (scales?.['x']?.ticks) {
+            scales['x'].ticks.color = cssvar('--mat-sys-on-surface-variant');
+        }
+        if (plugins?.legend?.labels) {
+            plugins.legend.labels.color = cssvar('--mat-sys-on-surface');
+        }
+
+        // Update chart data
+        this.chartData.datasets[0].borderColor = cssvar('--mat-sys-primary');
+        this.chartData.datasets[0].backgroundColor = cssvar('--mat-sys-primary-container');
+        this.chartData.datasets[0].pointBackgroundColor = cssvar('--mat-sys-primary');
+        this.chartData.datasets[0].pointBorderColor = cssvar('--mat-sys-primary');
+
+        // Force update
+        this.chartData = { ...this.chartData };
+        this.chartOptions = { ...this.chartOptions };
     }
 
     /**

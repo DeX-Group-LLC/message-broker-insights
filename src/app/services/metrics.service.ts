@@ -158,6 +158,16 @@ export class MetricsService implements OnDestroy {
     }
 
     /**
+     * Gets the current value of a specific metric.
+     * @param metricName - Name of the metric to get the value for
+     * @returns Current value of the metric or undefined if not found
+     */
+    public getMetric(metricName: string): Metric | undefined {
+        const metrics = this.metricsSubject.getValue();
+        return metrics.find(m => m.name === metricName);
+    }
+
+    /**
      * Gets the history of values for a specific metric.
      * Returns an array of value and timestamp pairs.
      * Filters out consecutive entries with the same timestamp.
@@ -165,20 +175,25 @@ export class MetricsService implements OnDestroy {
      * @param metricName - Name of the metric to get history for
      * @returns Array of value and timestamp pairs
      */
-    public getMetricHistory(metricName: string): { value: number, timestamp: Date }[] {
-        const history = this.metrics.map(metrics => {
+    public getMetricHistory(metricName: string): Metric[] {
+        const history: Metric[] = [];
+        for (const metrics of this.metrics) {
             const metric = metrics.find(m => m.name === metricName);
-            return metric ? { value: metric.value, timestamp: metric.timestamp } : null;
-        }).filter((entry): entry is { value: number, timestamp: Date } => entry !== null);
+            if (metric) history.push(metric);
+        }
 
         // Sort by timestamp
         history.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
         // Filter out consecutive entries with the same timestamp
-        return history.filter((entry, index, array) => {
-            if (index === 0) return true;
-            return entry.timestamp.getTime() !== array[index - 1].timestamp.getTime();
-        });
+        for (let i = 0; i < history.length; i++) {
+            if (i === 0) continue;
+            if (history[i].timestamp.getTime() === history[i - 1].timestamp.getTime()) {
+                history.splice(i, 1);
+                i--;
+            }
+        }
+        return history;
     }
 
     /**

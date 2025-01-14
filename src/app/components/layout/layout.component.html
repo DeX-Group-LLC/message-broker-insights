@@ -20,7 +20,7 @@
                         <span matListItemTitle>{{item.shortLabel}}</span>
                     </a>
                 </mat-nav-list>
-                <mat-nav-list class="toggle-container">
+                <mat-nav-list class="toggle-container" (click)="toggleNavbar()">
                     <a mat-list-item
                        [matTooltip]="getConnectionTooltip((connectionDetails$ | async) || websocketService.details)"
                        matTooltipPosition="right"

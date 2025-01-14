@@ -10,80 +10,78 @@
     </button>
 </ng-template>
 
-<div class="metrics-container">
-    <!-- Metrics Table -->
-    <mat-card class="metrics-table-card">
-        <mat-card-content>
-            <app-table
-                [data$]="metricsService.metrics$"
-                [columns]="columns"
-                [defaultSort]="{ active: 'name', direction: 'asc' }"
-                [refreshFn]="refreshMetrics.bind(this)"
-                [selectable]="true"
-                [multiSelect]="false"
-                [canExpand]="canExpand"
-                [getGroupName]="getMetricGroup"
-                [groupDisplayColumn]="'name'"
-                (selectionChange)="onSelectionChange($event)"
-                (onDataChange)="updateChart()"
-                [paginationConfig]="{
-                    pageSizeOptions: [10, 25, 50, 100],
-                    defaultPageSize: 25,
-                    showFirstLastButtons: true
-                }">
+<!-- Metrics Table -->
+<mat-card class="metrics-table-card">
+    <mat-card-content>
+        <app-table
+            [data$]="metricsService.metrics$"
+            [columns]="columns"
+            [defaultSort]="{ active: 'name', direction: 'asc' }"
+            [refreshFn]="refreshMetrics.bind(this)"
+            [selectable]="true"
+            [multiSelect]="false"
+            [canExpand]="canExpand"
+            [getGroupName]="getMetricGroup"
+            [groupDisplayColumn]="'name'"
+            (selectionChange)="onSelectionChange($event)"
+            (onDataChange)="updateChart()"
+            [paginationConfig]="{
+                pageSizeOptions: [10, 25, 50, 100],
+                defaultPageSize: 25,
+                showFirstLastButtons: true
+            }">
 
-                <!-- Cell Templates -->
-                <ng-template #cellTemplate let-metric let-column="column">
-                    <ng-container [ngSwitch]="column.name">
-                        <ng-container *ngSwitchCase="'name'">
-                            {{metric.name}}
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'value'">
-                            <span [ngClass]="getMetricClass(metric.type)">
-                                {{getMetricDisplayValue(metric)}}
-                            </span>
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'type'">
-                            <span [ngClass]="getMetricClass(metric.type)">
-                                {{metric.type}}
-                            </span>
-                        </ng-container>
-
-                        <ng-container *ngSwitchCase="'timestamp'">
-                            {{getFormattedDate(metric.timestamp)}}
-                            <span class="muted italic">({{getElapsedTime(metric.timestamp)}})</span>
-                        </ng-container>
+            <!-- Cell Templates -->
+            <ng-template #cellTemplate let-metric let-column="column">
+                <ng-container [ngSwitch]="column.name">
+                    <ng-container *ngSwitchCase="'name'">
+                        {{metric.name}}
                     </ng-container>
-                </ng-template>
-            </app-table>
-        </mat-card-content>
-    </mat-card>
+
+                    <ng-container *ngSwitchCase="'value'">
+                        <span [ngClass]="getMetricClass(metric.type)">
+                            {{getMetricDisplayValue(metric)}}
+                        </span>
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'type'">
+                        <span [ngClass]="getMetricClass(metric.type)">
+                            {{metric.type}}
+                        </span>
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'timestamp'">
+                        {{getFormattedDate(metric.timestamp)}}
+                        <span class="muted italic">({{getElapsedTime(metric.timestamp)}})</span>
+                    </ng-container>
+                </ng-container>
+            </ng-template>
+        </app-table>
+    </mat-card-content>
+</mat-card>
 
 
-    <!-- Chart Card -->
-    <mat-card *ngIf="selectedMetric" class="metric-chart-card">
-        <mat-card-header>
-            <mat-card-title>{{ selectedMetric.name }}</mat-card-title>
-            <div class="header-actions">
-                <app-export
-                    [data]="getChartExportData()"
-                    filename="metric-history-{{selectedMetric.name}}"
-                    tooltip="Export Chart Data"
-                    [customizable]="true"
-                    [disabled]="!selectedMetric"/>
-                <button mat-icon-button class="close-button" (click)="table.clearSelection()" matTooltip="Close chart">
-                    <mat-icon>close</mat-icon>
-                </button>
-            </div>
-        </mat-card-header>
-        <mat-card-content>
-            <canvas baseChart
-                [data]="chartData"
-                [options]="chartOptions"
-                [type]="'line'">
-            </canvas>
-        </mat-card-content>
-    </mat-card>
-</div>
+<!-- Chart Card -->
+<mat-card *ngIf="selectedMetric" class="metric-chart-card">
+    <mat-card-header>
+        <mat-card-title>{{ selectedMetric.name }}</mat-card-title>
+        <div class="header-actions">
+            <app-export
+                [data]="getChartExportData()"
+                filename="metric-history-{{selectedMetric.name}}"
+                tooltip="Export Chart Data"
+                [customizable]="true"
+                [disabled]="!selectedMetric"/>
+            <button mat-icon-button class="close-button" (click)="table.clearSelection()" matTooltip="Close chart">
+                <mat-icon>close</mat-icon>
+            </button>
+        </div>
+    </mat-card-header>
+    <mat-card-content>
+        <canvas baseChart
+            [data]="chartData"
+            [options]="chartOptions"
+            [type]="'line'">
+        </canvas>
+    </mat-card-content>
+</mat-card>

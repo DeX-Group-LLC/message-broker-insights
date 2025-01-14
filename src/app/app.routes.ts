@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { LogsComponent } from './components/logs/logs.component';
 import { MetricsComponent } from './components/metrics/metrics.component';
 import { ServicesComponent } from './components/services/services.component';
@@ -28,6 +29,15 @@ export interface RouteData {
  * - /topics: Shows message topics and their subscribers
  */
 export const routes: Routes = [
+    {
+        path: 'dashboard',
+        component: DashboardComponent,
+        data: {
+            icon: 'dashboard',
+            label: 'Dashboard',
+            shortLabel: 'Dashboard'
+        }
+    },
     {
         path: 'logs',
         component: LogsComponent,
