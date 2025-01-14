@@ -3,7 +3,7 @@
 [![Tests Status](https://github.com/DeX-Group-LLC/message-broker-insights/actions/workflows/tests.yml/badge.svg?style=square)](https://github.com/DeX-Group-LLC/message-broker-insights/actions/workflows/tests.yml)
 [![Coverage Status](https://coveralls.io/repos/github/DeX-Group-LLC/message-broker-insights/badge.svg?branch=main&style=square)](https://coveralls.io/github/DeX-Group-LLC/message-broker-insights?branch=main)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D18.x-brightgreen?style=square)](https://nodejs.org)
-[![NPM Version](https://img.shields.io/badge/npm%20package-deadbeef-green?style=square)](https://www.npmjs.com/package/message-broker-insights)
+[![NPM Version](https://badge.fury.io/js/message-broker-insights.svg?style=square)](https://badge.fury.io/js/message-broker-insights)
 [![Dependencies](https://img.shields.io/librariesio/release/npm/message-broker-insights?style=square)](https://libraries.io/npm/message-broker-insights)
 [![Install Size](https://packagephobia.com/badge?p=message-broker-insights?style=square)](https://packagephobia.com/result?p=message-broker-insights)
 
@@ -24,21 +24,24 @@
 
 ## Features
 
-- 🎨� Advanced WebSocket Communication:
+- 🎨 Advanced WebSocket Communication:
   - Real-time bidirectional communication with automatic reconnection
   - Connection state management (Connected, Connecting, Reconnecting, Disconnected)
   - Heartbeat monitoring with latency tracking
   - Comprehensive connection event history
   - Request/Response pattern support with UUIDs
   - Automatic service registration
+  - Advanced error handling and recovery
 
 - 📊 System Metrics and Analytics:
-  - Real-time performance metrics visualization
+  - Real-time performance metrics visualization using Chart.js
+  - CPU and Memory usage tracking (both system and process)
   - Historical metrics tracking (5-minute buffer)
   - Multiple metric types (gauge, rate, uptime, percent)
   - Smart metric value formatting
   - Service-specific metrics tracking
   - Automatic metric updates with configurable polling
+  - Responsive and interactive charts with tooltips
 
 - 🔍 Service Management:
   - Real-time service discovery and monitoring
@@ -126,6 +129,20 @@
 - Angular CLI 19.x or higher
 - Modern web browser with WebSocket support
 
+## Dependencies
+
+Core dependencies:
+- Angular 19.0.0
+- Angular Material 19.0.5
+- Chart.js 4.4.7
+- RxJS 7.8.0
+- UUID 11.0.5
+
+Development dependencies:
+- TypeScript 5.6.2
+- Jasmine 5.4.0
+- Karma 6.4.0
+
 ## Installation
 
 ```bash
@@ -180,12 +197,15 @@ The web interface is built with a modular architecture:
   - Handles connection state management and heartbeat monitoring
   - Implements request/response pattern with UUID tracking
   - Provides connection event history and latency tracking
+  - Advanced error handling and recovery mechanisms
 
 - **MetricsService**:
   - Manages system metrics collection and visualization
   - Supports multiple metric types (gauge, rate, uptime, percent)
   - Maintains 5-minute historical buffer
   - Handles automatic metric updates and formatting
+  - CPU and Memory usage tracking
+  - Message rate and size analytics
 
 - **ServicesService**:
   - Manages service discovery and monitoring
@@ -205,14 +225,28 @@ The web interface is built with a modular architecture:
   - Provides real-time log streaming
   - Supports advanced filtering
 
+- **ThemeService**:
+  - Dynamic theme management with Material Design 3
+  - Light/Dark mode support
+  - Custom color palette support
+  - Real-time theme switching
+  - System preference detection
+
 ### Components
 
+- **DashboardComponent**:
+  - Real-time system metrics visualization
+  - Interactive charts with Chart.js
+  - CPU and Memory usage tracking
+  - Service status overview
+  - Recent logs display
 
 - **LayoutComponent**: Main application layout with responsive navigation
 - **LogsComponent**: Real-time log viewing and filtering interface
 - **MetricsComponent**: System metrics visualization and analysis
 - **ServicesComponent**: Service management and monitoring interface
 - **TopicsComponent**: Topic management and subscriber monitoring interface
+- **TableComponent**: Reusable table component with sorting and filtering
 
 ### Design Patterns
 
