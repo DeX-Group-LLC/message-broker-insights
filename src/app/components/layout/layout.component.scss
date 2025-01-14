@@ -173,6 +173,11 @@
 
         &.active {
             background-color: var(--mat-sys-surface-container-highest);
+
+            &::after {
+                content: '►';
+                margin-left: auto;
+            }
         }
     }
 
@@ -200,6 +205,10 @@
     &.disconnected {
         color: #f44336 !important; // Material red
     }
+}
+
+.palette-icon {
+    color: var(--mat-sys-primary) !important;
 }
 
 @keyframes pulse {

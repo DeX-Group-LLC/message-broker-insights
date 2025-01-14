@@ -66,20 +66,20 @@
                        (click)="$event.stopPropagation()"
                        [matTooltip]="'Change theme'"
                        matTooltipPosition="right">
-                        <mat-icon matListItemIcon>{{ getThemeIcon((currentTheme$ | async) || 'system') }}</mat-icon>
+                        <mat-icon matListItemIcon class="palette-icon">{{ getThemeIcon((currentTheme$ | async) || 'system') }}</mat-icon>
                         <span matListItemTitle>{{ getThemeLabel((currentTheme$ | async) || 'system') }}</span>
                     </a>
                     <mat-menu #themeMenu="matMenu" class="theme-menu">
                         <button mat-menu-item (click)="setTheme('light')" [class.active]="(currentTheme$ | async) === 'light'">
-                            <mat-icon>light_mode</mat-icon>
+                            <mat-icon class="palette-icon">light_mode</mat-icon>
                             <span>Light</span>
                         </button>
                         <button mat-menu-item (click)="setTheme('dark')" [class.active]="(currentTheme$ | async) === 'dark'">
-                            <mat-icon>dark_mode</mat-icon>
+                            <mat-icon class="palette-icon">dark_mode</mat-icon>
                             <span>Dark</span>
                         </button>
                         <button mat-menu-item (click)="setTheme('system')" [class.active]="(currentTheme$ | async) === 'system'">
-                            <mat-icon>settings_suggest</mat-icon>
+                            <mat-icon class="palette-icon">brightness_auto</mat-icon>
                             <span>System</span>
                         </button>
                         <mat-divider></mat-divider>

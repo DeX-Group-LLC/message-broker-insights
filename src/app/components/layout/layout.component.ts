@@ -203,7 +203,7 @@ export class LayoutComponent implements OnInit {
             case 'dark':
                 return 'dark_mode';
             case 'system':
-                return 'settings_suggest';
+                return 'brightness_auto';
             default:
                 return 'light_mode';
         }
