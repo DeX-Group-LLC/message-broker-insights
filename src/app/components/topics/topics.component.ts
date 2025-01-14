@@ -1,22 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, AfterViewInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatMenuModule } from '@angular/material/menu';
-import { Subscription } from 'rxjs';
 import { Topic, TopicsService } from '../../services/topics.service';
-import { animate, state, style, transition, trigger } from '@angular/animations';
 import { TimeFormatService } from '../../services/time-format.service';
-import { LayoutComponent } from '../../components/layout/layout.component';
+import { LayoutComponent } from '../layout/layout.component';
 import { ExportComponent } from '../common/export/export.component';
+import { TableComponent } from '../common/table/table.component';
+import { TableColumn } from '../common/table/table.component';
 
 /**
  * Component for displaying and managing topics.
@@ -27,65 +20,36 @@ import { ExportComponent } from '../common/export/export.component';
     standalone: true,
     imports: [
         CommonModule,
-        FormsModule,
         MatButtonModule,
         MatCardModule,
-        MatFormFieldModule,
         MatIconModule,
-        MatInputModule,
-        MatPaginatorModule,
-        MatSortModule,
-        MatTableModule,
         MatTooltipModule,
-        MatMenuModule,
-        ExportComponent
+        ExportComponent,
+        TableComponent
     ],
     templateUrl: './topics.component.html',
-    styleUrls: ['./topics.component.scss'],
-    animations: [
-        trigger('detailExpand', [
-            state('collapsed', style({ height: '0px', minHeight: '0' })),
-            state('expanded', style({ height: '*' })),
-            transition('expanded <=> collapsed', animate('150ms ease')),
-        ]),
-    ],
+    styleUrls: ['./topics.component.scss']
 })
-export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
-    /** Columns to display in the table */
-    displayedColumns = ['name', 'subscriberCount', 'priorityRange', 'lastUpdated'];
-    /** Data source for the table */
-    dataSource = new MatTableDataSource<Topic>([]);
-    /** Set of currently expanded rows */
-    expandedRows = new Set<Topic>();
-    /** Whether multiple rows can be expanded simultaneously */
-    isMultiExpandEnabled = false;
+export class TopicsComponent implements OnInit, OnDestroy {
     /** Whether topic updates are paused */
     isPaused = false;
     /** Loading state */
     loading = false;
-    /** Latest topics data */
-    private latestTopics: Topic[] = [];
+    /** Whether multiple rows can be expanded simultaneously */
+    isMultiExpandEnabled = false;
+    /** Set of currently expanded rows */
+    expandedRows = new Set<Topic>();
 
-    /** Filter for name column */
-    nameFilter = '';
-    /** Filter for subscriber count column */
-    subscriberFilter = '';
-    /** Filter for priority range column */
-    priorityFilter = '';
-    /** Filter for last updated column */
-    lastUpdatedFilter = '';
-
-    /** Subscription to topics updates */
-    private topicsSubscription?: Subscription;
-    /** Subscription to loading state updates */
-    private loadingSubscription?: Subscription;
-
-    /** Reference to the paginator */
-    @ViewChild(MatPaginator) paginator!: MatPaginator;
-    /** Reference to the sort header */
-    @ViewChild(MatSort) sort!: MatSort;
+    /** Table columns configuration */
+    columns: TableColumn[] = [
+        { name: 'name', label: 'Topic', sortable: true },
+        { name: 'subscriberCount', label: 'Subscribers', sortable: true },
+        { name: 'priorityRange', label: 'Priority Range', sortable: false },
+        { name: 'lastUpdated', label: 'Last Updated', sortable: true }
+    ];
 
     @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
+    @ViewChild(TableComponent) table!: TableComponent;
 
     /**
      * Creates an instance of TopicsComponent.
@@ -95,37 +59,15 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
      * @param layout - Layout component
      */
     constructor(
-        private topicsService: TopicsService,
+        public topicsService: TopicsService,
         private timeFormatService: TimeFormatService,
         private layout: LayoutComponent
     ) {}
 
     /**
      * Initializes the component.
-     * Sets up subscriptions to topics and loading state.
      */
     ngOnInit(): void {
-        this.setupLoadingSubscription();
-        this.setupTopicsSubscription();
-    }
-
-    /**
-     * Sets up the component after view initialization.
-     * Configures the paginator and sort functionality.
-     */
-    ngAfterViewInit(): void {
-        this.dataSource.paginator = this.paginator;
-        this.dataSource.sort = this.sort;
-
-        // Set default sort to name ascending
-        setTimeout(() => {
-            this.sort.sort({
-                id: 'name',
-                start: 'asc',
-                disableClear: false
-            });
-        });
-
         if (this.toolbarContent) {
             this.layout.activeToolbarContent = this.toolbarContent;
         }
@@ -135,68 +77,7 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
      * Cleans up resources when the component is destroyed.
      */
     ngOnDestroy(): void {
-        this.topicsSubscription?.unsubscribe();
-        this.loadingSubscription?.unsubscribe();
         this.layout.activeToolbarContent = undefined;
-    }
-
-    /**
-     * Sets up subscription to topics updates.
-     */
-    private setupTopicsSubscription(): void {
-        this.topicsSubscription = this.topicsService.topics$.subscribe(topics => {
-            this.latestTopics = topics;
-            if (!this.isPaused) {
-                this.dataSource.data = this.applyFilters(this.latestTopics);
-            }
-        });
-        this.refresh();
-    }
-
-    /**
-     * Sets up subscription to loading state updates.
-     */
-    private setupLoadingSubscription(): void {
-        this.loadingSubscription = this.topicsService.loading$.subscribe(loading => {
-            this.loading = loading;
-        });
-    }
-
-    /**
-     * Applies current filters to the data source.
-     */
-    applyFilter(): void {
-        this.dataSource.data = this.applyFilters(this.latestTopics);
-        if (this.dataSource.paginator) {
-            this.dataSource.paginator.firstPage();
-        }
-    }
-
-    /**
-     * Applies filters to a set of topics.
-     *
-     * @param topics - Topics to filter
-     * @returns Filtered topics
-     */
-    private applyFilters(topics: Topic[]): Topic[] {
-        return topics.filter(topic => {
-            const matchesName = !this.nameFilter ||
-                topic.name.toLowerCase().includes(this.nameFilter.toLowerCase());
-            const matchesSubscriber = !this.subscriberFilter ||
-                topic.subscribers.some(s => s.serviceId.toLowerCase().includes(this.subscriberFilter.toLowerCase()) || s.priority.toString().includes(this.subscriberFilter.toLowerCase()));
-            const matchesPriority = !this.priorityFilter ||
-                (topic.subscribers.length > 0 && (
-                    // Match individual priority numbers
-                    topic.subscribers.some(s => s.priority.toString().includes(this.priorityFilter)) ||
-                    // Match the formatted range string
-                    this.getPriorityRange(topic).includes(this.priorityFilter)
-                ));
-            const matchesLastUpdated = !this.lastUpdatedFilter ||
-                this.getFormattedDate(topic.lastUpdated).toLowerCase().includes(this.lastUpdatedFilter.toLowerCase()) ||
-                this.getElapsedTime(topic.lastUpdated).toLowerCase().includes(this.lastUpdatedFilter.toLowerCase());
-
-            return matchesName && matchesSubscriber && matchesPriority && matchesLastUpdated;
-        });
     }
 
     /**
@@ -209,11 +90,8 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
     /**
      * Toggles the pause state of topic updates.
      */
-    togglePause() {
+    togglePause(): void {
         this.isPaused = !this.isPaused;
-        if (!this.isPaused) {
-            this.dataSource.data = this.applyFilters(this.latestTopics);
-        }
     }
 
     /**
@@ -224,6 +102,16 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!this.isMultiExpandEnabled) {
             this.expandedRows.clear();
         }
+    }
+
+    /**
+     * Checks if a topic has subscribers.
+     *
+     * @param topic - The topic to check
+     * @returns Whether the topic has subscribers
+     */
+    hasSubscribers(topic: Topic): boolean {
+        return topic.subscribers.length > 0;
     }
 
     /**
@@ -255,25 +143,25 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
      * @returns Whether the topic is expanded
      */
     isExpanded(topic: Topic): boolean {
-        return this.expandedRows.has(topic);
+        return this.table.isExpanded(topic);
     }
 
     /**
-     * Gets the subscriber count display text.
+     * Gets the subscriber count display string for a topic.
      *
-     * @param topic - The topic to get subscriber count for
-     * @returns Formatted subscriber count string
+     * @param topic - Topic to get subscriber count for
+     * @returns Subscriber count display string
      */
     getSubscriberCountDisplay(topic: Topic): string {
-        if (!topic.subscribers.length) return 'No subscribers';
-        return `${topic.subscriberCount} subscriber${topic.subscriberCount !== 1 ? 's' : ''}`;
+        const count = topic.subscribers.length;
+        return `${count} subscriber${count !== 1 ? 's' : ''}`;
     }
 
     /**
-     * Gets the priority range for a topic.
+     * Gets the priority range string for a topic.
      *
-     * @param topic - The topic to get the priority range for
-     * @returns Formatted priority range string
+     * @param topic - Topic to get priority range for
+     * @returns Priority range string
      */
     getPriorityRange(topic: Topic): string {
         if (!topic.subscribers.length) return 'N/A';
@@ -281,37 +169,23 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
         const priorities = topic.subscribers.map(s => s.priority);
         const min = Math.min(...priorities);
         const max = Math.max(...priorities);
-
         return min === max ? `${min}` : `${min} - ${max}`;
     }
 
     /**
-     * Gets a preview of subscribers.
+     * Gets the elapsed time string for a timestamp.
      *
-     * @param topic - The topic to get subscribers for
-     * @returns String describing number of subscribers
-     */
-    getSubscribersPreview(topic: Topic): string {
-        if (!topic.subscribers.length) return 'No subscribers';
-        return topic.subscribers.length === 1
-            ? '1 subscriber'
-            : `${topic.subscribers.length} subscribers`;
-    }
-
-    /**
-     * Gets the elapsed time since a timestamp.
-     *
-     * @param timestamp - Date object
-     * @returns Formatted elapsed time string
+     * @param timestamp - Timestamp to get elapsed time for
+     * @returns Elapsed time string
      */
     getElapsedTime(timestamp: Date): string {
         return this.timeFormatService.getElapsedTime(timestamp);
     }
 
     /**
-     * Gets the formatted date string for display.
+     * Gets the formatted date string for a timestamp.
      *
-     * @param timestamp - Date object
+     * @param timestamp - Timestamp to format
      * @returns Formatted date string
      */
     getFormattedDate(timestamp: Date): string {
@@ -319,69 +193,20 @@ export class TopicsComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     /**
-     * Clears all active filters.
-     */
-    clearFilters(): void {
-        this.nameFilter = '';
-        this.subscriberFilter = '';
-        this.priorityFilter = '';
-        this.lastUpdatedFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the name filter.
-     */
-    clearNameFilter(): void {
-        this.nameFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the subscriber filter.
-     */
-    clearSubscriberFilter(): void {
-        this.subscriberFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the priority filter.
-     */
-    clearPriorityFilter(): void {
-        this.priorityFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the last updated filter.
-     */
-    clearLastUpdatedFilter(): void {
-        this.lastUpdatedFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Checks if any filters are currently active.
+     * Gets the data for export.
      *
-     * @returns Whether any filters are active
-     */
-    hasActiveFilters(): boolean {
-        return !!(this.nameFilter || this.subscriberFilter || this.priorityFilter || this.lastUpdatedFilter);
-    }
-
-    /**
-     * Exports the current data source.
+     * @returns Export data
      */
     getExportData(): any {
-        return this.dataSource.data.map(topic => ({
+        return this.topicsService.getTopics().map(topic => ({
             name: topic.name,
+            subscriberCount: topic.subscribers.length,
+            priorityRange: this.getPriorityRange(topic),
+            lastUpdated: this.getFormattedDate(topic.lastUpdated),
             subscribers: topic.subscribers.map(s => ({
                 serviceId: s.serviceId,
                 priority: s.priority
-            })),
-            priorityRange: this.getPriorityRange(topic),
-            lastUpdated: topic.lastUpdated
+            }))
         }));
     }
 }

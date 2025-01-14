@@ -11,6 +11,7 @@
     position: relative;
     min-height: 0;
     background: var(--mat-sys-surface);
+    border-radius: 1em 1em 0em 0em;
 
     // Selection column styles
     .mat-column-select {
@@ -86,6 +87,8 @@ table {
     align-items: center;
     border-top: 1px solid var(--mat-sys-outline);
     background-color: var(--mat-sys-surface) !important;
+    border-radius: 0em 0em 1em 1em;
+    overflow: hidden;
 
     .paginator-actions {
         display: flex;
