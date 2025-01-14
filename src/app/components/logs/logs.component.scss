@@ -52,3 +52,32 @@ mat-card {
     color: #808080 !important;
     font-weight: bold;
 }
+
+::ng-deep {
+    .log-level-select {
+        padding-right: 0.5em;
+
+        .mat-mdc-form-field-flex {
+            min-height: unset;
+        }
+
+        .mat-mdc-form-field-infix {
+            padding-top: 8px;
+            padding-bottom: 8px;
+            min-height: unset;
+        }
+
+        .mat-mdc-text-field-wrapper {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
+        .mdc-text-field--outlined {
+            --mdc-typography-subtitle1-line-height: 28px;
+        }
+
+        .mat-mdc-form-field-subscript-wrapper {
+            display: none;
+        }
+    }
+}
