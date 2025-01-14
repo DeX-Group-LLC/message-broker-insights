@@ -1,19 +1,20 @@
 {
-  "name": "message-broker-insights",
+  "name": "mb-app-insights",
   "version": "1.0.0",
-  "description": "A web-based dashboard for monitoring and analyzing NABHAS-compliant Message Brokers. Provides real-time insights into message flow, performance, and system health. Compatible with `message-broker-node` and other NABHAS implementations.",
+  "description": "A web-based dashboard for monitoring and analyzing NABHAS-compliant Message Brokers. Provides real-time insights into message flow, performance, and system health. Compatible with `mb-server-node` and other NABHAS implementations.",
   "author": "DeX Group, LLC",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/DeX-Group-LLC/message-broker-insights#readme",
+  "homepage": "https://github.com/DeX-Group-LLC/mb-app-insights#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DeX-Group-LLC/message-broker-insights.git"
+    "url": "git+https://github.com/DeX-Group-LLC/mb-app-insights.git"
   },
   "bugs": {
-    "url": "https://github.com/DeX-Group-LLC/message-broker-insights/issues"
+    "url": "https://github.com/DeX-Group-LLC/mb-app-insights/issues"
   },
   "keywords": [
     "message-broker",
+    "message-broker-insights",
     "nabhas",
     "dashboard",
     "insights",
