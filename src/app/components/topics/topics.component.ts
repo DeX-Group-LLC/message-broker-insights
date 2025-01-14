@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, OnDestroy, ViewChild, TemplateRef } from '@angular/core';
+import { Component, OnDestroy, ViewChild, TemplateRef, AfterViewInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -30,7 +30,7 @@ import { TableColumn } from '../common/table/table.component';
     templateUrl: './topics.component.html',
     styleUrls: ['./topics.component.scss']
 })
-export class TopicsComponent implements OnInit, OnDestroy {
+export class TopicsComponent implements AfterViewInit, OnDestroy {
     /** Whether topic updates are paused */
     isPaused = false;
     /** Loading state */
@@ -64,13 +64,12 @@ export class TopicsComponent implements OnInit, OnDestroy {
         private layout: LayoutComponent
     ) {}
 
-    /**
-     * Initializes the component.
-     */
-    ngOnInit(): void {
-        if (this.toolbarContent) {
-            this.layout.activeToolbarContent = this.toolbarContent;
-        }
+    ngAfterViewInit() {
+        setTimeout(() => {
+            if (this.toolbarContent) {
+                this.layout.activeToolbarContent = this.toolbarContent;
+            }
+        });
     }
 
     /**
@@ -81,30 +80,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Forces a refresh of the topics data.
-     */
-    async refresh(): Promise<void> {
-        await this.topicsService.refresh();
-    }
-
-    /**
-     * Toggles the pause state of topic updates.
-     */
-    togglePause(): void {
-        this.isPaused = !this.isPaused;
-    }
-
-    /**
-     * Toggles multi-expand functionality.
-     */
-    toggleMultiExpand(): void {
-        this.isMultiExpandEnabled = !this.isMultiExpandEnabled;
-        if (!this.isMultiExpandEnabled) {
-            this.expandedRows.clear();
-        }
-    }
-
-    /**
      * Checks if a topic has subscribers.
      *
      * @param topic - The topic to check
@@ -112,28 +87,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
      */
     hasSubscribers(topic: Topic): boolean {
         return topic.subscribers.length > 0;
-    }
-
-    /**
-     * Toggles the expansion state of a topic's details.
-     *
-     * @param topic - Topic to toggle
-     */
-    toggleExpansion(topic: Topic): void {
-        if (this.isMultiExpandEnabled) {
-            if (this.expandedRows.has(topic)) {
-                this.expandedRows.delete(topic);
-            } else {
-                this.expandedRows.add(topic);
-            }
-        } else {
-            if (this.expandedRows.has(topic)) {
-                this.expandedRows.clear();
-            } else {
-                this.expandedRows.clear();
-                this.expandedRows.add(topic);
-            }
-        }
     }
 
     /**
@@ -190,23 +143,5 @@ export class TopicsComponent implements OnInit, OnDestroy {
      */
     getFormattedDate(timestamp: Date): string {
         return timestamp.toLocaleString();
-    }
-
-    /**
-     * Gets the data for export.
-     *
-     * @returns Export data
-     */
-    getExportData(): any {
-        return this.topicsService.getTopics().map(topic => ({
-            name: topic.name,
-            subscriberCount: topic.subscribers.length,
-            priorityRange: this.getPriorityRange(topic),
-            lastUpdated: this.getFormattedDate(topic.lastUpdated),
-            subscribers: topic.subscribers.map(s => ({
-                serviceId: s.serviceId,
-                priority: s.priority
-            }))
-        }));
     }
 }
