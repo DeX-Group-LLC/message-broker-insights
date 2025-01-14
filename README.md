@@ -9,7 +9,7 @@
 
 🌐 A modern Angular-based web interface for the Message Broker, providing real-time monitoring, log viewing, and system metrics visualization. Built with Angular Material for a clean, responsive user experience.
 
-![screenshot-2025-01-11-16-09-36](https://github.com/user-attachments/assets/226d26ad-b79c-46bb-b0d4-75afda1fc004)
+![image](https://github.com/user-attachments/assets/2d3f40e1-0864-4b65-8289-cd5574dafe37)
 
 ## Table of Contents
 - [Features](#features)
