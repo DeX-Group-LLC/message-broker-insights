@@ -29,19 +29,6 @@
         width: 18px;
         padding: 0;
         text-align: center;
-
-        .expand-icon {
-            transition: transform 150ms ease-in-out;
-            font-size: 18px;
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            margin: 0;
-
-            &.expanded {
-                transform: rotate(180deg);
-            }
-        }
     }
 }
 
@@ -50,6 +37,20 @@ table {
 }
 
 :host ::ng-deep {
+    .expand-icon {
+        transition: transform 150ms ease-in-out;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        margin: 0;
+        transform: rotate(-90deg);
+
+        &.expanded {
+            transform: rotate(0deg);
+        }
+    }
+
     .mat-mdc-header-row {
         background-color: var(--mat-sys-surface) !important;
     }
@@ -60,18 +61,6 @@ table {
 
     .mat-mdc-cell {
         border-bottom: none;
-
-        .expand-icon {
-            margin-right: 8px;
-            transition: transform 150ms ease-in-out;
-            font-size: 20px;
-            width: 20px;
-            height: 20px;
-
-            &.expanded {
-                transform: rotate(180deg);
-            }
-        }
 
         // Text styles
         .muted {
