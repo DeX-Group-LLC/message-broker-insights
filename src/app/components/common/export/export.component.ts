@@ -6,9 +6,9 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { ExportCustomizerComponent } from '../../components/export/customizer/customizer.component';
-import { ExportData, SerializationOptions } from '../../components/export/models/export.model';
-import { exportToCsv, exportToJson, toCsv, toJson } from '../../components/export/utils/export.utils';
+import { ExportCustomizerComponent } from './customizer/customizer.component';
+import { ExportData, SerializationOptions } from './models/export.model';
+import { exportToCsv, exportToJson, toCsv, toJson } from './utils/export.utils';
 
 /**
  * Reusable component for export functionality

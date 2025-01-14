@@ -18,7 +18,7 @@ import { TimeFormatService } from '../../services/time-format.service';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MetricsService } from '../../services/metrics.service';
 import { LayoutComponent } from '../layout/layout.component';
-import { ExportComponent } from '../export/export.component';
+import { ExportComponent } from '../common/export/export.component';
 
 /** Tab index for service details */
 export enum ServiceDetailsTab {

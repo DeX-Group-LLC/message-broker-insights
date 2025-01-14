@@ -31,6 +31,7 @@ mat-card {
     padding: 1em;
     border-radius: 1em;
     background-color: var(--mat-sys-surface-container-highest);
+    border: 1px solid var(--mat-sys-outline);
 }
 
 .error-level {

@@ -16,7 +16,7 @@ import { Topic, TopicsService } from '../../services/topics.service';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { TimeFormatService } from '../../services/time-format.service';
 import { LayoutComponent } from '../../components/layout/layout.component';
-import { ExportComponent } from '../export/export.component';
+import { ExportComponent } from '../common/export/export.component';
 
 /**
  * Component for displaying and managing topics.

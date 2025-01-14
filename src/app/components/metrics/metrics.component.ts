@@ -11,7 +11,7 @@ import { NgChartsModule } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions } from 'chart.js';
 import { TimeFormatService } from '../../services/time-format.service';
 import { LayoutComponent } from '../layout/layout.component';
-import { ExportComponent } from '../export/export.component';
+import { ExportComponent } from '../common/export/export.component';
 import { TableComponent, TableColumn } from '../common/table/table.component';
 
 /**

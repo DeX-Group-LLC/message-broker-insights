@@ -17,7 +17,7 @@ import { map } from 'rxjs/operators';
 import { LogService, LogEntry, LogLevel } from '../../services/log.service';
 import { TimeFormatService } from '../../services/time-format.service';
 import { LayoutComponent } from '../layout/layout.component';
-import { ExportComponent } from '../export/export.component';
+import { ExportComponent } from '../common/export/export.component';
 import { TableComponent, TableColumn } from '../common/table/table.component';
 
 /**
