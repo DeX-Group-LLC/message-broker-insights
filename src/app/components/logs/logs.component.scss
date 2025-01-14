@@ -7,9 +7,9 @@
 }
 
 mat-card {
-    display: flex;
-    flex-direction: column;
     flex: 1;
+    flex-direction: column;
+    min-width: 550px;
     min-height: 350px;
 }
 
@@ -30,8 +30,8 @@ mat-card {
     margin-top: 0;
     padding: 1em;
     border-radius: 1em;
-    background-color: var(--mat-sys-surface-container-highest);
-    border: 1px solid var(--mat-sys-outline);
+    background-color: var(--mat-sys-surface-container-high);
+    border: 1px solid var(--mat-sys-outline-variant);
 }
 
 .error-level {

@@ -228,7 +228,6 @@ export class TableComponent implements AfterViewInit, OnDestroy {
      */
     @Input()
     set data(data: any[]) {
-        console.log('Data input received:', data);
         this.cachedData = data;
         if (!this.isPaused) {
             this.updateDataSource(data);
@@ -248,7 +247,6 @@ export class TableComponent implements AfterViewInit, OnDestroy {
                     * (this.sort.direction === 'asc' ? 1 : -1);
             });
         }
-        console.log('Data:', result);
         return result;
     }
 
@@ -276,7 +274,6 @@ export class TableComponent implements AfterViewInit, OnDestroy {
             if (this.isGroupRow(row)) return; // Skip group rows in input data
 
             const groupName = this.getGroupName!(row);
-            console.log('Got group name:', groupName, 'for row:', row);
 
             if (!groupName) {
                 // No group, add directly to data

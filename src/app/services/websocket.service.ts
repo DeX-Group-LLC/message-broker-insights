@@ -304,7 +304,6 @@ export class WebsocketService extends EventEmitter {
         };
 
         this.socket.onclose = () => {
-            console.log('WebSocket connection closed');
             this._state = ConnectionState.DISCONNECTED;
             this.addEvent(ConnectionEventType.DISCONNECTED);
             this.emit('stateChange', this._state);

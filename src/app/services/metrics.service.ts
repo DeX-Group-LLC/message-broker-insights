@@ -1,6 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { WebsocketService } from './websocket.service';
+import { TimeFormatService } from './time-format.service';
 
 /**
  * Raw metric information received from the server.
@@ -59,7 +60,7 @@ export class MetricsService implements OnDestroy {
      *
      * @param websocketService - Service for WebSocket communication
      */
-    constructor(private websocketService: WebsocketService) {
+    constructor(private websocketService: WebsocketService, private timeFormatService: TimeFormatService) {
         this.startPolling();
     }
 
@@ -194,6 +195,28 @@ export class MetricsService implements OnDestroy {
      */
     public getCurrentMetrics(): Metric[] {
         return this.metricsSubject.getValue();
+    }
+
+    /**
+     * Gets the formatted metric display value
+     * @param metric - Metric to format
+     * @returns Formatted value string
+     */
+    getMetricDisplayValue(metric: Metric): string {
+        if (typeof metric.value !== 'number') {
+            return String(metric.value);
+        }
+
+        switch (metric.type.toLowerCase()) {
+            case 'percent':
+                return `${(metric.value * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
+            case 'rate':
+                return `${metric.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}/s`;
+            case 'uptime':
+                return this.timeFormatService.renderElapsedTime(metric.value * 1000);
+            default:
+                return metric.value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        }
     }
 
     /**

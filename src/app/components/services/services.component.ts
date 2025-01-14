@@ -1,25 +1,17 @@
-import { Component, OnInit, ViewChild, OnDestroy, AfterViewInit, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatSortModule, MatSort } from '@angular/material/sort';
-import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
-import { MatIconModule } from '@angular/material/icon';
+import { Component, OnDestroy, ViewChild, TemplateRef, AfterViewInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { Subscription } from 'rxjs';
-import { ServicesService, ServiceInfo, ServiceStatus } from '../../services/services.service';
-import { animate, state, style, transition, trigger } from '@angular/animations';
-import { TimeFormatService } from '../../services/time-format.service';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MetricsService } from '../../services/metrics.service';
+import { ServicesService, ServiceInfo, ServiceStatus } from '../../services/services.service';
+import { TimeFormatService } from '../../services/time-format.service';
 import { LayoutComponent } from '../layout/layout.component';
 import { ExportComponent } from '../common/export/export.component';
-
+import { TableComponent, TableColumn } from '../common/table/table.component';
+import { Metric, MetricsService } from '../../services/metrics.service';
+import { MetricInfo } from '../../services/metrics.service';
 /** Tab index for service details */
 export enum ServiceDetailsTab {
     Overview = 0,
@@ -29,46 +21,25 @@ export enum ServiceDetailsTab {
 
 /**
  * Component for displaying and managing system services.
- * Provides filtering, sorting, and expansion functionality for service entries.
+ * Provides filtering, sorting, and selection functionality for service entries.
  */
 @Component({
     selector: 'app-services',
     standalone: true,
     imports: [
         CommonModule,
-        FormsModule,
-        MatCardModule,
-        MatTableModule,
-        MatSortModule,
-        MatPaginatorModule,
-        MatIconModule,
         MatButtonModule,
-        MatMenuModule,
-        MatFormFieldModule,
-        MatInputModule,
+        MatCardModule,
+        MatIconModule,
         MatTooltipModule,
         MatTabsModule,
-        ExportComponent
+        ExportComponent,
+        TableComponent
     ],
     templateUrl: './services.component.html',
-    styleUrls: ['./services.component.scss'],
-    animations: [
-        trigger('detailExpand', [
-            state('collapsed', style({ height: '0px', minHeight: '0' })),
-            state('expanded', style({ height: '*' })),
-            transition('expanded <=> collapsed', animate('150ms ease')),
-        ]),
-    ],
+    styleUrls: ['./services.component.scss']
 })
-export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
-    /** Columns to display in the table */
-    displayedColumns = ['id', 'name', 'description', 'status', 'connectedAt', 'heartbeat'];
-    /** Data source for the table */
-    dataSource = new MatTableDataSource<ServiceInfo>([]);
-    /** Set of currently expanded rows */
-    expandedRows = new Set<ServiceInfo>();
-    /** Whether multiple rows can be expanded simultaneously */
-    isMultiExpandEnabled = false;
+export class ServicesComponent implements AfterViewInit, OnDestroy {
     /** Whether service updates are paused */
     isPaused = false;
     /** Loading state */
@@ -77,483 +48,69 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
     selectedService?: ServiceInfo;
     /** Current tab in the details panel */
     selectedTab = ServiceDetailsTab.Overview;
+    /** Interval ID for polling selected service details */
+    private selectedServiceInterval?: number;
 
-    /** Reference to the table's sort directive */
-    @ViewChild(MatSort) sort!: MatSort;
-    /** Reference to the table's paginator */
-    @ViewChild(MatPaginator) paginator!: MatPaginator;
+    /** Table columns configuration */
+    columns: TableColumn[] = [
+        { name: 'id', label: 'ID', sortable: true, filterable: true },
+        { name: 'name', label: 'Name', sortable: true, filterable: true },
+        { name: 'description', label: 'Description', sortable: true, filterable: true },
+        { name: 'status', label: 'Status', sortable: true, filterable: true },
+        { name: 'connectedAt', label: 'Connected', sortable: true, filterable: true },
+        { name: 'heartbeat', label: 'Heartbeat', sortable: false, filterable: true }
+    ];
 
-    /** Filter for id column */
-    idFilter = '';
-    /** Filter for name column */
-    nameFilter = '';
-    /** Filter for description column */
-    descriptionFilter = '';
-    /** Filter for connected at column */
-    connectedAtFilter = '';
-    /** Filter for heartbeat column */
-    heartbeatFilter = '';
-    /** Filter for meta column */
-    metaFilter = '';
-    /** Filter for status column */
-    statusFilter = '';
-
-    /** Subject for handling component destruction */
-    //private destroy$ = new Subject<void>();
-    /** Subscription to services updates */
-    private servicesSubscription?: Subscription;
-    /** Latest services received from the service */
-    private latestServices: ServiceInfo[] = [];
-    /** Subscription to loading state updates */
-    private loadingSubscription?: Subscription;
-    /** Subscription to metrics updates */
-    private metricsSubscription?: Subscription;
-    /** Interval ID for polling subscriptions */
-    private subscriptionsInterval?: number;
+    @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
+    @ViewChild(TableComponent) table!: TableComponent;
 
     /** Enum for tab indices */
     readonly ServiceDetailsTab = ServiceDetailsTab;
-
-    @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
 
     /**
      * Creates an instance of ServicesComponent.
      *
      * @param servicesService - Service for managing services
      * @param timeFormatService - Service for formatting time
-     * @param metricsService - Service for fetching service metrics
-     * @param layout - Layout component for toolbar content
+     * @param layout - Layout component
      */
     constructor(
-        private servicesService: ServicesService,
+        public servicesService: ServicesService,
         private timeFormatService: TimeFormatService,
-        private metricsService: MetricsService,
-        private layout: LayoutComponent
-    ) {
-    }
+        private layout: LayoutComponent,
+        private metricsService: MetricsService
+    ) {}
 
-    /**
-     * Initializes the component.
-     * Clears data source and expanded state.
-     */
-    ngOnInit() {
-        this.dataSource.data = [];
-        this.expandedRows.clear();
-    }
-
-    /**
-     * Sets up the component after view initialization.
-     * Configures sorting and pagination, and sets up services subscription.
-     */
     ngAfterViewInit() {
-        this.dataSource.sort = this.sort;
-        this.dataSource.paginator = this.paginator;
-
         setTimeout(() => {
-            // Setup initial services subscription
-            this.setupServicesSubscription();
-
-            // Set default sort to name ascending
-            this.sort.sort({
-                id: 'name',
-                start: 'asc',
-                disableClear: false
-            });
+            if (this.toolbarContent) {
+                this.layout.activeToolbarContent = this.toolbarContent;
+            }
         });
-
-        if (this.toolbarContent) {
-            this.layout.activeToolbarContent = this.toolbarContent;
-        }
     }
 
     /**
      * Cleans up resources when the component is destroyed.
      */
     ngOnDestroy(): void {
-        this.servicesSubscription?.unsubscribe();
-        this.metricsSubscription?.unsubscribe();
-        if (this.subscriptionsInterval) {
-            clearInterval(this.subscriptionsInterval);
-            this.subscriptionsInterval = undefined;
-        }
         this.layout.activeToolbarContent = undefined;
+        this.stopSelectedServicePolling();
     }
 
     /**
-     * Sets up subscription to services updates.
-     * Updates the data source when new services are received.
-     */
-    private setupServicesSubscription() {
-        this.loadingSubscription?.unsubscribe();
-        this.servicesSubscription?.unsubscribe();
-
-        // Subscribe to loading state
-        this.loadingSubscription = this.servicesService.loading$.subscribe(
-            loading => this.loading = loading
-        );
-
-        // Subscribe to services updates
-        this.servicesSubscription = this.servicesService.services$.subscribe(services => {
-            if (!this.isPaused) {
-                // Update services in place
-                const currentData = this.dataSource.data;
-                const newServiceIds = new Set(services.map(s => s.id));
-
-                // Update existing services and add new ones
-                services.forEach(newService => {
-                    const index = currentData.findIndex(s => s.id === newService.id);
-                    if (index >= 0) {
-                        // Update existing service in place
-                        Object.assign(currentData[index], newService);
-                    } else {
-                        // Add new service
-                        currentData.push(newService);
-                    }
-                });
-
-                // Remove services that no longer exist
-                const toRemove = currentData.filter(s => !newServiceIds.has(s.id));
-                toRemove.forEach(service => {
-                    const index = currentData.indexOf(service);
-                    if (index >= 0) {
-                        currentData.splice(index, 1);
-                    }
-                });
-
-                // Update filtered data
-                this.latestServices = currentData;
-                this.dataSource.data = this.applyFilters(currentData);
-            }
-        });
-    }
-
-    /**
-     * Gets the time elapsed since a timestamp.
+     * Gets the elapsed time string for a timestamp.
      *
-     * @param timestamp - Date object
-     * @returns Formatted elapsed time string
+     * @param timestamp - Timestamp to get elapsed time for
+     * @returns Elapsed time string
      */
     getElapsedTime(timestamp: Date): string {
         return this.timeFormatService.getElapsedTime(timestamp);
     }
 
     /**
-     * Gets the time elapsed since a timestamp in compact format.
+     * Gets the formatted date string for a timestamp.
      *
-     * @param timestamp - Date object
-     * @returns Formatted elapsed time string
-     */
-    getCompactElapsedTime(timestamp: Date): string {
-        return this.timeFormatService.getCompactElapsedTime(timestamp);
-    }
-
-    /**
-     * Gets the heartbeat status class for a service.
-     * Returns 'error' if the last heartbeat is more than 10 seconds old.
-     *
-     * @param service - Service to check
-     * @returns Status class
-     */
-    getHeartbeatStatus(service: ServiceInfo): string {
-        const now = new Date();
-        const elapsed = now.getTime() - service.lastHeartbeat.getTime();
-        if (elapsed >= 30000) return 'error';
-        if (elapsed >= 10000) return 'warning';
-        return '';
-    }
-
-    /**
-     * Gets the connection status of a service.
-     * Returns 'error' if the last heartbeat is more than 10 seconds old.
-     *
-     * @param service - Service to check
-     * @returns Connection status class
-     */
-    getConnectionStatus(service: ServiceInfo): string {
-        return this.getHeartbeatStatus(service);
-    }
-
-    /**
-     * Gets the connection status tooltip for a service.
-     *
-     * @param service - Service to get tooltip for
-     * @returns Tooltip text
-     */
-    getConnectionTooltip(service: ServiceInfo): string {
-        if (this.getHeartbeatStatus(service) == 'error') {
-            return `No heartbeat for ${this.getElapsedTime(service.lastHeartbeat)}`;
-        }
-        return '';
-    }
-
-    /**
-     * Gets the uptime status class for a service.
-     * Returns 'error' if the last heartbeat is more than 10 seconds old.
-     *
-     * @param service - Service to check
-     * @returns Status class
-     */
-    getUptimeStatus(service: ServiceInfo): string {
-        return this.getHeartbeatStatus(service);
-    }
-
-    /**
-     * Refreshes the services display with current filters.
-     */
-    refreshServices() {
-        this.servicesService.refresh().then(() => {
-            this.dataSource.data = this.applyFilters(this.latestServices);
-        });
-    }
-
-    /**
-     * Toggles the pause state of service updates.
-     */
-    togglePause() {
-        this.isPaused = !this.isPaused;
-        if (!this.isPaused) {
-            this.refreshServices();
-        }
-    }
-
-    /**
-     * Toggles multi-expand functionality.
-     * When disabled, collapses all expanded rows.
-     */
-    toggleMultiExpand(): void {
-        this.isMultiExpandEnabled = !this.isMultiExpandEnabled;
-        if (!this.isMultiExpandEnabled) {
-            this.expandedRows.clear();
-        }
-    }
-
-    /**
-     * Toggles the expansion state of a service's metadata.
-     *
-     * @param service - Service to toggle
-     */
-    toggleMetaExpansion(service: ServiceInfo) {
-        if (this.isMultiExpandEnabled) {
-            if (this.expandedRows.has(service)) {
-                this.expandedRows.delete(service);
-            } else {
-                this.expandedRows.add(service);
-            }
-        } else {
-            if (this.expandedRows.has(service)) {
-                this.expandedRows.clear();
-            } else {
-                this.expandedRows.clear();
-                this.expandedRows.add(service);
-            }
-        }
-    }
-
-    /**
-     * Checks if a row is expanded.
-     *
-     * @param row - Row to check
-     * @returns Whether the row is expanded
-     */
-    isExpanded(row: ServiceInfo): boolean {
-        return this.expandedRows.has(row);
-    }
-
-    /**
-     * Gets a preview of metadata fields.
-     *
-     * @param meta - Metadata object
-     * @returns String describing number of metadata fields
-     */
-    getMetaPreview(meta: any): string {
-        if (!meta) return '';
-        const fields = Object.keys(meta);
-        return fields.length === 1
-            ? `1 field`
-            : `${fields.length} fields`;
-    }
-
-    /**
-     * Clears all active filters.
-     */
-    clearFilters() {
-        this.idFilter = '';
-        this.nameFilter = '';
-        this.descriptionFilter = '';
-        this.connectedAtFilter = '';
-        this.heartbeatFilter = '';
-        this.metaFilter = '';
-        this.statusFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the ID filter.
-     */
-    clearIdFilter() {
-        this.idFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the name filter.
-     */
-    clearNameFilter() {
-        this.nameFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the connected at filter.
-     */
-    clearConnectedAtFilter() {
-        this.connectedAtFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the heartbeat filter.
-     */
-    clearHeartbeatFilter() {
-        this.heartbeatFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the description filter.
-     */
-    clearDescriptionFilter() {
-        this.descriptionFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the meta filter.
-     */
-    clearMetaFilter() {
-        this.metaFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Clears the status filter.
-     */
-    clearStatusFilter() {
-        this.statusFilter = '';
-        this.applyFilter();
-    }
-
-    /**
-     * Checks if any filters are currently active.
-     *
-     * @returns Whether any filters are active
-     */
-    hasActiveFilters(): boolean {
-        return !!(this.idFilter || this.nameFilter || this.descriptionFilter ||
-                 this.connectedAtFilter || this.heartbeatFilter || this.metaFilter ||
-                 this.statusFilter);
-    }
-
-    /**
-     * Applies current filters to the data source.
-     */
-    applyFilter() {
-        this.dataSource.data = this.applyFilters(this.latestServices);
-    }
-
-    /**
-     * Applies filters to a set of services.
-     *
-     * @param services - Services to filter
-     * @returns Filtered services
-     */
-    private applyFilters(services: ServiceInfo[]): ServiceInfo[] {
-        return services.filter(service => {
-            const matchesId = !this.idFilter ||
-                service.id.toLowerCase().includes(this.idFilter.toLowerCase());
-            const matchesName = !this.nameFilter ||
-                this.getDisplayName(service).toLowerCase().includes(this.nameFilter.toLowerCase());
-            const matchesDescription = !this.descriptionFilter ||
-                this.getDisplayDescription(service).toLowerCase().includes(this.descriptionFilter.toLowerCase());
-            const matchesConnectedAt = !this.connectedAtFilter ||
-                this.getFormattedDate(service.connectedAt).toLowerCase().includes(this.connectedAtFilter.toLowerCase());
-            const matchesHeartbeat = !this.heartbeatFilter ||
-                this.getFormattedDate(service.lastHeartbeat).toLowerCase().includes(this.heartbeatFilter.toLowerCase());
-            const matchesMeta = !this.metaFilter ||
-                (service.meta && JSON.stringify(service.meta).toLowerCase().includes(this.metaFilter.toLowerCase()));
-            const matchesStatus = !this.statusFilter ||
-                service.status.toLowerCase().includes(this.statusFilter.toLowerCase());
-
-            return matchesId && matchesName && matchesDescription && matchesConnectedAt &&
-                   matchesHeartbeat && matchesMeta && matchesStatus;
-        });
-    }
-
-    /**
-     * Gets the display name for a service.
-     * Returns the name if available, otherwise returns the ID in a muted style.
-     *
-     * @param service - Service to get display name for
-     * @returns Display name with optional styling
-     */
-    getDisplayName(service: ServiceInfo): string {
-        if (service.name && service.name.trim()) {
-            return service.name;
-        }
-        return service.id;
-    }
-
-    /**
-     * Gets the display description for a service.
-     * Returns the description if available, otherwise returns a placeholder.
-     *
-     * @param service - Service to get display description for
-     * @returns Display description with optional styling
-     */
-    getDisplayDescription(service: ServiceInfo): string {
-        if (service.description && service.description.trim()) {
-            return service.description;
-        }
-        return 'No description';
-    }
-
-    /**
-     * Checks if a service has a name.
-     * Used for conditional styling.
-     *
-     * @param service - Service to check
-     * @returns Whether the service has a name
-     */
-    hasName(service: ServiceInfo): boolean {
-        return !!(service.name && service.name.trim());
-    }
-
-    /**
-     * Checks if a service has a description.
-     * Used for conditional styling.
-     *
-     * @param service - Service to check
-     * @returns Whether the service has a description
-     */
-    hasDescription(service: ServiceInfo): boolean {
-        return !!(service.description && service.description.trim());
-    }
-
-    /**
-     * Checks if a service has metadata.
-     * Used for conditional styling.
-     *
-     * @param service - Service to check
-     * @returns Whether the service has metadata
-     */
-    hasMetaData(service: ServiceInfo): boolean {
-        return !!(service.meta && Object.keys(service.meta).length > 0);
-    }
-
-    /**
-     * Gets the formatted date string for display.
-     *
-     * @param timestamp - Date object
+     * @param timestamp - Timestamp to format
      * @returns Formatted date string
      */
     getFormattedDate(timestamp: Date): string {
@@ -561,13 +118,85 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     /**
-     * Gets entries from a metrics object for display.
+     * Gets the display name for a service.
      *
-     * @param metrics - Metrics object
-     * @returns Array of metric entries with name and value
+     * @param service - Service to get name for
+     * @returns Display name
      */
-    getMetricEntries(metrics: Record<string, number>): { name: string; value: number }[] {
-        return Object.entries(metrics).map(([name, value]) => ({ name, value }));
+    getDisplayName(service: ServiceInfo): string {
+        return service.name || service.id;
+    }
+
+    /**
+     * Gets the display description for a service.
+     *
+     * @param service - Service to get description for
+     * @returns Display description
+     */
+    getDisplayDescription(service: ServiceInfo): string {
+        return service.description || 'No description';
+    }
+
+    /**
+     * Gets formatted metric display value
+     * @param metric - Metric to format
+     * @returns Formatted value string
+     */
+    getMetricDisplayValue(metric: Metric): string {
+        return this.metricsService.getMetricDisplayValue(metric);
+    }
+
+    /**
+     * Checks if a service has a name.
+     *
+     * @param service - Service to check
+     * @returns Whether the service has a name
+     */
+    hasName(service: ServiceInfo): boolean {
+        return !!service.name;
+    }
+
+    /**
+     * Checks if a service has a description.
+     *
+     * @param service - Service to check
+     * @returns Whether the service has a description
+     */
+    hasDescription(service: ServiceInfo): boolean {
+        return !!service.description;
+    }
+
+    /**
+     * Gets the heartbeat status class for a service.
+     *
+     * @param service - Service to get status for
+     * @returns Status class name
+     */
+    getHeartbeatStatus(service: ServiceInfo): string {
+        const elapsed = Date.now() - new Date(service.lastHeartbeat).getTime();
+        if (elapsed > 60000) return 'error';
+        if (elapsed > 30000) return 'warning';
+        return '';
+    }
+
+    /**
+     * Gets the formatted status string.
+     *
+     * @param status - Status to format
+     * @returns Formatted status string
+     */
+    getFormattedStatus(status: ServiceStatus): string {
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    /**
+     * Gets the status class for a service status.
+     *
+     * @param status - Status to get class for
+     * @returns Status class name
+     */
+    getStatusClass(status: ServiceStatus): string {
+        return status === 'connected' ? 'success' : 'error';
     }
 
     /**
@@ -576,92 +205,85 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
      * @param service - Service to select
      */
     selectService(service: ServiceInfo): void {
-        this.selectedService = this.selectedService === service ? undefined : service;
-        if (this.selectedService) {
-            this.fetchServiceDetails(this.selectedService.id);
+        // If selecting the same service, do nothing
+        if (this.selectedService === service) return;
+
+        // Stop polling for previous service
+        this.stopSelectedServicePolling();
+
+        this.selectedService = service;
+        this.selectedTab = ServiceDetailsTab.Overview;
+
+        // Start polling for new service if it's connected
+        if (service && service.status === 'connected') {
+            this.startSelectedServicePolling();
         }
     }
 
     /**
-     * Cleans up metrics subscription and subscriptions interval.
+     * Starts polling for selected service details.
      */
-    private cleanupSubscriptions(): void {
-        this.metricsSubscription?.unsubscribe();
-        this.metricsSubscription = undefined;
-        clearInterval(this.subscriptionsInterval);
-        this.subscriptionsInterval = undefined;
-    }
-
-    /**
-     * Fetches additional details for a service.
-     *
-     * @param serviceId - ID of the service to fetch details for
-     */
-    private async fetchServiceDetails(serviceId: string): Promise<void> {
-        // Clean up existing subscriptions
-        this.cleanupSubscriptions();
-
-        const service = this.dataSource.data.find(s => s.id === serviceId);
-        if (!service || service.status === 'disconnected') return;
-
-        // Set up polling for subscriptions
-        const pollSubscriptions = async () => {
-            // Check if service is still connected before polling
-            const currentService = this.dataSource.data.find(s => s.id === serviceId);
-            if (!currentService || currentService.status === 'disconnected') {
-                this.cleanupSubscriptions();
-                return;
-            }
-
-            try {
-                const subsResponse = await this.servicesService.fetchServiceSubscriptions(serviceId);
-                if (subsResponse && subsResponse.subscriptions) {
-                    service.subscriptions = subsResponse.subscriptions;
-                    // Force update
-                    this.dataSource.data = [...this.dataSource.data];
-                }
-            } catch (error) {
-                console.warn(`Failed to get subscriptions for service ${serviceId}:`, error);
-            }
-        };
-
+    private startSelectedServicePolling(): void {
         // Initial fetch
-        await pollSubscriptions();
+        this.fetchSelectedServiceDetails();
 
         // Set up polling interval
-        const subscriptionsInterval = window.setInterval(pollSubscriptions, 5000);
-
-        // Subscribe to metrics to get service-specific metrics
-        const metricsSubscription = this.metricsService.metrics$.subscribe(metrics => {
-            // Check if service is still connected before processing metrics
-            const currentService = this.dataSource.data.find(s => s.id === serviceId);
-            if (!currentService || currentService.status === 'disconnected') {
-                this.cleanupSubscriptions();
-                return;
+        this.selectedServiceInterval = window.setInterval(() => {
+            if (this.selectedService?.status === 'connected') {
+                this.fetchSelectedServiceDetails();
+            } else {
+                this.stopSelectedServicePolling();
             }
-
-            const serviceMetrics: Record<string, number> = {};
-            for (const metric of metrics) {
-                if (metric.name.includes(`{serviceid:${serviceId}}`)) {
-                    serviceMetrics[metric.name] = metric.value;
-                }
-            }
-            if (Object.keys(serviceMetrics).length > 0) {
-                service.metrics = serviceMetrics;
-                // Force update
-                this.dataSource.data = [...this.dataSource.data];
-            }
-        });
-
-        // Store subscriptions to clean up later
-        this.metricsSubscription = metricsSubscription;
-        this.subscriptionsInterval = subscriptionsInterval;
+        }, 5000);
     }
 
     /**
-     * Checks if a service is currently selected.
+     * Stops polling for selected service details.
+     */
+    private stopSelectedServicePolling(): void {
+        if (this.selectedServiceInterval) {
+            clearInterval(this.selectedServiceInterval);
+            this.selectedServiceInterval = undefined;
+        }
+    }
+
+    /**
+     * Fetches details for the selected service.
+     */
+    private async fetchSelectedServiceDetails(): Promise<void> {
+        if (!this.selectedService || this.selectedService.status !== 'connected') return;
+
+        try {
+            // Fetch subscriptions
+            const subsResponse = await this.servicesService.fetchServiceSubscriptions(this.selectedService.id);
+            if (subsResponse && subsResponse.subscriptions) {
+                this.selectedService.subscriptions = subsResponse.subscriptions;
+            } else {
+                delete this.selectedService.subscriptions;
+            }
+        } catch (error) {
+            console.warn(`Failed to get subscriptions for service ${this.selectedService.id}:`, error);
+            delete this.selectedService.subscriptions;
+        }
+
+        try {
+            // Fetch metrics
+            const metricsResponse = await this.servicesService.fetchServiceMetrics(this.selectedService.id);
+            if (metricsResponse && metricsResponse.length > 0) {
+                this.selectedService.metrics = metricsResponse;
+            } else {
+                delete this.selectedService.metrics;
+            }
+        } catch (error) {
+            console.warn(`Failed to get metrics for service ${this.selectedService.id}:`, error);
+            delete this.selectedService.metrics;
+        }
+    }
+
+    /**
+     * Checks if a service is selected.
      *
-     * @param service - Service to check selection state for
+     * @param service - Service to check
      * @returns Whether the service is selected
      */
     isSelected(service: ServiceInfo): boolean {
@@ -669,44 +291,24 @@ export class ServicesComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     /**
-     * Closes the details panel.
+     * Closes the service details panel.
      */
     closeDetails(): void {
+        this.stopSelectedServicePolling();
         this.selectedService = undefined;
-        this.cleanupSubscriptions();
     }
 
     /**
-     * Changes the selected tab in the details panel.
+     * Handles tab changes in the details panel.
      *
-     * @param tabIndex - Index of the tab to select
+     * @param tabIndex - New tab index
      */
     onTabChange(tabIndex: number): void {
         this.selectedTab = tabIndex;
     }
 
     /**
-     * Gets the formatted status text.
-     *
-     * @param status - Status to format
-     * @returns Formatted status text
-     */
-    getFormattedStatus(status: ServiceStatus): string {
-        return status.charAt(0).toUpperCase() + status.slice(1);
-    }
-
-    /**
-     * Gets the CSS class for a status.
-     *
-     * @param status - Status to get class for
-     * @returns CSS class name
-     */
-    getStatusClass(status: ServiceStatus): string {
-        return `status-${status}`;
-    }
-
-    /**
-     * Clears the list of disconnected services
+     * Clears disconnected services.
      */
     clearDisconnected(): void {
         this.servicesService.clearDisconnected();

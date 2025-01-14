@@ -58,7 +58,6 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         if (!metric?.name) return 'Other';
         const parts = metric.name.split('.');
         const groupName = parts[0];
-        console.log('Grouping metric:', metric.name, 'into group:', groupName);
         return groupName;
     };
 
@@ -118,7 +117,6 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
 
         // Subscribe to metrics updates
         this.metricsSubscription = this.metricsService.metrics$.subscribe(metrics => {
-            console.log('Received metrics update:', metrics);
             this.updateChart();
         });
     }
@@ -134,20 +132,7 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
      * @returns Formatted value string
      */
     getMetricDisplayValue(metric: Metric): string {
-        if (typeof metric.value !== 'number') {
-            return String(metric.value);
-        }
-
-        switch (metric.type.toLowerCase()) {
-            case 'percent':
-                return `${(metric.value * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
-            case 'rate':
-                return `${metric.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}/s`;
-            case 'uptime':
-                return this.timeFormatService.renderElapsedTime(metric.value * 1000);
-            default:
-                return metric.value.toLocaleString(undefined, { maximumFractionDigits: 2 });
-        }
+        return this.metricsService.getMetricDisplayValue(metric);
     }
 
     /**

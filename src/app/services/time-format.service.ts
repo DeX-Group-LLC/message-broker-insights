@@ -27,6 +27,11 @@ export class TimeFormatService implements OnDestroy {
         this.currentTimestamp.complete();
     }
 
+    getElapsed(timestamp: string | Date): number {
+        const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+        return Math.max(0, this.currentTimestamp.value - date.getTime());
+    }
+
     /**
      * Gets the time elapsed since a timestamp.
      *
@@ -34,9 +39,7 @@ export class TimeFormatService implements OnDestroy {
      * @returns Formatted elapsed time string
      */
     getElapsedTime(timestamp: string | Date): string {
-        const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
-        const elapsed = Math.max(0, this.currentTimestamp.value - date.getTime());
-        return this.renderElapsedTime(elapsed);
+        return this.renderElapsedTime(this.getElapsed(timestamp));
     }
 
     /**
