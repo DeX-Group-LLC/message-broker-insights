@@ -1,16 +1,17 @@
 .services-container {
     margin: 16px;
     width: calc(100% - 32px);
+    min-height: fit-content;
     height: calc(100% - 32px);
     display: flex;
-    gap: 20px;
+    gap: 1rem;
 }
 
 mat-card {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
     flex: 1;
+    flex-direction: column;
+    min-width: 550px;
+    min-height: 350px;
 }
 
 .mat-mdc-card-content {
@@ -20,98 +21,132 @@ mat-card {
     overflow: hidden;
 }
 
-.table-container {
-    flex: 1;
+.header-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.tab-content {
+    padding: 1rem;
     overflow: auto;
-    position: relative;
-}
-
-table {
-    width: 100%;
-}
-
-.paginator-container {
+    flex: 1;
     display: flex;
-    align-items: center;
-    border-top: 1px solid var(--mat-sys-outline);
-    background: var(--mat-sys-surface-container);
-
-    .paginator-actions {
-        display: flex;
-        gap: 8px;
-        padding: 0 16px;
-    }
-
-    mat-paginator {
-        flex: 1;
-    }
+    flex-direction: column;
 }
 
-.header-cell-content {
-    display: flex;
-    align-items: center;
-    gap: 2px;
+mat-tab-group {
     height: 100%;
-    width: 100%;
-    position: relative;
-    justify-content: flex-start;
 
-    span {
-        margin-right: 2px;
-    }
+    ::ng-deep & .mat-mdc-tab-body-wrapper {
+        flex: 1;
 
-    .filter-icon {
-        width: 24px;
-        height: 24px;
-        line-height: 24px;
-        opacity: 0;
-        transition: opacity 150ms ease;
-        position: relative;
-        padding: 0;
-
-        &.active {
-            opacity: 1;
-            color: var(--mat-sys-color-primary);
+        .mat-mdc-tab-body-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
         }
-
-        mat-icon {
-            font-size: 14px;
-            width: 14px;
-            height: 14px;
-            line-height: 14px;
-            opacity: 0.7;
-        }
-
-        &:hover mat-icon {
-            opacity: 1;
-        }
-    }
-
-    &:hover .filter-icon {
-        opacity: 1;
     }
 }
 
-tr.mat-mdc-row {
-    cursor: pointer;
-    transition: background-color 150ms ease;
+.pill-section {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.pill-item {
+    display: flex;
+    flex-direction: column;
+    padding: 1em;
+    border-radius: 1em;
+    min-width: fit-content;
+    background-color: var(--mat-sys-surface-container-high);
+    border: 1px solid var(--mat-sys-outline-variant);
+    transition: all 0.2s ease;
 
     &:hover {
-        background: var(--mat-sys-surface-container-high);
+        background-color: var(--mat-sys-surface-container-highest);
+        border-color: var(--mat-sys-outline);
     }
 
-    &.selected-row {
-        background: var(--mat-sys-surface-container-highest);
-        border-left: 4px solid var(--mat-sys-color-primary);
-
-        &:hover {
-            background: var(--mat-sys-surface-container-highest);
-        }
+    .label {
+        font-size: 0.875rem;
+        margin-bottom: 0.5em;
     }
 
-    td {
-        border-bottom: 1px solid var(--mat-sys-outline-variant);
+    .value {
+        font-size: 1rem;
+        font-weight: 500;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
     }
+
+    .property {
+        flex: 1;
+        padding: 0.25em 0.75em;
+        border-radius: 1em;
+        font-size: 0.75rem;
+        font-weight: 500;
+        background-color: var(--mat-sys-surface-container);
+        color: var(--mat-sys-color-primary);
+        border: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    .property + .property {
+        margin-top: 0.25em;
+    }
+
+    &:hover {
+        transform: translateY(-0.2em);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+}
+
+.meta-section {
+    h3 {
+        margin: 0 0 1rem 0;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.subscriptions-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10px, 1fr));
+    gap: 1rem;
+}
+
+.no-data-message {
+    display: flex;
+    flex: 1;
+    align-self: center;
+    align-items: center;
+}
+
+// Status colors
+.success {
+    color: #4caf50 !important;
+    font-weight: 500;
+}
+
+.warning {
+    color: #ff9800 !important;
+    font-weight: 500;
+}
+
+.error {
+    color: #f44336 !important;
+    font-weight: 500;
 }
 
 // Text styles
@@ -121,220 +156,4 @@ tr.mat-mdc-row {
 
 .italic {
     font-style: italic;
-}
-
-.warning {
-    color: #ff9800;
-}
-
-.error {
-    color: #f44336;
-}
-
-.no-data-message {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: var(--mat-sys-color-on-surface-variant);
-    font-size: 1em;
-}
-
-// Status styles
-.status-connected {
-    color: #4caf50 !important;
-    font-weight: 500;
-}
-
-.status-disconnected {
-    color: #f44336 !important;
-    font-weight: 500;
-}
-
-// Service Details Panel
-.service-details-card {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-
-    mat-card-header {
-        padding: 16px;
-        border-bottom: 1px solid var(--mat-sys-outline-variant);
-
-        mat-card-title {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 0;
-            font-size: 20px;
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 0px;
-            margin-left: auto;
-        }
-    }
-
-    mat-card-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-
-        mat-tab-group {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-
-            ::ng-deep .mat-mdc-tab-body-wrapper {
-                flex: 1;
-            }
-        }
-
-        .tab-content {
-            padding: 24px;
-            overflow: auto;
-        }
-    }
-}
-
-// Overview Tab
-.overview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-
-    .info-item {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        padding: 12px;
-        background: var(--mat-sys-surface-container);
-        border-radius: 4px;
-        border: 1px solid var(--mat-sys-outline-variant);
-
-        .label {
-            font-size: 12px;
-            color: var(--mat-sys-color-on-surface-variant);
-        }
-
-        .value {
-            font-size: 14px;
-            font-weight: 500;
-        }
-    }
-}
-
-.metadata-section {
-    h3 {
-        margin: 0 0 12px 0;
-        font-size: 14px;
-        font-weight: 500;
-        color: var(--mat-sys-color-on-surface-variant);
-    }
-
-    pre.meta-content {
-        margin: 0;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        font-size: 12px;
-        line-height: 1.5;
-        padding: 12px;
-        background: var(--mat-sys-surface-container);
-        border-radius: 4px;
-        border: 1px solid var(--mat-sys-outline-variant);
-    }
-}
-
-// Metrics Tab
-.metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-
-    .metric-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 12px;
-        background: var(--mat-sys-surface-container);
-        border-radius: 4px;
-        border: 1px solid var(--mat-sys-outline-variant);
-
-        .metric-name {
-            font-size: 12px;
-            color: var(--mat-sys-color-on-surface-variant);
-        }
-
-        .metric-value {
-            font-size: 14px;
-            font-weight: 500;
-        }
-    }
-}
-
-// Subscriptions Tab
-.subscriptions-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-
-    .subscription-item {
-        padding: 4px 8px;
-        background: var(--mat-sys-surface-container);
-        border-radius: 4px;
-        border: 1px solid var(--mat-sys-outline-variant);
-        font-size: 12px;
-        color: var(--mat-sys-color-on-surface-variant);
-    }
-}
-
-.empty-state {
-    text-align: center;
-    padding: 24px;
-    color: var(--mat-sys-color-on-surface-variant);
-    font-style: italic;
-}
-
-@keyframes rotate {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.rotating {
-    animation: rotate 1s linear infinite;
-}
-
-::ng-deep {
-    .filter-menu {
-        margin-top: 8px !important;
-
-        .mat-mdc-menu-content {
-            padding: 0 !important;
-        }
-    }
-
-    .filter-menu-content {
-        padding: 12px;
-
-        .mat-mdc-form-field {
-            width: 100%;
-            margin: 0;
-
-            .mat-mdc-form-field-subscript-wrapper {
-                display: none;
-            }
-        }
-    }
-
-    .mat-sort-header-arrow svg {
-        margin-left: -10px !important;
-    }
 }

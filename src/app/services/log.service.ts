@@ -36,14 +36,10 @@ export interface LogEntry {
 export class LogService implements OnDestroy {
     /** Subject holding the current logs */
     private logsSubject = new BehaviorSubject<LogEntry[]>([]);
-    /** Subject indicating whether logs are currently being loaded */
-    private loadingSubject = new BehaviorSubject<boolean>(false);
     /** Subject holding the current minimum log level */
     private minLogLevelSubject = new BehaviorSubject<LogLevel>(LogLevel.INFO);
     /** Observable stream of log entries */
     logs$ = this.logsSubject.asObservable();
-    /** Observable indicating whether logs are currently being loaded */
-    public loading$ = this.loadingSubject.asObservable();
     /** Observable of the current minimum log level */
     public minLogLevel$ = this.minLogLevelSubject.asObservable();
     /** Flag indicating if the service has been initialized */
@@ -128,15 +124,9 @@ export class LogService implements OnDestroy {
      * Requests log updates from the server.
      */
     private async setupLogSubscription() {
-        try {
-            this.loadingSubject.next(true);
-            const minLogLevel = this.minLogLevelSubject.value;
-            const levels = Object.values(LogLevel)
-                .filter(level => this.meetsMinLogLevel(level));
-            return await this.websocketService.request('system.log.subscribe', { levels });
-        } finally {
-            this.loadingSubject.next(false);
-        }
+        const levels = Object.values(LogLevel)
+            .filter(level => this.meetsMinLogLevel(level));
+        return await this.websocketService.request('system.log.subscribe', { levels });
     }
     private _setupLogSubscription = this.setupLogSubscription.bind(this);
 

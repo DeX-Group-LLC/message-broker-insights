@@ -15,9 +15,8 @@ import { animate, state, style, transition, trigger, group } from '@angular/anim
 import { Observable, filter, map } from 'rxjs';
 import { ThemeService, Theme, ColorPalette } from '../../services/theme.service';
 import { WebsocketService, ConnectionState, ConnectionDetails } from '../../services/websocket.service';
-import { ConnectionEventsDialogComponent } from '../connection-events-dialog/connection-events-dialog.component';
+import { ConnectionHistoryComponent } from './connection-history/connection-history.component';
 import { routes, RouteData } from '../../app.routes';
-import { MatSelectChange } from '@angular/material/select';
 
 interface NavItem {
     path: string;
@@ -204,7 +203,7 @@ export class LayoutComponent implements OnInit {
             case 'dark':
                 return 'dark_mode';
             case 'system':
-                return 'settings_suggest';
+                return 'brightness_auto';
             default:
                 return 'light_mode';
         }
@@ -280,10 +279,10 @@ export class LayoutComponent implements OnInit {
      */
     getConnectionTooltip(details: ConnectionDetails): string {
         const lines = [
-            `Server: ${details.url}`,
-            `Status: ${this.getConnectionLabel(details.state)}`,
-            `Last Connected: ${this.formatDate(details.lastConnected)}`,
-            `Latency: ${this.formatLatency(details.latency)}`
+            `Server: \t\t\t\t${details.url}`,
+            `Status: \t\t\t\t${this.getConnectionLabel(details.state)}`,
+            `Last Connected: \t${this.formatDate(details.lastConnected)}`,
+            `Latency: \t\t\t${this.formatLatency(details.latency)}`
         ];
 
         if (details.reconnectAttempts > 0) {
@@ -297,7 +296,7 @@ export class LayoutComponent implements OnInit {
      * Shows the connection events dialog.
      */
     showConnectionEvents(): void {
-        this.dialog.open(ConnectionEventsDialogComponent, {
+        this.dialog.open(ConnectionHistoryComponent, {
             data: this.websocketService.details.recentEvents,
             width: '600px',
             autoFocus: false

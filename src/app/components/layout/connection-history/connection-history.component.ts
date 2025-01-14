@@ -3,10 +3,10 @@ import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { ConnectionEvent, ConnectionEventType, WebsocketService } from '../../services/websocket.service';
+import { ConnectionEvent, ConnectionEventType, WebsocketService } from '../../../services/websocket.service';
 
 @Component({
-    selector: 'app-connection-events-dialog',
+    selector: 'app-connection-history',
     standalone: true,
     imports: [
         CommonModule,
@@ -14,10 +14,10 @@ import { ConnectionEvent, ConnectionEventType, WebsocketService } from '../../se
         MatIconModule,
         MatButtonModule
     ],
-    templateUrl: './connection-events-dialog.component.html',
-    styleUrls: ['./connection-events-dialog.component.scss']
+    templateUrl: './connection-history.component.html',
+    styleUrls: ['./connection-history.component.scss']
 })
-export class ConnectionEventsDialogComponent implements OnInit, OnDestroy {
+export class ConnectionHistoryComponent implements OnInit, OnDestroy {
     /** Current list of events */
     events: ConnectionEvent[];
     /** Event handler for connection events */

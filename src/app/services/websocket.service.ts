@@ -276,8 +276,10 @@ export class WebsocketService extends EventEmitter {
                 const [action, topic, version, requestId] = header.split(':');
                 const message = JSON.parse(payload);
 
-                if (action === ActionType.REQUEST && topic === 'system.heartbeat') {
-                    this.send(ActionType.RESPONSE, 'system.heartbeat', { timestamp: new Date().toISOString() }, requestId);
+                if (topic === 'system.heartbeat') {
+                    if (action === ActionType.REQUEST) {
+                        this.send(ActionType.RESPONSE, 'system.heartbeat', { timestamp: new Date().toISOString() }, requestId);
+                    }
                 } else if (action === ActionType.RESPONSE && requestId) {
                     const request = this.pendingRequests.get(requestId);
                     if (request == null) return;
@@ -302,7 +304,6 @@ export class WebsocketService extends EventEmitter {
         };
 
         this.socket.onclose = () => {
-            console.log('WebSocket connection closed');
             this._state = ConnectionState.DISCONNECTED;
             this.addEvent(ConnectionEventType.DISCONNECTED);
             this.emit('stateChange', this._state);

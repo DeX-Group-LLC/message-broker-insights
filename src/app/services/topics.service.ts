@@ -156,4 +156,12 @@ export class TopicsService implements OnDestroy {
     async refresh(): Promise<void> {
         await this.pollTopics();
     }
+
+    /**
+     * Gets the current topics.
+     * @returns Current topics
+     */
+    getTopics(): Topic[] {
+        return this.currentTopics;
+    }
 }

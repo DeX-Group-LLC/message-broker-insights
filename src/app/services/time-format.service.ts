@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
+import { Observable, BehaviorSubject } from 'rxjs';
 
 /**
  * Service for formatting time and timestamps consistently across the application.
@@ -6,7 +7,31 @@ import { Injectable } from '@angular/core';
 @Injectable({
     providedIn: 'root'
 })
-export class TimeFormatService {
+export class TimeFormatService implements OnDestroy {
+    /** Current timestamp that gets updated every second */
+    private currentTimestamp = new BehaviorSubject<number>(Date.now());
+    /** Timer reference for cleanup */
+    private timer: any;
+
+    constructor() {
+        // Update timestamp every second
+        this.timer = setInterval(() => {
+            this.currentTimestamp.next(Date.now());
+        }, 1000);
+    }
+
+    ngOnDestroy() {
+        if (this.timer) {
+            clearInterval(this.timer);
+        }
+        this.currentTimestamp.complete();
+    }
+
+    getElapsed(timestamp: string | Date): number {
+        const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+        return Math.max(0, this.currentTimestamp.value - date.getTime());
+    }
+
     /**
      * Gets the time elapsed since a timestamp.
      *
@@ -14,10 +39,16 @@ export class TimeFormatService {
      * @returns Formatted elapsed time string
      */
     getElapsedTime(timestamp: string | Date): string {
-        const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
-        const now = new Date();
-        const elapsed = now.getTime() - date.getTime();
+        return this.renderElapsedTime(this.getElapsed(timestamp));
+    }
 
+    /**
+     * Renders elapsed time in a human readable format.
+     *
+     * @param elapsed - Elapsed time in milliseconds
+     * @returns Formatted elapsed time string
+     */
+    renderElapsedTime(elapsed: number): string {
         const seconds = Math.floor(elapsed / 1000);
         const minutes = Math.floor(seconds / 60);
         const hours = Math.floor(minutes / 60);
@@ -42,8 +73,14 @@ export class TimeFormatService {
      */
     getCompactElapsedTime(timestamp: string | Date): string {
         const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
-        const now = new Date();
-        const elapsed = now.getTime() - date.getTime();
+        const elapsed = Math.max(0, this.currentTimestamp.value - date.getTime());
         return `${Math.floor(elapsed / 1000)}s`;
+    }
+
+    /**
+     * Gets the current timestamp observable for components that need to react to time updates
+     */
+    getCurrentTimestamp(): Observable<number> {
+        return this.currentTimestamp.asObservable();
     }
 }
