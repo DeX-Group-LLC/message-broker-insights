@@ -13,6 +13,7 @@
 
 ## Table of Contents
 - [Features](#features)
+- [Pages Overview](#pages-overview)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Development](#development)
@@ -23,70 +24,100 @@
 
 ## Features
 
-- 🎨 Comprehensive Theme System:
-  - 🌙 Light/Dark mode with system preference detection
-  - 12 Material Design color palettes (Red, Green, Blue, Yellow, etc.)
-  - Persistent theme preferences
-  - Real-time theme switching
+- 🎨� Advanced WebSocket Communication:
+  - Real-time bidirectional communication with automatic reconnection
+  - Connection state management (Connected, Connecting, Reconnecting, Disconnected)
+  - Heartbeat monitoring with latency tracking
+  - Comprehensive connection event history
+  - Request/Response pattern support with UUIDs
+  - Automatic service registration
+
 - 📊 System Metrics and Analytics:
   - Real-time performance metrics visualization
-  - Historical metrics tracking and trends
-- 📝 Live log streaming with filtering and search
-- 📱 Responsive design with collapsible navigation
-- 🔄 WebSocket-based real-time updates with comprehensive connection monitoring:
-  - Visual connection status indicator (Connecting, Connected, Reconnecting, Disconnected)
-  - Connection details (server URL, latency, last connected time)
-  - Automatic reconnection with attempt tracking
-  - Real-time connection event history
-  - Manual reconnection option
-- 🎨 Material Design with Angular Material components
-- 🔍 Advanced filtering and sorting capabilities
-- ⚡ Optimized performance with virtual scrolling
-- 🔌 Service Management and Monitoring:
-  - Real-time status and heartbeat monitoring
-  - Service metrics and metadata visualization
-  - Subscription tracking and management
-  - Advanced filtering and service controls
-  - Expandable detailed views
-- 📨 Topic Management and Monitoring:
+  - Historical metrics tracking (5-minute buffer)
+  - Multiple metric types (gauge, rate, uptime, percent)
+  - Smart metric value formatting
+  - Service-specific metrics tracking
+  - Automatic metric updates with configurable polling
+
+- 🔍 Service Management:
+  - Real-time service discovery and monitoring
+  - Service status tracking (connected/disconnected)
+  - Service metadata and description management
+  - Subscription tracking per service
+  - Service-specific metrics visualization
+  - Historical disconnected service tracking
+  - Automatic cleanup of stale services
+
+- 📨 Topic Management:
   - Real-time topic subscription tracking
-  - Priority range visualization
-  - Multi-subscriber management
-  - Expandable subscriber details
-  - Advanced filtering by topic name, subscribers, and priority
-  - Multi-expand support for comparing topics
-- 📥 Data Export Capabilities:
-  - Export data to CSV or JSON formats
-  - Customizable field selection
-  - Advanced formatting options:
-    - Array formatting (JSON or comma-separated list)
-    - Object formatting (JSON or flattened structure)
-    - Date formatting (ISO, Local, or Unix timestamp)
-    - Custom field delimiters for CSV
-  - Preview functionality
-  - Hierarchical field selection with parent/child relationships
-  - Smart handling of nested arrays and objects
-  - Configurable array size limits
+  - Subscriber count and details
+  - Priority-based subscription management
+  - Last update tracking per topic
+  - Automatic topic cleanup
+  - Topic filtering and search
 
-### Theme System
-The application supports both light/dark modes and multiple color themes:
+- 📝 Advanced Logging System:
+  - Multiple log levels (DEBUG, INFO, WARN, ERROR)
+  - Structured log entries with metadata
+  - Module-based logging
+  - Real-time log streaming
+  - Log filtering and search
 
-- **Mode Selection**: Choose between Light, Dark, or System mode
-- **Color Palettes**: Available color themes:
-  - Red
-  - Green
-  - Blue
-  - Yellow
-  - Cyan
-  - Magenta
-  - Orange
-  - Chartreuse
-  - Spring Green
-  - Azure
-  - Violet
-  - Rose
+- 🎨 Comprehensive Theme System:
+  - Light/Dark mode with system preference detection
+  - 12 Material Design color palettes
+  - Persistent theme preferences
+  - Real-time theme switching
 
-Theme preferences are persisted in localStorage and will be restored on page reload.
+- 📱 Modern UI/UX:
+  - Responsive Material Design
+  - Virtual scrolling for performance
+  - Advanced filtering and sorting
+  - Expandable detailed views
+  - Real-time updates
+  - Connection status indicators
+
+## Pages Overview
+
+### Dashboard
+![Dashboard](https://raw.githubusercontent.com/DeX-Group-LLC/message-broker-insights/main/docs/images/dashboard.png)
+- Main landing page providing a high-level system overview
+- Real-time connection status and metrics visualization
+- Quick access to critical system information
+- Service health indicators and active topic counts
+
+### Logs
+![Logs](https://raw.githubusercontent.com/DeX-Group-LLC/message-broker-insights/main/docs/images/logs.png)
+- Real-time log streaming interface
+- Multi-level log filtering (DEBUG, INFO, WARN, ERROR)
+- Module-based log categorization
+- Advanced search and filtering capabilities
+- Structured log entry display with metadata
+- Automatic log rotation and cleanup
+
+### Metrics
+![Metrics](https://raw.githubusercontent.com/DeX-Group-LLC/message-broker-insights/main/docs/images/metrics.png)
+- System-wide performance visualization
+- Real-time metric updates with historical trends
+- Multiple visualization options for different metric types
+- Service-specific metric filtering
+
+### Services
+![Services](https://raw.githubusercontent.com/DeX-Group-LLC/message-broker-insights/main/docs/images/services.png)
+- Comprehensive list of all connected and recently disconnected services
+- Real-time status indicators and heartbeat monitoring
+- Expandable service details showing metadata and metrics
+- Service-specific subscription information
+- Filtering and sorting capabilities
+- Historical connection tracking
+
+### Topics
+![Topics](https://raw.githubusercontent.com/DeX-Group-LLC/message-broker-insights/main/docs/images/topics.png)
+- Complete overview of all subscribed message topics
+- Real-time subscriber count and priority information
+- Detailed subscriber lists with service associations
+- Advanced filtering by topic name and subscribers
 
 ## Prerequisites
 
@@ -98,39 +129,20 @@ Theme preferences are persisted in localStorage and will be restored on page rel
 ## Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/DeX-Group-LLC/message-broker-insights.git
+
+# Navigate to project directory
+cd message-broker-insights
+
 # Install dependencies
 npm install
-```
 
-## Development
-
-Start the development server:
-
-```bash
+# Start the application
 npm start
-# or
-ng serve
 ```
 
-The application will be available at `http://localhost:4200`. The app will automatically reload when you change any source files.
-
-### Code Generation
-
-Angular CLI provides powerful code generation tools:
-
-```bash
-# Generate a new component
-ng generate component my-component
-
-# Generate a new service
-ng generate service my-service
-
-# Generate a new interface
-ng generate interface my-interface
-
-# List all available schematics
-ng generate --help
-```
+The application will be available at `http://localhost:4200`. Make sure you have a Message Broker instance running at `ws://localhost:3000` or configure the connection URL in the application settings.
 
 ## Building
 
@@ -161,63 +173,77 @@ ng test
 
 The web interface is built with a modular architecture:
 
-- **Core Services**
-  - `LogService`: Handles log collection, streaming, and filtering
-  - `MetricsService`: Manages system metrics collection and visualization
-  - `ServicesService`: Manages service discovery, monitoring, and status tracking
-  - `ThemeService`: Controls application theming and user preferences
-  - `TimeFormatService`: Handles consistent time formatting across the application
-  - `WebsocketService`: Manages WebSocket communication and connection state
+### Core Services
 
-- **Components**
-  - `ConnectionEventsDialogComponent`: Connection status and event history dialog
-  - `LayoutComponent`: Main application layout with responsive navigation
-  - `LogsComponent`: Real-time log viewing and filtering interface
-  - `MetricsComponent`: System metrics visualization and analysis
-  - `ServicesComponent`: Service management and monitoring interface
-  - `TopicsComponent`: Topic management and subscriber monitoring interface
-  - `ExportComponent`: Reusable data export interface with customization options
-  - `ExportCustomizerComponent`: Advanced export configuration dialog with field selection and format options
+- **WebsocketService**:
+  - Manages WebSocket communication with automatic reconnection
+  - Handles connection state management and heartbeat monitoring
+  - Implements request/response pattern with UUID tracking
+  - Provides connection event history and latency tracking
 
-- **Features**
-  - Real-time data updates via WebSocket
-  - Responsive layout with Material Design
-  - Theme switching with system preference detection
-  - Advanced filtering and sorting capabilities
-  - Service monitoring and management
-  - Topic and subscriber management
-  - Real-time metrics visualization
-  - Log streaming and analysis
+- **MetricsService**:
+  - Manages system metrics collection and visualization
+  - Supports multiple metric types (gauge, rate, uptime, percent)
+  - Maintains 5-minute historical buffer
+  - Handles automatic metric updates and formatting
 
-- **Design Patterns**
-  - Component-based architecture
-  - Reactive programming with RxJS
-  - Dependency injection
-  - Observable data streams
-  - Event-driven communication
-  - Singleton services
-  - Recursive data processing for nested structures
-  - Smart data cloning with type preservation
+- **ServicesService**:
+  - Manages service discovery and monitoring
+  - Tracks service status and metadata
+  - Handles service-specific metrics and subscriptions
+  - Maintains history of disconnected services
 
-- **Standardized Component Behavior**
-  - Consistent refresh mechanism across components:
-    - Automatic updates when component is active
-    - Manual refresh available when paused
-    - Visual loading indicators during updates
-  - Unified filtering system:
-    - Real-time filter application
-    - Clear individual or all filters
-    - Filter state indicators
-  - Common data management:
-    - Pause/Resume functionality
-    - Data persistence during paused state
-    - Automatic data refresh on resume
-  - Export functionality:
-    - Consistent export interface across components
-    - Field customization with hierarchical selection
-    - Format options with live preview
-    - Smart handling of complex data structures
-    - Configurable size limits and formatting
+- **TopicsService**:
+  - Manages topic subscriptions and updates
+  - Tracks subscriber counts and priorities
+  - Handles automatic topic cleanup
+  - Provides real-time topic updates
+
+- **LogService**:
+  - Manages structured logging with multiple levels
+  - Handles log entry metadata and module tracking
+  - Provides real-time log streaming
+  - Supports advanced filtering
+
+### Components
+
+
+- **LayoutComponent**: Main application layout with responsive navigation
+- **LogsComponent**: Real-time log viewing and filtering interface
+- **MetricsComponent**: System metrics visualization and analysis
+- **ServicesComponent**: Service management and monitoring interface
+- **TopicsComponent**: Topic management and subscriber monitoring interface
+
+### Design Patterns
+
+- Component-based architecture
+- Reactive programming with RxJS
+- Dependency injection
+- Observable data streams
+- Event-driven communication
+- Singleton services
+- Smart data management with buffer limits
+- Automatic cleanup of stale data
+
+### Standardized Component Behavior
+
+- **Real-time Updates**:
+  - Automatic data polling with configurable intervals
+  - WebSocket-based real-time updates
+  - Smart data buffer management
+  - Automatic cleanup of stale data
+
+- **State Management**:
+  - Reactive state updates with BehaviorSubjects
+  - Loading state tracking
+  - Error handling and recovery
+  - Automatic reconnection logic
+
+- **Data Formatting**:
+  - Smart metric value formatting
+  - Timestamp formatting
+  - Metadata extraction and management
+  - Priority-based sorting
 
 ## Contributing
 

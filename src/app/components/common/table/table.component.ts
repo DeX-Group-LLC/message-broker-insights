@@ -121,7 +121,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
     @Input() paginationConfig?: TablePaginationConfig;
 
     /** Function to determine if a row can be expanded */
-    @Input() canExpand: (row: any) => boolean = () => false;
+    @Input() canExpand?: (row: any) => boolean;
 
     /** Function to determine if a row can be selected */
     @Input() canSelect: (row: any) => boolean = () => true;
@@ -530,7 +530,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         }
 
         // If row is expandable, handle expansion
-        if (this.canExpand(row)) {
+        if (this.canExpand?.(row)) {
             if (this.isExpanded(row)) {
                 this.expandedRows.delete(row);
             } else {
