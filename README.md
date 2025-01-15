@@ -1,15 +1,15 @@
 # Message Broker Insights (MBI) Web Interface
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue?style=square)](https://opensource.org/licenses/Apache-2.0)
-[![Tests Status](https://github.com/DeX-Group-LLC/mb-app-insights/actions/workflows/tests.yml/badge.svg?style=square)](https://github.com/DeX-Group-LLC/mb-app-insights/actions/workflows/tests.yml)
-[![Coverage Status](https://coveralls.io/repos/github/DeX-Group-LLC/mb-app-insights/badge.svg?branch=main&style=square)](https://coveralls.io/github/DeX-Group-LLC/mb-app-insights?branch=main)
+[![Tests Status](https://github.com/DeX-Group-LLC/mb-insights/actions/workflows/tests.yml/badge.svg?style=square)](https://github.com/DeX-Group-LLC/mb-insights/actions/workflows/tests.yml)
+[![Coverage Status](https://coveralls.io/repos/github/DeX-Group-LLC/mb-insights/badge.svg?branch=main&style=square)](https://coveralls.io/github/DeX-Group-LLC/mb-insights?branch=main)
 [![Node Version](https://img.shields.io/badge/node-%3E%3D18.x-brightgreen?style=square)](https://nodejs.org)
-[![NPM Version](https://badge.fury.io/js/mb-app-insights.svg?style=square)](https://badge.fury.io/js/mb-app-insights)
-[![Dependencies](https://img.shields.io/librariesio/release/npm/mb-app-insights?style=square)](https://libraries.io/npm/mb-app-insights)
-[![Install Size](https://packagephobia.com/badge?p=mb-app-insights?style=square)](https://packagephobia.com/result?p=mb-app-insights)
+[![NPM Version](https://badge.fury.io/js/mb-insights.svg?style=square)](https://badge.fury.io/js/mb-insights)
+[![Dependencies](https://img.shields.io/librariesio/release/npm/mb-insights?style=square)](https://libraries.io/npm/mb-insights)
+[![Install Size](https://packagephobia.com/badge?p=mb-insights?style=square)](https://packagephobia.com/result?p=mb-insights)
 
 🌐 A modern Angular-based web interface for the Message Broker, providing real-time monitoring, log viewing, and system metrics visualization. Built with Angular Material for a clean, responsive user experience.
 
-![Dashboard](https://raw.githubusercontent.com/DeX-Group-LLC/mb-app-insights/main/docs/images/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/DeX-Group-LLC/mb-insights/main/docs/images/dashboard.png)
 
 ## Table of Contents
 - [Features](#features)
@@ -84,14 +84,14 @@
 ## Pages Overview
 
 ### Dashboard
-![Dashboard](https://raw.githubusercontent.com/DeX-Group-LLC/mb-app-insights/main/docs/images/dashboard.png)
+![Dashboard](https://raw.githubusercontent.com/DeX-Group-LLC/mb-insights/main/docs/images/dashboard.png)
 - Main landing page providing a high-level system overview
 - Real-time connection status and metrics visualization
 - Quick access to critical system information
 - Service health indicators and active topic counts
 
 ### Logs
-![Logs](https://raw.githubusercontent.com/DeX-Group-LLC/mb-app-insights/main/docs/images/logs.png)
+![Logs](https://raw.githubusercontent.com/DeX-Group-LLC/mb-insights/main/docs/images/logs.png)
 - Real-time log streaming interface
 - Multi-level log filtering (DEBUG, INFO, WARN, ERROR)
 - Module-based log categorization
@@ -100,14 +100,14 @@
 - Automatic log rotation and cleanup
 
 ### Metrics
-![Metrics](https://raw.githubusercontent.com/DeX-Group-LLC/mb-app-insights/main/docs/images/metrics.png)
+![Metrics](https://raw.githubusercontent.com/DeX-Group-LLC/mb-insights/main/docs/images/metrics.png)
 - System-wide performance visualization
 - Real-time metric updates with historical trends
 - Multiple visualization options for different metric types
 - Service-specific metric filtering
 
 ### Services
-![Services](https://raw.githubusercontent.com/DeX-Group-LLC/mb-app-insights/main/docs/images/services.png)
+![Services](https://raw.githubusercontent.com/DeX-Group-LLC/mb-insights/main/docs/images/services.png)
 - Comprehensive list of all connected and recently disconnected services
 - Real-time status indicators and heartbeat monitoring
 - Expandable service details showing metadata and metrics
@@ -116,7 +116,7 @@
 - Historical connection tracking
 
 ### Topics
-![Topics](https://raw.githubusercontent.com/DeX-Group-LLC/mb-app-insights/main/docs/images/topics.png)
+![Topics](https://raw.githubusercontent.com/DeX-Group-LLC/mb-insights/main/docs/images/topics.png)
 - Complete overview of all subscribed message topics
 - Real-time subscriber count and priority information
 - Detailed subscriber lists with service associations
@@ -147,10 +147,10 @@ Development dependencies:
 
 ```bash
 # Clone the repository
-git clone https://github.com/DeX-Group-LLC/mb-app-insights.git
+git clone https://github.com/DeX-Group-LLC/mb-insights.git
 
 # Navigate to project directory
-cd mb-app-insights
+cd mb-insights
 
 # Install dependencies
 npm install

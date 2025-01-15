@@ -1,16 +1,16 @@
 {
-  "name": "mb-app-insights",
+  "name": "mb-insights",
   "version": "1.0.0",
   "description": "A web-based dashboard for monitoring and analyzing NABHAS-compliant Message Brokers. Provides real-time insights into message flow, performance, and system health. Compatible with `mb-server-node` and other NABHAS implementations.",
   "author": "DeX Group, LLC",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/DeX-Group-LLC/mb-app-insights#readme",
+  "homepage": "https://github.com/DeX-Group-LLC/mb-insights#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/DeX-Group-LLC/mb-app-insights.git"
+    "url": "git+https://github.com/DeX-Group-LLC/mb-insights.git"
   },
   "bugs": {
-    "url": "https://github.com/DeX-Group-LLC/mb-app-insights/issues"
+    "url": "https://github.com/DeX-Group-LLC/mb-insights/issues"
   },
   "keywords": [
     "message-broker",
@@ -42,6 +42,7 @@
     "@angular/router": "^19.0.0",
     "@types/chart.js": "^2.9.41",
     "chart.js": "^4.4.7",
+    "chartjs-adapter-moment": "^1.0.1",
     "ng2-charts": "^5.0.3",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
