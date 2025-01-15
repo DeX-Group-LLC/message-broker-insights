@@ -171,13 +171,13 @@ interface Listener {
             min-height: 600px;
             display: flex;
             flex-direction: column;
-        }
 
-        .section {
-            flex: 1;
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
+            ::ng-deep & .section {
+                flex: 1;
+                min-height: 0;
+                display: flex;
+                flex-direction: column;
+            }
         }
 
         app-flow-diagram {
@@ -328,12 +328,13 @@ export class FlowDiagramComponent implements OnChanges {
 
         const nodes: FlowNode[] = [];
         const messages: FlowMessage[] = [];
-        const serviceSpacing = 200;
+        const serviceSpacing = 150;
         const messageSpacing = 30;
         const messageStartY = 60;
         const boxWidth = 100;
-        const topPadding = 16;  // 1em = 16px
-        const sideServicesX = serviceSpacing * 4;
+        const topPadding = 16;
+        const horizontalPadding = 50;
+        const sideServicesX = serviceSpacing *4;
 
         // Track first message Y position for each service
         const serviceFirstMessageY = new Map<string, number>();
@@ -343,7 +344,7 @@ export class FlowDiagramComponent implements OnChanges {
             id: this.messageFlow.originatorServiceId,
             label: this.messageFlow.originatorServiceId,
             type: 'originator',
-            x: serviceSpacing,
+            x: horizontalPadding + boxWidth/2,
             y: topPadding
         });
 
@@ -351,17 +352,34 @@ export class FlowDiagramComponent implements OnChanges {
             id: 'message-broker',
             label: 'Message Broker',
             type: 'broker',
-            x: serviceSpacing * 2,
+            x: horizontalPadding + boxWidth/2 + serviceSpacing,
             y: topPadding
         });
 
-        nodes.push({
-            id: this.messageFlow.responderServiceId,
-            label: this.messageFlow.responderServiceId,
-            type: 'responder',
-            x: serviceSpacing * 3,
-            y: topPadding
-        });
+        // Only add responder node if it exists and is needed
+        const isInternalError = this.messageFlow.error?.code === 'INTERNAL_ERROR';
+        const isNoResponders = this.messageFlow.error?.code === 'NO_RESPONDERS';
+        if (this.messageFlow.responderServiceId && !isNoResponders) {
+            nodes.push({
+                id: this.messageFlow.responderServiceId,
+                label: this.messageFlow.responderServiceId,
+                type: 'responder',
+                x: horizontalPadding + boxWidth/2 + serviceSpacing * 2,
+                y: topPadding
+            });
+        }
+
+        // Calculate base width without listeners
+        let baseWidth = horizontalPadding * 2 + boxWidth + serviceSpacing * (nodes.length - 1);
+
+        // Add listeners if they exist
+        if (this.messageFlow.listeners?.length) {
+            // Add extra space for listeners column
+            baseWidth += serviceSpacing + horizontalPadding;
+        }
+
+        // Set final width
+        this.width = baseWidth;
 
         let messageIndex = 0;
 
@@ -376,8 +394,6 @@ export class FlowDiagramComponent implements OnChanges {
         });
 
         // Only add message to responder if not NO_RESPONDERS and no internal error
-        const isInternalError = this.messageFlow.error?.code === 'INTERNAL_ERROR';
-        const isNoResponders = this.messageFlow.error?.code === 'NO_RESPONDERS';
         if (!isNoResponders && !isInternalError) {
             messages.push({
                 from: 'message-broker',
@@ -510,7 +526,7 @@ export class FlowDiagramComponent implements OnChanges {
                 label: serviceId,
                 type: 'listener',
                 x: sideServicesX,
-                y: y - 12 + topPadding  // Add padding to side services too
+                y: y - 12 + topPadding
             });
         });
 
@@ -520,7 +536,6 @@ export class FlowDiagramComponent implements OnChanges {
         const maxY = Math.max(...nodes.map(n => n.y)) + 100;
         const diagramHeight = Math.max(400, messageStartY + messages.length * messageSpacing + topPadding);
         this.height = Math.max(diagramHeight, maxY);
-        this.width = serviceSpacing * 5;
     }
 
     getNodeX(nodeId: string): number {
