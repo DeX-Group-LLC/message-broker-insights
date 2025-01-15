@@ -16,7 +16,7 @@ import { TableColumn } from '../common/table/table.component';
  * Provides filtering, sorting, and expansion functionality for topics.
  */
 @Component({
-    selector: 'app-topics',
+    selector: 'app-subscriptions',
     standalone: true,
     imports: [
         CommonModule,
@@ -27,10 +27,10 @@ import { TableColumn } from '../common/table/table.component';
         ExportComponent,
         TableComponent
     ],
-    templateUrl: './topics.component.html',
-    styleUrls: ['./topics.component.scss']
+    templateUrl: './subscriptions.component.html',
+    styleUrls: ['./subscriptions.component.scss']
 })
-export class TopicsComponent implements AfterViewInit, OnDestroy {
+export class SubscriptionsComponent implements AfterViewInit, OnDestroy {
     /** Whether topic updates are paused */
     isPaused = false;
     /** Loading state */

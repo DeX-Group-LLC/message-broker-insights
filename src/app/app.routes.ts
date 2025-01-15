@@ -3,7 +3,7 @@ import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { LogsComponent } from './components/logs/logs.component';
 import { MetricsComponent } from './components/metrics/metrics.component';
 import { ServicesComponent } from './components/services/services.component';
-import { TopicsComponent } from './components/topics/topics.component';
+import { SubscriptionsComponent } from './components/subscriptions/subscriptions.component';
 
 /**
  * Interface defining the data structure for route metadata.
@@ -26,7 +26,7 @@ export interface RouteData {
  * - /logs: Displays system logs with filtering and sorting
  * - /metrics: Shows system metrics with real-time updates
  * - /services: Shows system services with status and details
- * - /topics: Shows message topics and their subscribers
+ * - /subscriptions: Shows message topics and their subscribers
  */
 export const routes: Routes = [
     {
@@ -67,12 +67,12 @@ export const routes: Routes = [
         }
     },
     {
-        path: 'topics',
-        component: TopicsComponent,
+        path: 'subscriptions',
+        component: SubscriptionsComponent,
         data: {
-            icon: 'topic',
-            label: 'Message Topics',
-            shortLabel: 'Topics'
+            icon: 'bookmarks',
+            label: 'Topic Subscriptions',
+            shortLabel: 'Subscriptions'
         }
     },
     {

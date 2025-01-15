@@ -9,7 +9,7 @@
     background-color: var(--mat-sys-surface-container);
     border-right: 1px solid var(--mat-sys-outline);
     border-radius: 0;
-    width: 150px;
+    width: 170px;
 
     .sidenav-click-layer {
         height: 100%;
@@ -113,7 +113,7 @@
 }
 
 ::ng-deep mat-sidenav-content {
-    margin-left: 150px !important;
+    margin-left: 170px !important;
     transition: margin-left 150ms ease !important;
 
     .sidenav.collapsed ~ & {

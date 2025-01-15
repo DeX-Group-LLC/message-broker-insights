@@ -52,7 +52,7 @@ interface NavItem {
     animations: [
         trigger('sidenavAnimation', [
             state('expanded', style({
-                width: '150px'
+                width: '170px'
             })),
             state('collapsed', style({
                 width: '55px'

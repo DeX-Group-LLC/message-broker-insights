@@ -115,8 +115,8 @@
 - Filtering and sorting capabilities
 - Historical connection tracking
 
-### Topics
-![Topics](https://raw.githubusercontent.com/DeX-Group-LLC/mb-insights/main/docs/images/topics.png)
+### Subscriptions
+![Subscriptions](https://raw.githubusercontent.com/DeX-Group-LLC/mb-insights/main/docs/images/subscriptions.png)
 - Complete overview of all subscribed message topics
 - Real-time subscriber count and priority information
 - Detailed subscriber lists with service associations

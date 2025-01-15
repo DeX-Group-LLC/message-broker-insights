@@ -63,7 +63,9 @@
                                 <tr>
                                     <td>{{subscriber.serviceId}}
                                         @if ($index === 0) {
-                                            <span class="muted italic"> (Primary Responder)</span>
+                                            <span class="muted italic" matTooltip="This service will be the primary responder for requests for this topic.">
+                                                (Primary)
+                                            </span>
                                         }
                                     </td>
                                     <td>{{subscriber.priority}}</td>
