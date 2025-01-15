@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TableComponent, TableColumn } from '../common/table/table.component';
+import { FlowDiagramComponent } from './flow-diagram/flow-diagram.component';
 import { BehaviorSubject } from 'rxjs';
 
 interface ErrorDetails {
@@ -76,7 +77,8 @@ interface MessageFlow {
         MatIconModule,
         MatExpansionModule,
         MatTooltipModule,
-        TableComponent
+        TableComponent,
+        FlowDiagramComponent
     ],
     templateUrl: './tracker.component.html',
     styleUrls: ['./tracker.component.scss']
@@ -220,7 +222,7 @@ export class TrackerComponent implements OnInit {
         {
             requestId: 'req-004',
             originatorServiceId: 'catalog-service',
-            responderServiceId: 'pricing-service',
+            responderServiceId: '',
             topic: 'system.pricing.request',
             version: '1.0.0',
             status: 'dropped',
@@ -235,12 +237,27 @@ export class TrackerComponent implements OnInit {
                 version: '1.0.0',
                 requestId: 'req-004'
             },
-            responderPriority: 3,
+            responderPriority: 0,
             error: {
                 code: 'NO_RESPONDERS',
                 message: 'No responders available for topic',
                 metadata: {
                     topic: 'system.pricing.request'
+                }
+            },
+            response: {
+                header: {
+                    action: 'response',
+                    topic: 'system.pricing.request',
+                    version: '1.0.0',
+                    requestId: 'req-004'
+                },
+                payload: {
+                    error: {
+                        code: 'NO_RESPONDERS',
+                        message: 'No responders available for topic',
+                        topic: 'system.pricing.request'
+                    }
                 }
             }
         },
@@ -276,6 +293,60 @@ export class TrackerComponent implements OnInit {
                     details: 'Failed to route message due to internal error'
                 }
             }
+        },
+        {
+            requestId: 'req-006',
+            originatorServiceId: 'order-service',
+            responderServiceId: 'shipping-service',
+            topic: 'system.shipping.calculate',
+            version: '1.0.0',
+            status: 'dropped',
+            receivedAt: new Date('2024-01-20T10:25:00'),
+            completedAt: new Date('2024-01-20T10:25:02'),
+            brokerProcessingTime: 2000,
+            timeout: 30000,
+            payload: {
+                orderId: 'ord123',
+                items: [
+                    { productId: 'p1', quantity: 2, weight: 1.5 },
+                    { productId: 'p2', quantity: 1, weight: 0.5 }
+                ],
+                destination: {
+                    country: 'US',
+                    zipCode: '94105'
+                }
+            },
+            header: {
+                action: 'request',
+                topic: 'system.shipping.calculate',
+                version: '1.0.0',
+                requestId: 'req-006'
+            },
+            responderPriority: 1,
+            error: {
+                code: 'SERVICE_UNAVAILABLE',
+                message: 'Message broker is busy',
+                metadata: {
+                    errorId: 'mb-err-456',
+                    component: 'message-queue',
+                    details: 'Request dropped due to broker capacity limit'
+                }
+            },
+            response: {
+                header: {
+                    action: 'response',
+                    topic: 'system.shipping.calculate',
+                    version: '1.0.0',
+                    requestId: 'req-006'
+                },
+                payload: {
+                    error: {
+                        code: 'SERVICE_UNAVAILABLE',
+                        message: 'Message broker is busy',
+                        details: 'Request dropped due to broker capacity limit'
+                    }
+                }
+            }
         }
     ];
 
@@ -294,7 +365,7 @@ export class TrackerComponent implements OnInit {
         switch (status) {
             case 'success': return '#4caf50';
             case 'error': return '#f44336';
-            case 'dropped': return '#9e9e9e';
+            case 'dropped':// return '#9e9e9e';
             case 'timeout': return '#ff9800';
             default: return '#9e9e9e';
         }

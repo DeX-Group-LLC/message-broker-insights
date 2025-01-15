@@ -241,10 +241,8 @@
 
             <mat-tab label="Flow Diagram">
                 <div class="tab-content">
-                    <!-- Placeholder for flow diagram -->
                     <div class="section">
-                        <h3>Message Flow Visualization</h3>
-                        <p class="muted italic">Flow diagram visualization coming soon...</p>
+                        <app-flow-diagram [messageFlow]="selectedFlow"></app-flow-diagram>
                     </div>
                 </div>
             </mat-tab>
