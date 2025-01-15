@@ -74,6 +74,8 @@ export class LayoutComponent implements OnInit {
     currentColorPalette$!: Observable<ColorPalette>;
     /** Observable of the current page title */
     currentPageTitle$!: Observable<string>;
+    /** Observable of the current page icon */
+    currentPageIcon$!: Observable<string>;
     /** Current WebSocket connection state */
     connectionState = ConnectionState;
     /** Observable of the current connection state */
@@ -135,6 +137,15 @@ export class LayoutComponent implements OnInit {
                 const currentRoute = this.router.url;
                 const navItem = this.navItems.find(item => item.path === currentRoute);
                 return navItem?.label || 'Message Broker Monitor';
+            })
+        );
+
+        this.currentPageIcon$ = this.router.events.pipe(
+            filter(event => event instanceof NavigationEnd),
+            map(() => {
+                const currentRoute = this.router.url;
+                const navItem = this.navItems.find(item => item.path === currentRoute);
+                return navItem?.icon || '';
             })
         );
 
