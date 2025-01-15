@@ -75,6 +75,15 @@
     stroke-dasharray: 4 4;
 }
 
+::ng-deep .flow-message-tooltip {
+    white-space: pre-wrap;
+
+    > div {
+        text-align: left;
+        max-width: unset;
+    }
+}
+
 .message-line {
     stroke-width: 2;
 

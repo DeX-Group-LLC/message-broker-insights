@@ -15,7 +15,7 @@ interface FlowMessage {
     to: string;
     label: string;
     type: 'request' | 'response' | 'publish';
-    timestamp: Date;
+    timestamp?: Date;
     status?: 'success' | 'error' | 'dropped' | 'timeout';
     isBrokerInput?: boolean;  // True if message is going to broker
 }
@@ -308,7 +308,7 @@ export class FlowDiagramComponent implements OnChanges {
             `From: ${msg.from}`,
             `To: ${msg.to}`,
             `Topic: ${msg.label}`,
-            `Time: ${msg.timestamp.toLocaleTimeString()}`,
+            `Time: ${msg.timestamp ? msg.timestamp.toLocaleTimeString() : 'N/A'}`,
         ];
 
         if (msg.status) {
