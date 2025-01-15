@@ -65,16 +65,15 @@
                 </g>
 
                 <!-- Message Label -->
-                <text [attr.x]="(getNodeX(msg.from) + getNodeX(msg.to)) / 2" y="-5"
-                    class="message-label">
-                    {{msg.label}}
-                </text>
+                <div class="message-label">{{msg.label}}</div>
+                <foreignObject [attr.x]="(getNodeX(msg.from) + getNodeX(msg.to)) / 2 - 75" y="-12" width="150" height="20">
+                    <div class="message-label">{{msg.label}}</div>
+                </foreignObject>
 
                 <!-- Timestamp -->
-                <text [attr.x]="(getNodeX(msg.from) + getNodeX(msg.to)) / 2" y="12"
-                    class="timestamp">
-                    {{msg.timestamp | date:'HH:mm:ss.SSS'}}
-                </text>
+                <foreignObject [attr.x]="(getNodeX(msg.from) + getNodeX(msg.to)) / 2 - 50" y="0" width="100" height="20">
+                    <div class="timestamp">{{msg.timestamp | date:'HH:mm:ss.SSS'}}</div>
+                </foreignObject>
             </g>
         </ng-container>
 
@@ -83,10 +82,9 @@
             <g [class]="'service-group ' + node.type">
                 <rect [attr.x]="node.x - 50" [attr.y]="node.y" width="100" height="24" rx="4"
                     class="service-box" />
-                <text [attr.x]="node.x" [attr.y]="node.y + 12"
-                    class="service-label"
-                    dominant-baseline="middle"
-                    text-anchor="middle">{{node.label}}</text>
+                <foreignObject [attr.x]="node.x - 50" [attr.y]="node.y" width="100" height="24">
+                    <div class="service-label">{{node.label}}</div>
+                </foreignObject>
             </g>
         </ng-container>
     </svg>
