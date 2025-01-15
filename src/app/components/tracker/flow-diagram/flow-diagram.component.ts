@@ -532,8 +532,8 @@ export class FlowDiagramComponent implements OnChanges {
         this.flowData = { nodes, messages };
 
         // Calculate dimensions including padding
-        const maxY = Math.max(...nodes.map(n => n.y)) + 100;
-        const diagramHeight = Math.max(400, messageStartY + messages.length * messageSpacing + topPadding);
+        const maxY = Math.max(...nodes.map(n => n.y)) + messageSpacing;
+        const diagramHeight = Math.max(messageSpacing, messageStartY + messages.length * messageSpacing + topPadding);
         this.height = Math.max(diagramHeight, maxY);
     }
 
