@@ -1,0 +1,93 @@
+<div class="diagram-container">
+    <svg #svgContainer [attr.width]="width" [attr.height]="height" class="flow-diagram"
+        [attr.viewBox]="'0 0 ' + width + ' ' + height"
+        preserveAspectRatio="xMidYMin slice">
+        <!-- Definitions for symbols -->
+        <defs>
+            <!-- Error symbol (X) -->
+            <symbol id="error-symbol" viewBox="-6 -6 12 12">
+                <path d="M-4,-4 L4,4 M-4,4 L4,-4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    fill="none"/>
+            </symbol>
+            <!-- Timeout symbol (clock) -->
+            <symbol id="timeout-symbol" viewBox="-6 -6 12 12">
+                <circle r="5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"/>
+                <path d="M0,-3 L0,0 L2,2"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    fill="none"/>
+            </symbol>
+            <!-- Dropped symbol (stop) -->
+            <symbol id="dropped-symbol" viewBox="-6 -6 12 12">
+                <rect x="-4" y="-4" width="8" height="8"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    fill="none"/>
+                <line x1="-2" y1="-2" x2="2" y2="2"
+                    stroke="currentColor"
+                    stroke-width="1.5"/>
+                <line x1="-2" y1="2" x2="2" y2="-2"
+                    stroke="currentColor"
+                    stroke-width="1.5"/>
+            </symbol>
+        </defs>
+
+        <!-- Lifelines first (bottom layer) -->
+        <ng-container *ngFor="let node of flowData?.nodes">
+            <line *ngIf="node.type !== 'listener'"
+                [attr.x1]="node.x" [attr.y1]="node.y + 24" [attr.x2]="node.x" [attr.y2]="height - 10"
+                class="lifeline" />
+        </ng-container>
+
+        <!-- Messages next (middle layer) -->
+        <ng-container *ngFor="let msg of flowData?.messages; let i = index">
+            <g [attr.transform]="'translate(0,' + (60 + i * 30 + 16) + ')'"
+               [matTooltip]="getMessageTooltip(msg)"
+               [matTooltipClass]="'pre-line-tooltip'">
+                <!-- Arrow Line -->
+                <line [attr.x1]="getNodeX(msg.from)" [attr.x2]="getNodeX(msg.to)" y1="0" y2="0"
+                    [class]="'message-line ' + msg.type + ' ' + (msg.status || '') + (msg.isBrokerInput ? ' isBrokerInput' : '')" />
+
+                <!-- Arrow Head -->
+                <path [attr.d]="getArrowPath(getNodeX(msg.from), getNodeX(msg.to), 0)"
+                    [class]="'message-arrow ' + msg.type + ' ' + (msg.status || '')" />
+
+                <!-- Status Symbol -->
+                <g *ngIf="msg.status && msg.status !== 'success'"
+                   [attr.transform]="'translate(' + getNodeX(msg.from) + ',0)'"
+                   [class]="'status-symbol ' + msg.status">
+                    <use [attr.href]="'#' + msg.status + '-symbol'" width="12" height="12" x="4" y="-6"/>
+                </g>
+
+                <!-- Message Label -->
+                <text [attr.x]="(getNodeX(msg.from) + getNodeX(msg.to)) / 2" y="-5"
+                    class="message-label">
+                    {{msg.label}}
+                </text>
+
+                <!-- Timestamp -->
+                <text [attr.x]="(getNodeX(msg.from) + getNodeX(msg.to)) / 2" y="12"
+                    class="timestamp">
+                    {{msg.timestamp | date:'HH:mm:ss.SSS'}}
+                </text>
+            </g>
+        </ng-container>
+
+        <!-- Service boxes last (top layer) -->
+        <ng-container *ngFor="let node of flowData?.nodes">
+            <g [class]="'service-group ' + node.type">
+                <rect [attr.x]="node.x - 50" [attr.y]="node.y" width="100" height="24" rx="4"
+                    class="service-box" />
+                <text [attr.x]="node.x" [attr.y]="node.y + 12"
+                    class="service-label"
+                    dominant-baseline="middle"
+                    text-anchor="middle">{{node.label}}</text>
+            </g>
+        </ng-container>
+    </svg>
+</div>
