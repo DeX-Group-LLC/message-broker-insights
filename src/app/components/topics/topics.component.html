@@ -61,7 +61,11 @@
                         <tbody>
                             @for (subscriber of topic.subscribers; track subscriber.serviceId) {
                                 <tr>
-                                    <td>{{subscriber.serviceId}}</td>
+                                    <td>{{subscriber.serviceId}}
+                                        @if ($index === 0) {
+                                            <span class="muted italic"> (Primary Responder)</span>
+                                        }
+                                    </td>
                                     <td>{{subscriber.priority}}</td>
                                 </tr>
                             }
