@@ -48,7 +48,8 @@ interface Listener {
     template: `
         <div class="diagram-container">
             <svg #svgContainer [attr.width]="width" [attr.height]="height" class="flow-diagram"
-                [attr.viewBox]="'0 0 ' + width + ' ' + height" preserveAspectRatio="xMidYMid meet">
+                [attr.viewBox]="'0 0 ' + width + ' ' + height"
+                preserveAspectRatio="xMidYMin meet">
                 <!-- Definitions for symbols -->
                 <defs>
                     <!-- Error symbol (X) -->
@@ -152,18 +153,21 @@ interface Listener {
             width: 100%;
             height: 100%;
             min-height: 100%;
-            overflow: auto;
+            max-height: 100%;
             padding: 20px;
             box-sizing: border-box;
+            border-radius: 1em;
+            background: var(--mat-sys-surface-container-lowest);
+            overflow-y: auto;
         }
 
         .flow-diagram {
             display: block;
             width: 100%;
-            height: 100%;
+            overflow-x: hidden;
+            overflow-y: auto;
+            height: auto;
             min-height: 100%;
-            background: var(--mat-sys-surface-container-lowest);
-            border-radius: 8px;
         }
 
         .tab-content {
@@ -178,11 +182,6 @@ interface Listener {
                 display: flex;
                 flex-direction: column;
             }
-        }
-
-        app-flow-diagram {
-            flex: 1;
-            min-height: 0;
         }
 
         .service-group {
