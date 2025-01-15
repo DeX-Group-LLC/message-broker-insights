@@ -4,6 +4,7 @@ import { LogsComponent } from './components/logs/logs.component';
 import { MetricsComponent } from './components/metrics/metrics.component';
 import { ServicesComponent } from './components/services/services.component';
 import { SubscriptionsComponent } from './components/subscriptions/subscriptions.component';
+import { TrackerComponent } from './components/tracker/tracker.component';
 
 /**
  * Interface defining the data structure for route metadata.
@@ -76,8 +77,12 @@ export const routes: Routes = [
         }
     },
     {
-        path: '',
-        redirectTo: 'logs',
-        pathMatch: 'full'
+        path: 'tracker',
+        component: TrackerComponent,
+        data: {
+            icon: 'mediation',
+            label: 'Message Tracker',
+            shortLabel: 'Tracker'
+        }
     }
 ];
