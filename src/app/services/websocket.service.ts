@@ -110,8 +110,12 @@ export class WebsocketService {
     private pendingRequests = new Map<string, { resolve: (response: any) => void; reject: (error: any) => void }>();
     /** Current state of the WebSocket connection */
     private _state = ConnectionState.DISCONNECTED;
+    /** Storage key for the WebSocket URL */
+    private readonly WS_URL_KEY = 'websocket_url';
+    /** Default WebSocket URL based on current location */
+    private readonly DEFAULT_URL = location.protocol.startsWith('https:') ? `wss://${location.hostname}:3000` : `ws://${location.hostname}:3000`;
     /** URL of the WebSocket server */
-    private _url = location.protocol.startsWith('https:') ? `wss://${location.hostname}:3000` : `ws://${location.hostname}:3000`;
+    private _url: string;
     /** Time of last successful connection */
     private _lastConnected?: Date;
     /** Number of reconnection attempts */
@@ -171,7 +175,37 @@ export class WebsocketService {
      * Automatically connects to the WebSocket server.
      */
     constructor() {
+        // Initialize URL from localStorage or default
+        this._url = this.getStoredUrl();
         // Connect to the WebSocket server
+        this.connect();
+    }
+
+    /**
+     * Gets the stored WebSocket URL from localStorage or returns the default URL
+     * @returns The stored URL or default URL
+     */
+    private getStoredUrl(): string {
+        const storedUrl = localStorage.getItem(this.WS_URL_KEY);
+        return storedUrl || this.DEFAULT_URL;
+    }
+
+    /**
+     * Sets the WebSocket URL in localStorage
+     * @param url - The URL to store
+     */
+    private setStoredUrl(url: string): void {
+        localStorage.setItem(this.WS_URL_KEY, url);
+    }
+
+    /**
+     * Updates the WebSocket URL and reconnects
+     * @param url - The new WebSocket URL
+     */
+    public updateUrl(url: string): void {
+        this.setStoredUrl(url);
+        this._url = url;
+        this.disconnect();
         this.connect();
     }
 
@@ -247,9 +281,14 @@ export class WebsocketService {
      * Connects to the WebSocket server.
      * Handles reconnection and sets up event listeners.
      *
-     * @param url - WebSocket server URL
+     * @param url - Optional WebSocket server URL. If not provided, uses the stored URL.
      */
-    connect(url: string = this._url): void {
+    connect(url?: string): void {
+        if (url) {
+            this.updateUrl(url);
+        } else {
+            url = this._url;
+        }
         // Stop any pending reconnection
         this.stopReconnectTimeout();
 
