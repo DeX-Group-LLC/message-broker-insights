@@ -228,19 +228,8 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
      * @param metrics - Selected metrics
      */
     onSelectionChange(metrics: Metric[]): void {
-        // Clear selection if no metrics selected
-        if (!metrics.length) {
-            this.selectedMetrics = [];
-            this.chartData.datasets = [];
-            this.chartData.labels = [];
-            return;
-        }
-
-        // Since we're using single select, we only care about the first metric
         this.selectedMetrics = metrics;
-        // Clone chart data and options to avoid mutating the original objects, and forcing a rebuild of the entire chart
-        this.chartData = { ...this.chartData };
-        this.chartOptions = { ...this.chartOptions };
+
         // Update the chart
         this.updateChart();
     }
@@ -276,8 +265,12 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
 
                 // Add y-axis for each metric
                 this.chartOptions.scales![`y-${this.chartData.datasets.length}`] = {
+                    display: showYAxis,
                     beginAtZero: true,
                     ticks: {
+                        display: showYAxis
+                    },
+                    grid: {
                         display: showYAxis
                     }
                 };
@@ -300,14 +293,14 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
                 });
             }
 
-            console.log(this.chartData.datasets, this.chartOptions.scales);
             this.chartOptions.interaction!.mode = this.chartData.datasets.length > 1 ? 'index' : 'nearest';
         }
 
         // Update the chart
         if (this.baseChart) {
-            this.baseChart.data = this.chartData;
-            this.baseChart.options = this.chartOptions;
+            // Clone chart data and options to avoid mutating the original objects, and forcing a rebuild of the entire chart
+            //this.chartData = { ...this.chartData };
+            this.chartOptions = { ...this.chartOptions };
             this.baseChart.update();
         }
     }
