@@ -96,7 +96,7 @@ mat-tab-group {
     min-width: fit-content;
     background-color: var(--mat-sys-surface-container-high);
     border: 1px solid var(--mat-sys-outline-variant);
-    transition: all 0.2s ease;
+    transition: all 150ms ease;
 
     // Status pill in table
     :host ::ng-deep app-table & {
