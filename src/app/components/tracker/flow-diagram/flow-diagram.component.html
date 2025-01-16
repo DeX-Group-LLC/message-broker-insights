@@ -48,7 +48,9 @@
         <ng-container *ngFor="let msg of flowData?.messages; let i = index">
             <g [attr.transform]="'translate(0,' + (60 + i * 30 + 16) + ')'"
                [matTooltip]="getMessageTooltip(msg)"
-               [matTooltipClass]="'flow-message-tooltip'">
+               [matTooltipClass]="'flow-message-tooltip'"
+               [class.clickable]="isMessageClickable(msg)"
+               (click)="onMessageClick(msg)">
                 <!-- Arrow Line -->
                 <line [attr.x1]="getNodeX(msg.from)" [attr.x2]="getNodeX(msg.to)" y1="0" y2="0"
                     [class]="'message-line ' + msg.type + ' ' + (msg.status || '') + (msg.isBrokerInput ? ' isBrokerInput' : '')" />
@@ -58,14 +60,14 @@
                     [class]="'message-arrow ' + msg.type + ' ' + (msg.status || '')" />
 
                 <!-- Status Symbol -->
-                <g *ngIf="msg.status && msg.status !== 'success'"
-                   [attr.transform]="'translate(' + getNodeX(msg.from) + ',0)'"
-                   [class]="'status-symbol ' + msg.status">
-                    <use [attr.href]="'#' + msg.status + '-symbol'" width="12" height="12" x="4" y="-6"/>
-                </g>
+                <foreignObject [attr.x]="getNodeX(msg.from) - 8" y="-8" width="80" height="16" *ngIf="msg.status">
+                    <div class="status-icon-container">
+                        <mat-icon [class]="'material-symbols-outlined status-symbol ' + msg.status">{{getStatusIcon(msg.status)}}</mat-icon>
+                        <span [class]="'status-text ' + msg.status">{{msg.status}}</span>
+                    </div>
+                </foreignObject>
 
                 <!-- Message Label -->
-                <div class="message-label">{{msg.label}}</div>
                 <foreignObject [attr.x]="(getNodeX(msg.from) + getNodeX(msg.to)) / 2 - 75" y="-13" width="150" height="20">
                     <div class="message-label">{{msg.label}}</div>
                 </foreignObject>

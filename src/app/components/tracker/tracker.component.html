@@ -1,7 +1,7 @@
 <mat-card>
     <mat-card-content>
         <app-table
-            [data$]="mockData$"
+            [data$]="data$"
             [columns]="columns"
             [defaultSort]="{ active: 'receivedAt', direction: 'desc' }"
             [paginationConfig]="{
@@ -31,7 +31,7 @@
                     </ng-container>
 
                     <ng-container *ngSwitchDefault>
-                        {{element?.[column.name]}}
+                        {{getNestedValue(element, column.name)}}
                     </ng-container>
                 </ng-container>
             </ng-template>
@@ -83,25 +83,25 @@
                         <div class="pill-section">
                             <div class="pill-item service-pill">
                                 <span class="label">Originator</span>
-                                <span class="value">{{selectedFlow.originatorServiceId}}</span>
+                                <span class="value">{{selectedFlow.request.serviceId}}</span>
                             </div>
                             <div class="pill-item">
                                 <span class="label">Action</span>
-                                <span class="value">{{selectedFlow.header.action}}</span>
+                                <span class="value">{{selectedFlow.request.message.header.action}}</span>
                             </div>
                             <div class="pill-item">
                                 <span class="label">Topic</span>
-                                <span class="value">{{selectedFlow.header.topic}}</span>
+                                <span class="value">{{selectedFlow.request.message.header.topic}}</span>
                             </div>
                             <div class="pill-item">
                                 <span class="label">Version</span>
-                                <span class="value">{{selectedFlow.header.version}}</span>
+                                <span class="value">{{selectedFlow.request.message.header.version}}</span>
                             </div>
                             <div class="pill-item">
                                 <span class="label">Request ID</span>
-                                <span class="value">{{selectedFlow.header.requestId}}</span>
+                                <span class="value">{{selectedFlow.request.message.header.requestId}}</span>
                             </div>
-                            <ng-container *ngFor="let item of getHeaderItems(selectedFlow.header)">
+                            <ng-container *ngFor="let item of getHeaderItems(selectedFlow.request.message.header)">
                                 <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestId'].includes(item.key)">
                                     <span class="label">{{item.key}}</span>
                                     <span class="value">{{item.value}}</span>
@@ -109,7 +109,7 @@
                             </ng-container>
                             <div class="pill-item" matTooltip="Total size of header and payload combined">
                                 <span class="label">Size</span>
-                                <span class="value">{{getTotalRequestSize(selectedFlow)}} bytes</span>
+                                <span class="value">{{getMessageSize(selectedFlow.request.message)}} bytes</span>
                             </div>
                         </div>
                         <div class="expandable-section">
@@ -117,7 +117,7 @@
                                 <mat-expansion-panel-header>
                                     <mat-panel-title>Payload</mat-panel-title>
                                 </mat-expansion-panel-header>
-                                <pre>{{selectedFlow.payload | json}}</pre>
+                                <pre>{{selectedFlow.request.message.payload | json}}</pre>
                             </mat-expansion-panel>
                         </div>
                     </div>
@@ -128,42 +128,50 @@
                         <div class="pill-section">
                             <div class="pill-item service-pill">
                                 <span class="label">Responder</span>
-                                <span class="value">{{selectedFlow.responderServiceId}}</span>
-                                <span class="property" matTooltip="Higher number means lower priority">Priority: {{selectedFlow.responderPriority}}</span>
+                                @if (selectedFlow.response.serviceId) {
+                                    <span class="value">{{selectedFlow.response.serviceId}}</span>
+                                } @else if (selectedFlow.response.message) {
+                                    <span class="value warning">message-broker</span>
+                                }
+                                @if (selectedFlow.response.priority) {
+                                    <span class="property" matTooltip="Higher number means lower priority">Priority: {{selectedFlow.response.priority}}</span>
+                                }
                             </div>
-                            <div class="pill-item">
-                                <span class="label">Action</span>
-                                <span class="value">{{selectedFlow.response.header.action}}</span>
-                            </div>
-                            <div class="pill-item">
-                                <span class="label">Topic</span>
-                                <span class="value">{{selectedFlow.response.header.topic}}</span>
-                            </div>
-                            <div class="pill-item">
-                                <span class="label">Version</span>
-                                <span class="value">{{selectedFlow.response.header.version}}</span>
-                            </div>
-                            <div class="pill-item">
-                                <span class="label">Request ID</span>
-                                <span class="value">{{selectedFlow.response.header.requestId}}</span>
-                            </div>
-                            <ng-container *ngFor="let item of getHeaderItems(selectedFlow.response.header)">
-                                <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestId'].includes(item.key)">
-                                    <span class="label">{{item.key}}</span>
-                                    <span class="value">{{item.value}}</span>
+                            @if (selectedFlow.response.message) {
+                                <div class="pill-item">
+                                    <span class="label">Action</span>
+                                    <span class="value">{{selectedFlow.response.message.header.action}}</span>
                                 </div>
-                            </ng-container>
-                            <div class="pill-item" matTooltip="Total size of header and payload combined">
-                                <span class="label">Size</span>
-                                <span class="value">{{getTotalResponseSize(selectedFlow)}} bytes</span>
-                            </div>
+                                <div class="pill-item">
+                                    <span class="label">Topic</span>
+                                    <span class="value">{{selectedFlow.response.message.header.topic}}</span>
+                                </div>
+                                <div class="pill-item">
+                                    <span class="label">Version</span>
+                                    <span class="value">{{selectedFlow.response.message.header.version}}</span>
+                                </div>
+                                <div class="pill-item">
+                                    <span class="label">Request ID</span>
+                                    <span class="value">{{selectedFlow.response.message.header.requestId}}</span>
+                                </div>
+                                <ng-container *ngFor="let item of getHeaderItems(selectedFlow.response.message.header)">
+                                    <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestId'].includes(item.key)">
+                                        <span class="label">{{item.key}}</span>
+                                        <span class="value">{{item.value}}</span>
+                                    </div>
+                                </ng-container>
+                                <div class="pill-item" matTooltip="Total size of header and payload combined">
+                                    <span class="label">Size</span>
+                                    <span class="value">{{getMessageSize(selectedFlow.response.message)}} bytes</span>
+                                </div>
+                            }
                         </div>
-                        <div class="expandable-section">
+                        <div class="expandable-section" *ngIf="selectedFlow.response.message">
                             <mat-expansion-panel>
                                 <mat-expansion-panel-header>
                                     <mat-panel-title>Payload</mat-panel-title>
                                 </mat-expansion-panel-header>
-                                <pre>{{selectedFlow.response.payload | json}}</pre>
+                                <pre>{{selectedFlow.response.message.payload | json}}</pre>
                             </mat-expansion-panel>
                         </div>
                     </div>
@@ -220,10 +228,10 @@
                         <div class="pill-section">
                             <div class="pill-item message-pill" *ngFor="let msg of selectedFlow.relatedMessages"
                                 matTooltip="Messages that were triggered as a result of processing this request">
-                                <span class="label">{{msg.type}}</span>
+                                <span class="label">{{msg.action}}</span>
                                 <span class="value">{{msg.topic}}</span>
                                 <span class="property">From: {{msg.originatorServiceId}}</span>
-                                <ng-container [ngSwitch]="msg.type">
+                                <ng-container [ngSwitch]="msg.action">
                                     <ng-container *ngSwitchCase="'Publish'">
                                         <span class="property" *ngFor="let id of msg.responderServiceIds">To: {{id}}</span>
                                     </ng-container>

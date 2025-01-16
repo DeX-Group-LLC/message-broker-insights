@@ -78,6 +78,22 @@ export interface ConnectionDetails {
     recentEvents: ConnectionEvent[];
 }
 
+export interface MessageHeader {
+    action: ActionType;
+    topic: string;
+    version: string;
+    requestId?: string;
+}
+
+export interface MessagePayload extends Record<string, any> {
+    timeout?: number;
+}
+
+export interface Message {
+    header: MessageHeader;
+    payload: MessagePayload;
+}
+
 /**
  * Service for managing WebSocket communication with the server.
  * Extends EventEmitter to provide event-based communication.

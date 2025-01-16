@@ -756,7 +756,8 @@ export class TableComponent implements AfterViewInit, OnDestroy {
 
     /** Gets the cell display value */
     getCellValue(row: any, column: TableColumn): any {
-        return row[column.name];
+        if (!row || !column.name) return '';
+        return this.getNestedValue(row, column.name);
     }
 
     /** Gets the colspan for a cell */
@@ -806,5 +807,46 @@ export class TableComponent implements AfterViewInit, OnDestroy {
     isFilterMenuOpen(columnName: string): boolean {
         const trigger = this.filterMenuTriggers?.find((t, index) => this.columns[index].name === columnName);
         return trigger?.menuOpen || false;
+    }
+
+    private getNestedValue(obj: any, path: string): any {
+        if (!obj) return null;
+        return path.split('.').reduce((current, key) => current?.[key], obj);
+    }
+
+    /** Applies sorting to the data */
+    private applySorting(data: any[]): any[] {
+        if (!this.sort?.active || !this.sort.direction) {
+            return data;
+        }
+
+        return data.slice().sort((a, b) => {
+            const isAsc = this.sort.direction === 'asc';
+            const column = this.columns.find(col => col.name === this.sort.active);
+            if (!column?.sortable) return 0;
+
+            const aValue = this.getNestedValue(a, this.sort.active);
+            const bValue = this.getNestedValue(b, this.sort.active);
+
+            return this.compareValues(aValue, bValue) * (isAsc ? 1 : -1);
+        });
+    }
+
+    /** Applies filtering to the data */
+    private applyFiltering(data: any[]): any[] {
+        const activeFilters = Array.from(this.filters.entries())
+            .filter(([_, value]) => value);
+
+        if (activeFilters.length === 0) {
+            return data;
+        }
+
+        return data.filter(row => {
+            return activeFilters.every(([column, filterValue]) => {
+                const value = this.getNestedValue(row, column);
+                if (value == null) return false;
+                return String(value).toLowerCase().includes(filterValue.toLowerCase());
+            });
+        });
     }
 }

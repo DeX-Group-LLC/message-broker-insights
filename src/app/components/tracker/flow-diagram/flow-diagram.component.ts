@@ -1,6 +1,9 @@
-import { Component, Input, OnChanges, SimpleChanges, NO_ERRORS_SCHEMA } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatIconModule } from '@angular/material/icon';
+import { ActionType, MessageHeader } from '../../../services/websocket.service';
+import { MessageFlow } from '../tracker.component';
 
 interface FlowNode {
     id: string;
@@ -43,13 +46,14 @@ interface Listener {
 @Component({
     selector: 'app-flow-diagram',
     standalone: true,
-    imports: [CommonModule, MatTooltipModule],
+    imports: [CommonModule, MatTooltipModule, MatIconModule],
     schemas: [NO_ERRORS_SCHEMA],
     templateUrl: './flow-diagram.component.html',
     styleUrls: ['./flow-diagram.component.scss']
 })
 export class FlowDiagramComponent implements OnChanges {
-    @Input() messageFlow: any;
+    @Input() messageFlow!: MessageFlow;
+    @Output() messageSelect = new EventEmitter<string>();
 
     width = 800;
     height = 400;
@@ -77,13 +81,13 @@ export class FlowDiagramComponent implements OnChanges {
         const horizontalPadding = 50;
         const sideServicesX = serviceSpacing *4;
 
-        // Track first message Y position for each service
-        const serviceFirstMessageY = new Map<string, number>();
+        // Track all Y positions for each service
+        const serviceMessageYPositions = new Map<string, number[]>();
 
         // Add core services with top padding
         nodes.push({
-            id: this.messageFlow.originatorServiceId,
-            label: this.messageFlow.originatorServiceId,
+            id: this.messageFlow.request.serviceId,
+            label: this.messageFlow.request.serviceId,
             type: 'originator',
             x: horizontalPadding + boxWidth/2,
             y: topPadding
@@ -100,10 +104,10 @@ export class FlowDiagramComponent implements OnChanges {
         // Only add responder node if it exists and is needed
         const isInternalError = this.messageFlow.error?.code === 'INTERNAL_ERROR';
         const isNoResponders = this.messageFlow.error?.code === 'NO_RESPONDERS';
-        if (this.messageFlow.responderServiceId && !isNoResponders) {
+        if (this.messageFlow.response?.serviceId && !isNoResponders) {
             nodes.push({
-                id: this.messageFlow.responderServiceId,
-                label: this.messageFlow.responderServiceId,
+                id: this.messageFlow.response.serviceId,
+                label: this.messageFlow.response.serviceId,
                 type: 'responder',
                 x: horizontalPadding + boxWidth/2 + serviceSpacing * 2,
                 y: topPadding
@@ -126,35 +130,56 @@ export class FlowDiagramComponent implements OnChanges {
 
         // Add request messages
         messages.push({
-            from: this.messageFlow.originatorServiceId,
+            from: this.messageFlow.request.serviceId,
             to: 'message-broker',
-            label: this.messageFlow.topic,
+            label: this.messageFlow.request.message.header.topic,
             type: 'request',
             timestamp: this.messageFlow.receivedAt,
             isBrokerInput: true
         });
+        messageIndex++;
 
         // Only add message to responder if not NO_RESPONDERS and no internal error
         if (!isNoResponders && !isInternalError) {
             messages.push({
                 from: 'message-broker',
-                to: this.messageFlow.responderServiceId,
-                label: this.messageFlow.topic,
+                to: this.messageFlow.response!.serviceId!,
+                label: this.messageFlow.request.message.header.topic,
                 type: 'request',
                 timestamp: new Date(this.messageFlow.receivedAt.getTime() + this.messageFlow.brokerProcessingTime),
                 isBrokerInput: false
             });
             messageIndex++;
+
+            // Add messages to listeners after forwarding to responder
+            this.messageFlow.listeners?.forEach((listener: Listener) => {
+                const msgY = messageStartY + messageIndex * messageSpacing;
+
+                // Track Y position for this service
+                if (!serviceMessageYPositions.has(listener.serviceId)) {
+                    serviceMessageYPositions.set(listener.serviceId, []);
+                }
+                serviceMessageYPositions.get(listener.serviceId)?.push(msgY);
+
+                messages.push({
+                    from: 'message-broker',
+                    to: listener.serviceId,
+                    label: this.messageFlow.request.message.header.topic,
+                    type: 'publish',
+                    timestamp: new Date(this.messageFlow.receivedAt.getTime() + this.messageFlow.brokerProcessingTime),
+                    isBrokerInput: false
+                });
+                messageIndex++;
+            });
         }
-        messageIndex++;
 
         // Add response messages if exists or timeout/dropped/internal error response
         if (this.messageFlow.status === 'timeout') {
             // For timeout, add response from broker to originator
             messages.push({
                 from: 'message-broker',
-                to: this.messageFlow.originatorServiceId,
-                label: this.messageFlow.topic,
+                to: this.messageFlow.request.serviceId,
+                label: this.messageFlow.request.message.header.topic,
                 type: 'response',
                 timestamp: new Date(this.messageFlow.receivedAt.getTime() + this.messageFlow.timeout),
                 status: 'timeout',
@@ -165,8 +190,8 @@ export class FlowDiagramComponent implements OnChanges {
             // For dropped/internal error, add response from broker to originator
             messages.push({
                 from: 'message-broker',
-                to: this.messageFlow.originatorServiceId,
-                label: this.messageFlow.topic,
+                to: this.messageFlow.request.serviceId,
+                label: this.messageFlow.request.message.header.topic,
                 type: 'response',
                 timestamp: this.messageFlow.completedAt,
                 status: isInternalError ? 'error' : 'dropped',
@@ -175,9 +200,9 @@ export class FlowDiagramComponent implements OnChanges {
             messageIndex++;
         } else if (this.messageFlow.response) {
             messages.push({
-                from: this.messageFlow.responderServiceId,
+                from: this.messageFlow.response.serviceId!,
                 to: 'message-broker',
-                label: this.messageFlow.topic,
+                label: this.messageFlow.request.message.header.topic,
                 type: 'response',
                 timestamp: new Date(this.messageFlow.completedAt.getTime() - this.messageFlow.brokerProcessingTime),
                 status: this.messageFlow.status,
@@ -185,8 +210,8 @@ export class FlowDiagramComponent implements OnChanges {
             });
             messages.push({
                 from: 'message-broker',
-                to: this.messageFlow.originatorServiceId,
-                label: this.messageFlow.topic,
+                to: this.messageFlow.request.serviceId,
+                label: this.messageFlow.request.message.header.topic,
                 type: 'response',
                 timestamp: this.messageFlow.completedAt,
                 status: this.messageFlow.status,
@@ -196,18 +221,14 @@ export class FlowDiagramComponent implements OnChanges {
         }
 
         // Add related messages
-        this.messageFlow.relatedMessages?.forEach((msg: RelatedMessage) => {
-            const currentY = messageStartY + messageIndex * messageSpacing;
-
-            if (msg.type === 'Publish') {
-                // Add message to broker
+        this.messageFlow.relatedMessages?.forEach(msg => {
+            if (msg.action === ActionType.PUBLISH) {
                 messages.push({
                     from: msg.originatorServiceId,
                     to: 'message-broker',
                     label: msg.topic,
                     type: 'publish',
                     timestamp: this.messageFlow.completedAt,
-                    status: msg.status,
                     isBrokerInput: true
                 });
                 messageIndex++;
@@ -215,10 +236,12 @@ export class FlowDiagramComponent implements OnChanges {
                 // Add messages from broker to each responder
                 msg.responderServiceIds?.forEach((responder: string) => {
                     const msgY = messageStartY + messageIndex * messageSpacing;
-                    // Track first message Y for each service
-                    if (!serviceFirstMessageY.has(responder)) {
-                        serviceFirstMessageY.set(responder, msgY);
+
+                    // Track Y position for this service
+                    if (!serviceMessageYPositions.has(responder)) {
+                        serviceMessageYPositions.set(responder, []);
                     }
+                    serviceMessageYPositions.get(responder)?.push(msgY);
 
                     messages.push({
                         from: 'message-broker',
@@ -226,7 +249,6 @@ export class FlowDiagramComponent implements OnChanges {
                         label: msg.topic,
                         type: 'publish',
                         timestamp: this.messageFlow.completedAt,
-                        status: msg.status,
                         isBrokerInput: false
                     });
                     messageIndex++;
@@ -234,8 +256,11 @@ export class FlowDiagramComponent implements OnChanges {
             } else {
                 // For request type, track the Y position when the message is going TO the service
                 const toServiceY = messageStartY + (messageIndex + 1) * messageSpacing; // +1 to get the second message Y
-                if (msg.responderServiceId && !serviceFirstMessageY.has(msg.responderServiceId)) {
-                    serviceFirstMessageY.set(msg.responderServiceId, toServiceY);
+                if (msg.responderServiceId && !serviceMessageYPositions.has(msg.responderServiceId)) {
+                    serviceMessageYPositions.set(msg.responderServiceId, []);
+                }
+                if (msg.responderServiceId) {
+                    serviceMessageYPositions.get(msg.responderServiceId)?.push(toServiceY);
                 }
 
                 messages.push({
@@ -244,7 +269,6 @@ export class FlowDiagramComponent implements OnChanges {
                     label: msg.topic,
                     type: 'request',
                     timestamp: this.messageFlow.completedAt,
-                    status: msg.status,
                     isBrokerInput: true
                 });
                 messages.push({
@@ -253,21 +277,22 @@ export class FlowDiagramComponent implements OnChanges {
                     label: msg.topic,
                     type: 'request',
                     timestamp: this.messageFlow.completedAt,
-                    status: msg.status,
                     isBrokerInput: false
                 });
                 messageIndex += 2;
             }
         });
 
-        // Add side services at their first message position
-        serviceFirstMessageY.forEach((y, serviceId) => {
-            nodes.push({
-                id: serviceId,
-                label: serviceId,
-                type: 'listener',
-                x: sideServicesX,
-                y: y - 12 + topPadding
+        // Add side services for each message position
+        serviceMessageYPositions.forEach((yPositions, serviceId) => {
+            yPositions.forEach(y => {
+                nodes.push({
+                    id: `${serviceId}-${y}`, // Make ID unique for each instance
+                    label: serviceId,
+                    type: 'listener',
+                    x: sideServicesX,
+                    y: y - 12 + topPadding
+                });
             });
         });
 
@@ -280,7 +305,9 @@ export class FlowDiagramComponent implements OnChanges {
     }
 
     getNodeX(nodeId: string): number {
-        const node = this.flowData?.nodes.find(n => n.id === nodeId);
+        // Strip the Y position suffix for side services when looking up nodes
+        const baseNodeId = nodeId.split('-')[0];
+        const node = this.flowData?.nodes.find(n => n.id.startsWith(baseNodeId));
         if (!node) return 0;
 
         // If this is a side service and we're getting the x for an arrow endpoint,
@@ -327,21 +354,21 @@ export class FlowDiagramComponent implements OnChanges {
         return parts.join('\n');
     }
 
-    private getMessageHeader(msg: FlowMessage): Record<string, any> | null {
+    private getMessageHeader(msg: FlowMessage): MessageHeader | null {
         if (!this.messageFlow) return null;
 
         // For the main request/response flow
-        if (msg.from === this.messageFlow.originatorServiceId && msg.to === 'message-broker') {
-            return this.messageFlow.header;
+        if (msg.from === this.messageFlow.request.serviceId && msg.to === 'message-broker') {
+            return this.messageFlow.request.message.header;
         }
-        if (msg.from === 'message-broker' && msg.to === this.messageFlow.responderServiceId) {
-            return this.messageFlow.header;
+        if (msg.from === 'message-broker' && msg.to === this.messageFlow.response?.serviceId) {
+            return this.messageFlow.request.message.header;
         }
-        if (msg.from === this.messageFlow.responderServiceId && msg.to === 'message-broker' && this.messageFlow.response) {
-            return this.messageFlow.response.header;
+        if (msg.from === this.messageFlow.response?.serviceId && msg.to === 'message-broker' && this.messageFlow.response) {
+            return this.messageFlow.request.message.header;
         }
-        if (msg.from === 'message-broker' && msg.to === this.messageFlow.originatorServiceId && this.messageFlow.response) {
-            return this.messageFlow.response.header;
+        if (msg.from === 'message-broker' && msg.to === this.messageFlow.request.serviceId && this.messageFlow.response) {
+            return this.messageFlow.request.message.header;
         }
 
         // For related messages
@@ -359,13 +386,35 @@ export class FlowDiagramComponent implements OnChanges {
 
         if (relatedMsg) {
             return {
-                type: relatedMsg.type,
+                action: relatedMsg.action,
                 topic: relatedMsg.topic,
-                requestId: relatedMsg.requestId,
-                status: relatedMsg.status
+                version: relatedMsg.version,
+                requestId: relatedMsg.requestId
             };
         }
 
         return null;
+    }
+
+    isMessageClickable(msg: FlowMessage): boolean {
+        const header = this.getMessageHeader(msg);
+        return !!header?.['requestId'] && header['requestId'] !== this.messageFlow.request.message.header.requestId;
+    }
+
+    onMessageClick(msg: FlowMessage): void {
+        const header = this.getMessageHeader(msg);
+        if (header?.['requestId'] && header['requestId'] !== this.messageFlow.request.message.header.requestId) {
+            this.messageSelect.emit(header['requestId']);
+        }
+    }
+
+    getStatusIcon(status: string): string {
+        switch (status) {
+            case 'success': return 'check_circle';
+            case 'error': return 'cancel';
+            case 'dropped': return 'unpublished';
+            case 'timeout': return 'timer_off';
+            default: return '';
+        }
     }
 }
