@@ -230,6 +230,9 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
     onSelectionChange(metrics: Metric[]): void {
         this.selectedMetrics = metrics;
 
+        // Clone chart data and options to avoid mutating the original objects, and forcing a rebuild of the entire chart
+        //this.chartData = { ...this.chartData };
+        this.chartOptions = { ...this.chartOptions };
         // Update the chart
         this.updateChart();
     }
@@ -298,9 +301,6 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
 
         // Update the chart
         if (this.baseChart) {
-            // Clone chart data and options to avoid mutating the original objects, and forcing a rebuild of the entire chart
-            //this.chartData = { ...this.chartData };
-            this.chartOptions = { ...this.chartOptions };
             this.baseChart.update();
         }
     }
