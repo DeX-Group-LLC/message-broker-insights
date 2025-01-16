@@ -6,8 +6,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription } from 'rxjs';
-import { NgChartsModule } from 'ng2-charts';
-import { ChartConfiguration, ChartOptions, Point, TooltipItem } from 'chart.js';
+import { NgChartsModule, BaseChartDirective } from 'ng2-charts';
+import { Chart, ChartConfiguration, ChartOptions, Point, TooltipItem } from 'chart.js';
 import 'chartjs-adapter-moment';
 import { MetricsService, Metric } from '../../services/metrics.service';
 import { ThemeService } from '../../services/theme.service';
@@ -46,8 +46,6 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         { name: 'type', label: 'Type', sortable: true, filterable: true },
         { name: 'timestamp', label: 'Last Updated', sortable: true, filterable: true }
     ];
-
-    private subscriptions: Subscription[] = [];
 
     /** Currently selected metric */
     selectedMetrics: Metric[] = [];
@@ -149,6 +147,7 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         }
     };
 
+    @ViewChild(BaseChartDirective) private baseChart?: BaseChartDirective;
     @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
     @ViewChild(TableComponent) table!: TableComponent;
 
@@ -161,18 +160,7 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
 
     ngOnInit(): void {
         // Subscribe to theme changes
-        this.subscriptions.push(
-            this.themeService.theme$.subscribe(() => {
-                setTimeout(() => {
-                    this.updateChartColors();
-                });
-            }),
-            this.themeService.colorPalette$.subscribe(() => {
-                setTimeout(() => {
-                    this.updateChartColors();
-                });
-            })
-        );
+        this.themeService.themeChanged$.on(this._updateChartColorsDelayed);
     }
 
     ngAfterViewInit(): void {
@@ -183,14 +171,13 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         });
 
         // Subscribe to metrics updates
-        this.metricsSubscription = this.metricsService.metrics$.subscribe(metrics => {
-            this.updateChart();
-        });
+        this.metricsSubscription = this.metricsService.metrics$.subscribe(this._updateChart);
     }
 
     ngOnDestroy(): void {
         this.layout.activeToolbarContent = undefined;
         this.metricsSubscription?.unsubscribe();
+        this.themeService.themeChanged$.off(this._updateChartColorsDelayed);
     }
 
     /**
@@ -244,13 +231,17 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         // Clear selection if no metrics selected
         if (!metrics.length) {
             this.selectedMetrics = [];
-            this.chartData.datasets[0].data = [];
+            this.chartData.datasets = [];
             this.chartData.labels = [];
             return;
         }
 
         // Since we're using single select, we only care about the first metric
         this.selectedMetrics = metrics;
+        // Clone chart data and options to avoid mutating the original objects, and forcing a rebuild of the entire chart
+        this.chartData = { ...this.chartData };
+        this.chartOptions = { ...this.chartOptions };
+        // Update the chart
         this.updateChart();
     }
 
@@ -264,17 +255,18 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         // Clear chart data
         this.chartData.datasets = [];
         this.chartData.labels = [];
+        // Remove all y-axes
+        for (const scale of Object.keys(this.chartOptions.scales!)) {
+            if (scale.startsWith('y-')) {
+                delete this.chartOptions.scales![scale];
+            }
+        }
 
         // If no metric selected, do nothing
         if (this.selectedMetrics.length) {
-            // Remove all y-axes
-            for (const scale of Object.keys(this.chartOptions.scales!)) {
-                if (scale.startsWith('y-')) {
-                    delete this.chartOptions.scales![scale];
-                }
-            }
-
             const showYAxis = this.selectedMetrics.length === 1;
+            const primary = cssvar('--mat-sys-primary');
+            const primaryContainer = cssvar('--mat-sys-primary-container');
 
             // Add data for each selected metric
             for (const metric of this.selectedMetrics) {
@@ -284,37 +276,42 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
 
                 // Add y-axis for each metric
                 this.chartOptions.scales![`y-${this.chartData.datasets.length}`] = {
-                    display: showYAxis,
                     beginAtZero: true,
+                    ticks: {
+                        display: showYAxis
+                    }
                 };
 
                 // Add data for each metric
-
                 const alpha = this.chartData.datasets.length / Math.max(1, this.selectedMetrics.length - 1);
-                const primary = cssvar('--mat-sys-primary');
-                const primaryContainer = cssvar('--mat-sys-primary-container');
                 const color = scaledMix(primary, primaryContainer, 1 - alpha);
                 this.chartData.datasets.push({
-                    data: history.map(h => ({ x: h.timestamp.getTime(), y: h.value, metric: h })),
+                    data: history.map(h => {
+                        const x = Math.round(h.timestamp.getTime() / 1000) * 1000;
+                        return { x, y: h.value, metric: h };
+                    }),
                     label: metric.name,
                     borderColor: color,
                     pointBorderColor: color,
                     backgroundColor: color,
                     pointBackgroundColor: color,
                     tension: 0.1,
-                    fill: false,
                     yAxisID: `y-${this.chartData.datasets.length}`
                 });
             }
 
+            console.log(this.chartData.datasets, this.chartOptions.scales);
             this.chartOptions.interaction!.mode = this.chartData.datasets.length > 1 ? 'index' : 'nearest';
         }
 
-        // Force update
-        this.chartData = { ...this.chartData };
-        this.chartOptions = { ...this.chartOptions };
+        // Update the chart
+        if (this.baseChart) {
+            this.baseChart.data = this.chartData;
+            this.baseChart.options = this.chartOptions;
+            this.baseChart.update();
+        }
     }
-
+    private _updateChart = this.updateChart.bind(this);
 
     /**
      * Updates the chart colors based on the current theme
@@ -333,11 +330,12 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
             plugins.legend.labels.color = cssvar('--mat-sys-on-surface');
         }
 
+        const primary = cssvar('--mat-sys-primary');
+        const primaryContainer = cssvar('--mat-sys-primary-container');
+
         // Update chart data
         for (let i = 0; i < this.chartData.datasets.length; i++) {
             const alpha = i / Math.max(1, this.chartData.datasets.length - 1);
-            const primary = cssvar('--mat-sys-primary');
-            const primaryContainer = cssvar('--mat-sys-primary-container');
             const color = scaledMix(primary, primaryContainer, 1 - alpha);
             this.chartData.datasets[i].borderColor = color;
             this.chartData.datasets[i].backgroundColor = color;
@@ -345,10 +343,13 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
             this.chartData.datasets[i].pointBorderColor = color;
         }
 
-        // Force update
-        this.chartData = { ...this.chartData };
-        this.chartOptions = { ...this.chartOptions };
+        // Update the chart after color changes
+        this.baseChart?.update();
     }
+    private _updateChartColors = this.updateChartColors.bind(this);
+    private _updateChartColorsDelayed = () => {
+        setTimeout(this._updateChartColors);
+    };
 
     /**
      * Gets chart data in exportable format

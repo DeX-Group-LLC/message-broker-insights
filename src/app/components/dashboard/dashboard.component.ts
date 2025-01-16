@@ -5,7 +5,7 @@ import { MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
 import { ChartConfiguration, ChartOptions, Tick, TooltipItem } from 'chart.js';
 import 'chartjs-adapter-moment';
-import { NgChartsModule } from 'ng2-charts';
+import { BaseChartDirective, NgChartsModule } from 'ng2-charts';
 import { MetricsService, Metric } from '../../services/metrics.service';
 import { LogService } from '../../services/log.service';
 import { TimeFormatService } from '../../services/time-format.service';
@@ -161,6 +161,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     metrics: SystemMetrics = {};
 
+    @ViewChild(BaseChartDirective) private baseChart?: BaseChartDirective;
+
     constructor(
         private metricsService: MetricsService,
         public logService: LogService,
@@ -189,18 +191,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         );
 
         // Subscribe to theme changes
-        this.subscriptions.push(
-            this.themeService.theme$.subscribe(() => {
-                setTimeout(() => {
-                    this.updateChartColors();
-                });
-            }),
-            this.themeService.colorPalette$.subscribe(() => {
-                setTimeout(() => {
-                    this.updateChartColors();
-                });
-            })
-        );
+        this.themeService.themeChanged$.on(this._updateChartColorsDelayed);
     }
 
     ngAfterViewInit(): void {
@@ -216,6 +207,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             sub.unsubscribe();
         }
         this.subscriptions = [];
+        this.themeService.themeChanged$.off(this._updateChartColorsDelayed);
     }
 
     /**
@@ -224,7 +216,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
      * @returns An array of { x: number, y: number } pairs.
      */
     private toXY(metric: Metric[]): { x: number, y: number }[] {
-        return Array.from({ length: metric.length }, (_, i) => ({ x: metric[i].timestamp.getTime(), y: metric[i].value * 100 }));
+        return Array.from({ length: metric.length }, (_, i) => {
+            const x = Math.round(metric[i].timestamp.getTime() / 1000) * 1000;
+            return { x, y: metric[i].value * 100 };
+        });
     }
 
     /**
@@ -237,8 +232,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.chartData.datasets[3].data = this.toXY(this.metrics.processMemoryPercent || []);
 
         // Force update
-        this.chartData = { ...this.chartData };
-        this.chartOptions = { ...this.chartOptions };
+        this.baseChart?.update();
     }
 
     formatUptime(seconds: number): string {
@@ -274,26 +268,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
         const scales = this.chartOptions.scales as any;
         const plugins = this.chartOptions.plugins;
 
+        const gridColor = cssvar('--mat-sys-outline-variant');
+        const tickColor = cssvar('--mat-sys-on-surface-variant');
+        const titleColor = cssvar('--mat-sys-on-surface');
+
         if (scales?.['y']?.grid) {
-            scales['y'].grid.color = cssvar('--mat-sys-outline-variant');
+            scales['y'].grid.color = gridColor;
         }
         if (scales?.['y']?.ticks) {
-            scales['y'].ticks.color = cssvar('--mat-sys-on-surface-variant');
+            scales['y'].ticks.color = tickColor;
         }
         if (scales?.['y']?.title) {
-            scales['y'].title.color = cssvar('--mat-sys-on-surface');
+            scales['y'].title.color = titleColor;
         }
         if (scales?.['x']?.grid) {
-            scales['x'].grid.color = cssvar('--mat-sys-outline-variant');
+            scales['x'].grid.color = gridColor;
         }
         if (scales?.['x']?.ticks) {
-            scales['x'].ticks.color = cssvar('--mat-sys-on-surface-variant');
+            scales['x'].ticks.color = tickColor;
         }
         if (plugins?.legend?.labels) {
-            plugins.legend.labels.color = cssvar('--mat-sys-on-surface');
+            plugins.legend.labels.color = titleColor;
         }
 
         // Force update
-        this.chartOptions = { ...this.chartOptions };
+        this.baseChart?.update();
     }
+    private _updateChartColors = this.updateChartColors.bind(this);
+    private _updateChartColorsDelayed = () => {
+        setTimeout(this._updateChartColors);
+    };
 }

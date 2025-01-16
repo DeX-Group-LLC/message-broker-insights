@@ -70,10 +70,6 @@ interface NavItem {
 export class LayoutComponent implements OnInit {
     /** Whether the sidebar is expanded */
     isExpanded = true;
-    /** Observable of the current theme */
-    currentTheme$!: Observable<Theme>;
-    /** Observable of the current color palette */
-    currentColorPalette$!: Observable<ColorPalette>;
     /** Observable of the current page title */
     currentPageTitle$!: Observable<string>;
     /** Observable of the current page icon */
@@ -121,7 +117,7 @@ export class LayoutComponent implements OnInit {
      * @param router - Angular router service for navigation
      */
     constructor(
-        private themeService: ThemeService,
+        public themeService: ThemeService,
         private router: Router,
         public websocketService: WebsocketService,
         private dialog: MatDialog
@@ -132,8 +128,6 @@ export class LayoutComponent implements OnInit {
      * Sets up theme and page title observables.
      */
     ngOnInit() {
-        this.currentTheme$ = this.themeService.theme$;
-        this.currentColorPalette$ = this.themeService.colorPalette$;
         this.currentPageTitle$ = this.router.events.pipe(
             filter(event => event instanceof NavigationEnd),
             map(() => {
