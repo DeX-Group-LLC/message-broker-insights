@@ -34,16 +34,16 @@ jobs:
         uses: actions/configure-pages@v5
       - uses: actions/setup-node@v4
         with:
-          node-version: 'lts/*' 
+          node-version: 'lts/*'
           registry-url: 'https://registry.npmjs.org'
       - name: Install dependencies
         run: npm ci
       - name: Build static pages
-        run: npm build
+        run: npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'dist/'
+          path: 'dist/insights'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4 
+        uses: actions/deploy-pages@v4
