@@ -15,7 +15,7 @@
                     <a mat-list-item [routerLink]="item.enabled ? item.path : null" [routerLinkActive]="['active']" *ngFor="let item of navItems"
                        (click)="$event.stopPropagation()"
                        [disabled]="!item.enabled"
-                       [matTooltip]="!isExpanded ? item.shortLabel : ''"
+                       [matTooltip]="item.label"
                        matTooltipPosition="right">
                         <mat-icon matListItemIcon [class]="item.iconClass">{{item.icon}}</mat-icon>
                         <span matListItemTitle>{{item.shortLabel}}</span>

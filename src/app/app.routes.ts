@@ -34,6 +34,31 @@ export interface RouteData {
  */
 export const routes: Routes = [
     {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+    },
+    {
+        path: 'alarms',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'alarm',
+            label: 'Alarms',
+            shortLabel: 'Alarms'
+        }
+    },
+    {
+        path: 'alerts',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'notifications',
+            label: 'Alerts',
+            shortLabel: 'Alerts'
+        }
+    },
+    {
         path: 'dashboard',
         component: DashboardComponent,
         data: {
@@ -73,6 +98,16 @@ export const routes: Routes = [
         }
     },
     {
+        path: 'performance',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'speed',
+            label: 'Performance Bottlenecks',
+            shortLabel: 'Performance'
+        }
+    },
+    {
         path: 'security',
         component: Component,
         data: {
@@ -109,5 +144,9 @@ export const routes: Routes = [
             label: 'Message Tracker',
             shortLabel: 'Tracker'
         }
+    },
+    {
+        path: '**',
+        redirectTo: 'dashboard'
     }
 ];
