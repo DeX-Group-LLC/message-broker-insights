@@ -20,6 +20,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
+            "baseHref": ".",
             "outputPath": "dist/insights",
             "index": "src/index.html",
             "browser": "src/main.ts",
