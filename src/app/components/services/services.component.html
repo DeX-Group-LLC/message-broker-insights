@@ -98,7 +98,7 @@
     </mat-card-header>
 
     <mat-card-content>
-        <mat-tab-group [(selectedIndex)]="selectedTab" (selectedIndexChange)="onTabChange($event)">
+        <mat-tab-group [(selectedIndex)]="selectedTab" (selectedIndexChange)="onTabChange($event)" animationDuration="150">
             <!-- Overview Tab -->
             <mat-tab label="Overview">
                 <div class="tab-content">
