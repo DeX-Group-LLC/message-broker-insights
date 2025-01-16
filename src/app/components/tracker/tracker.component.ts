@@ -79,7 +79,10 @@ export class TrackerComponent implements OnInit {
         { name: 'response.serviceId', label: 'Responder', sortable: true, filterable: true },
         { name: 'request.topic', label: 'Topic', sortable: true, filterable: true },
         { name: 'status', label: 'Status', sortable: true, filterable: true },
-        { name: 'completedAt', label: 'Completed', sortable: true, filterable: true }
+        { name: 'completedAt', label: 'Completed', sortable: true, filterable: true },
+        { name: 'meta', label: 'Meta', sortable: false, filterable: (data: any, filter: string) => {
+            return this.getMetaSearchContent(data).includes(filter);
+        } }
     ];
 
     constructor() {}
@@ -122,5 +125,60 @@ export class TrackerComponent implements OnInit {
 
     getNestedValue(obj: any, path: string): any {
         return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+    }
+
+    /**
+     * Generates the meta text displayed in the column
+     */
+    getMetaText(flow: MessageFlow): string {
+        const parts = ['Request', 'Response'];
+
+        if (flow.listeners?.length) {
+            parts.push(`${flow.listeners.length} Listener${flow.listeners.length > 1 ? 's' : ''}`);
+        }
+
+        if (flow.relatedMessages?.length) {
+            parts.push(`${flow.relatedMessages.length} Related Message${flow.relatedMessages.length > 1 ? 's' : ''}`);
+        }
+
+        return parts.join(', ');
+    }
+
+    /**
+     * Generates the searchable content for the meta column
+     */
+    getMetaSearchContent(flow: MessageFlow): string {
+        const searchParts = [];
+
+        // Request content
+        if (flow.request) {
+            searchParts.push(JSON.stringify(flow.request.message.header));
+            if (flow.request.message.payload) {
+                searchParts.push(JSON.stringify(flow.request.message.payload));
+            }
+        }
+
+        // Response content
+        if (flow.response?.message) {
+            searchParts.push(JSON.stringify(flow.response.message.header));
+            if (flow.response.message.payload) {
+                searchParts.push(JSON.stringify(flow.response.message.payload));
+            }
+        }
+
+        // Listeners
+        if (flow.listeners?.length) {
+            searchParts.push(flow.listeners.map((l: Listener) => l.serviceId).join(' '));
+        }
+
+        // Related messages
+        if (flow.relatedMessages?.length) {
+            const relatedContent = flow.relatedMessages.map((msg: RelatedMessage) =>
+                `${msg.originatorServiceId} ${msg.topic}`
+            ).join(' ');
+            searchParts.push(relatedContent);
+        }
+
+        return searchParts.join(' ');
     }
 }

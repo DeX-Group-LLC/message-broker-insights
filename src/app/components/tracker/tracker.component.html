@@ -30,6 +30,10 @@
                         <span *ngIf="element?.completedAt">{{element.completedAt | date:'medium'}}</span>
                     </ng-container>
 
+                    <ng-container *ngSwitchCase="'meta'">
+                        <span class="muted italic">{{getMetaText(element)}}</span>
+                    </ng-container>
+
                     <ng-container *ngSwitchDefault>
                         {{getNestedValue(element, column.name)}}
                     </ng-container>
