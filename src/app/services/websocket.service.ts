@@ -333,6 +333,7 @@ export class WebsocketService {
             this.addEvent(ConnectionEventType.DISCONNECTED);
             this.stateChange$.emit(this._state);
             this.stopHeartbeat();
+            this.socket = null;
 
             // Only attempt to reconnect if not suppressed
             if (this.suppressReconnect) {
