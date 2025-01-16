@@ -128,13 +128,11 @@
                         <div class="pill-section">
                             <div class="pill-item service-pill">
                                 <span class="label">Responder</span>
-                                @if (selectedFlow.response.serviceId) {
-                                    <span class="value">{{selectedFlow.response.serviceId}}</span>
+                                @if (selectedFlow.response.target && !selectedFlow.response.fromBroker) {
+                                    <span class="value">{{selectedFlow.response.target.serviceId}}</span>
+                                    <span class="property" matTooltip="Higher number means lower priority">Priority: {{selectedFlow.response.target.priority}}</span>
                                 } @else if (selectedFlow.response.message) {
                                     <span class="value warning">message-broker</span>
-                                }
-                                @if (selectedFlow.response.priority) {
-                                    <span class="property" matTooltip="Higher number means lower priority">Priority: {{selectedFlow.response.priority}}</span>
                                 }
                             </div>
                             @if (selectedFlow.response.message) {

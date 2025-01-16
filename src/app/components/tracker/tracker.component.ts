@@ -42,8 +42,11 @@ export interface MessageFlow {
         message: Message;
     };
     response?: {
-        serviceId?: string;
-        priority?: number;
+        target?: {
+            serviceId: string;
+            priority: number;
+        };
+        fromBroker: boolean;
         message?: Message;
     };
     relatedMessages?: RelatedMessage[];

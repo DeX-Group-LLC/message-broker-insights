@@ -104,10 +104,10 @@ export class FlowDiagramComponent implements OnChanges {
         // Only add responder node if it exists and is needed
         const isInternalError = this.messageFlow.error?.code === 'INTERNAL_ERROR';
         const isNoResponders = this.messageFlow.error?.code === 'NO_RESPONDERS';
-        if (this.messageFlow.response?.serviceId && !isNoResponders) {
+        if (this.messageFlow.response?.target?.serviceId && !isNoResponders) {
             nodes.push({
-                id: this.messageFlow.response.serviceId,
-                label: this.messageFlow.response.serviceId,
+                id: this.messageFlow.response.target.serviceId,
+                label: this.messageFlow.response.target.serviceId,
                 type: 'responder',
                 x: horizontalPadding + boxWidth/2 + serviceSpacing * 2,
                 y: topPadding
@@ -143,7 +143,7 @@ export class FlowDiagramComponent implements OnChanges {
         if (!isNoResponders && !isInternalError) {
             messages.push({
                 from: 'message-broker',
-                to: this.messageFlow.response!.serviceId!,
+                to: this.messageFlow.response!.target!.serviceId!,
                 label: this.messageFlow.request.message.header.topic,
                 type: 'request',
                 timestamp: new Date(this.messageFlow.receivedAt.getTime() + this.messageFlow.brokerProcessingTime),
@@ -200,7 +200,7 @@ export class FlowDiagramComponent implements OnChanges {
             messageIndex++;
         } else if (this.messageFlow.response) {
             messages.push({
-                from: this.messageFlow.response.serviceId!,
+                from: this.messageFlow.response.target!.serviceId!,
                 to: 'message-broker',
                 label: this.messageFlow.request.message.header.topic,
                 type: 'response',
@@ -361,10 +361,10 @@ export class FlowDiagramComponent implements OnChanges {
         if (msg.from === this.messageFlow.request.serviceId && msg.to === 'message-broker') {
             return this.messageFlow.request.message.header;
         }
-        if (msg.from === 'message-broker' && msg.to === this.messageFlow.response?.serviceId) {
+        if (msg.from === 'message-broker' && msg.to === this.messageFlow.response?.target?.serviceId) {
             return this.messageFlow.request.message.header;
         }
-        if (msg.from === this.messageFlow.response?.serviceId && msg.to === 'message-broker' && this.messageFlow.response) {
+        if (msg.from === this.messageFlow.response?.target?.serviceId && msg.to === 'message-broker' && this.messageFlow.response) {
             return this.messageFlow.request.message.header;
         }
         if (msg.from === 'message-broker' && msg.to === this.messageFlow.request.serviceId && this.messageFlow.response) {

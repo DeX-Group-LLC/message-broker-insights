@@ -25,8 +25,11 @@ export const MOCK_DATA: MessageFlow[] = [
             }
         },
         response: {
-            serviceId: 'auth-service',
-            priority: 1,
+            target: {
+                serviceId: 'auth-service',
+                priority: 1
+            },
+            fromBroker: false,
             message: {
                 header: {
                     action: ActionType.RESPONSE,
@@ -77,8 +80,29 @@ export const MOCK_DATA: MessageFlow[] = [
             }
         },
         response: {
-            serviceId: 'email-service',
-            priority: 2
+            target: {
+                serviceId: 'email-service',
+                priority: 2
+            },
+            fromBroker: true,
+            message: {
+                header: {
+                    action: ActionType.RESPONSE,
+                    topic: 'system.email.request',
+                    version: '1.0.0',
+                    requestId: 'req-002'
+                },
+                payload: {
+                    error: {
+                        code: 'REQUEST_TIMEOUT',
+                        message: 'Request timed out after 2000ms',
+                        metadata: {
+                            timeout: 2000,
+                            responderServiceId: 'email-service'
+                        }
+                    }
+                }
+            }
         },
         error: {
             code: 'REQUEST_TIMEOUT',
@@ -108,8 +132,11 @@ export const MOCK_DATA: MessageFlow[] = [
             }
         },
         response: {
-            serviceId: 'inventory-service',
-            priority: 1,
+            target: {
+                serviceId: 'inventory-service',
+                priority: 2
+            },
+            fromBroker: false,
             message: {
                 header: {
                     action: ActionType.RESPONSE,
@@ -156,6 +183,7 @@ export const MOCK_DATA: MessageFlow[] = [
             }
         },
         response: {
+            fromBroker: true,
             message: {
                 header: {
                     action: ActionType.RESPONSE,
@@ -199,6 +227,7 @@ export const MOCK_DATA: MessageFlow[] = [
             }
         },
         response: {
+            fromBroker: true,
             message: {
                 header: {
                     action: ActionType.RESPONSE,
@@ -254,8 +283,11 @@ export const MOCK_DATA: MessageFlow[] = [
             }
         },
         response: {
-            serviceId: 'shipping-service',
-            priority: 1,
+            target: {
+                serviceId: 'shipping-service',
+                priority: 1
+            },
+            fromBroker: true,
             message: {
                 header: {
                     action: ActionType.RESPONSE,
@@ -280,6 +312,6 @@ export const MOCK_DATA: MessageFlow[] = [
                 component: 'message-queue',
                 details: 'Request dropped due to broker capacity limit'
             }
-        },
+        }
     }
 ]
