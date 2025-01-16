@@ -43,7 +43,7 @@
                                 <div class="label">Status:</div>
                                 <div class="label">Last Connected:</div>
                                 <div class="label">Latency:</div>
-                                <div class="label"  *ngIf="(connectionDetails$ | async)?.reconnectAttempts">Reconnect Attempts:</div>
+                                <div class="label" *ngIf="(connectionDetails$ | async)?.reconnectAttempts">Reconnect Attempts:</div>
                             </div>
                             <div class="detail-col">
                                 <div class="value">{{ (connectionDetails$ | async)?.url }}</div>
@@ -54,9 +54,13 @@
                             </div>
                         </div>
                         <mat-divider></mat-divider>
-                        <button mat-menu-item (click)="showConnectionEvents()">
+                        <button mat-menu-item (click)="showConnectionHistory()">
                             <mat-icon>history</mat-icon>
-                            <span>View Connection History</span>
+                            <span>View History</span>
+                        </button>
+                        <button mat-menu-item (click)="showConnectionSettings()">
+                            <mat-icon>settings</mat-icon>
+                            <span>Connection Settings</span>
                         </button>
                         <button mat-menu-item (click)="reconnect()" *ngIf="(connectionState$ | async) === connectionState.DISCONNECTED">
                             <mat-icon>refresh</mat-icon>

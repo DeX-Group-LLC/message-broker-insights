@@ -16,6 +16,7 @@ import { Observable, filter, map } from 'rxjs';
 import { ThemeService, Theme, ColorPalette } from '../../services/theme.service';
 import { WebsocketService, ConnectionState, ConnectionDetails } from '../../services/websocket.service';
 import { ConnectionHistoryComponent } from './connection-history/connection-history.component';
+import { ConnectionSettingsComponent } from './connection-settings/connection-settings.component';
 import { routes, RouteData } from '../../app.routes';
 
 interface NavItem {
@@ -158,10 +159,10 @@ export class LayoutComponent implements OnInit {
 
             // Listen for state changes
             const handler = (state: ConnectionState) => observer.next(state);
-            this.websocketService.on('stateChange', handler);
+            this.websocketService.stateChange$.on(handler);
 
             // Cleanup
-            return () => this.websocketService.off('stateChange', handler);
+            return () => this.websocketService.stateChange$.off(handler);
         });
 
         // Set up connection details observable
@@ -174,15 +175,15 @@ export class LayoutComponent implements OnInit {
             const latencyHandler = () => observer.next(this.websocketService.details);
             const eventHandler = () => observer.next(this.websocketService.details);
 
-            this.websocketService.on('stateChange', stateHandler);
-            this.websocketService.on('latencyUpdate', latencyHandler);
-            this.websocketService.on('connectionEvent', eventHandler);
+            this.websocketService.stateChange$.on(stateHandler);
+            this.websocketService.latencyUpdate$.on(latencyHandler);
+            this.websocketService.connection$.on(eventHandler);
 
             // Cleanup
             return () => {
-                this.websocketService.off('stateChange', stateHandler);
-                this.websocketService.off('latencyUpdate', latencyHandler);
-                this.websocketService.off('connectionEvent', eventHandler);
+                this.websocketService.stateChange$.off(stateHandler);
+                this.websocketService.latencyUpdate$.off(latencyHandler);
+                this.websocketService.connection$.off(eventHandler);
             };
         });
     }
@@ -241,14 +242,15 @@ export class LayoutComponent implements OnInit {
      */
     getConnectionIcon(state: ConnectionState): string {
         switch (state) {
+            case ConnectionState.CONNECTING:
+            case ConnectionState.RECONNECTING:
+                return 'cloud_sync';
             case ConnectionState.CONNECTED:
                 return 'cloud_done';
-            case ConnectionState.CONNECTING:
-                return 'cloud_sync';
             case ConnectionState.DISCONNECTED:
                 return 'cloud_off';
             default:
-                return 'cloud_off';
+                return 'warning';
         }
     }
 
@@ -310,7 +312,30 @@ export class LayoutComponent implements OnInit {
      */
     showConnectionEvents(): void {
         this.dialog.open(ConnectionHistoryComponent, {
-            data: this.websocketService.details.recentEvents,
+            width: '600px',
+            height: '80vh',
+            maxHeight: '80vh',
+            autoFocus: false
+        });
+    }
+
+    /**
+     * Shows the connection history dialog.
+     */
+    showConnectionHistory(): void {
+        this.dialog.open(ConnectionHistoryComponent, {
+            width: '600px',
+            height: '80vh',
+            maxHeight: '80vh',
+            autoFocus: false
+        });
+    }
+
+    /**
+     * Shows the connection settings dialog.
+     */
+    showConnectionSettings(): void {
+        this.dialog.open(ConnectionSettingsComponent, {
             width: '600px',
             autoFocus: false
         });

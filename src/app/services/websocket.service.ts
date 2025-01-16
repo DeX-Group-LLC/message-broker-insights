@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { v4 as uuidv4 } from 'uuid';
 import { EventEmitter } from '../utils/event-emitter';
+import { SingleEmitter } from '../utils/single-emitter';
+import { MultiEmitter } from '../utils/multi-emitter';
 
 /** Types of actions that can be sent over the WebSocket */
 export enum ActionType {
@@ -39,15 +41,15 @@ export enum ConnectionState {
 /** Connection event types */
 export enum ConnectionEventType {
     /** Connection established successfully */
-    CONNECTED = 'connected',
+    CONNECTED = 'Connected',
     /** Initial connection attempt */
-    CONNECTING = 'connecting',
+    CONNECTING = 'Connecting',
     /** Attempting to reconnect */
-    RECONNECTING = 'reconnecting',
+    RECONNECTING = 'Reconnecting',
     /** Connection lost */
-    DISCONNECTED = 'disconnected',
+    DISCONNECTED = 'Disconnected',
     /** Error occurred */
-    ERROR = 'error'
+    ERROR = 'Error'
 }
 
 /** Structure of connection events */
@@ -75,7 +77,7 @@ export interface ConnectionDetails {
     /** Latest connection latency in ms */
     latency?: number;
     /** Recent connection events */
-    recentEvents: ConnectionEvent[];
+    events: ConnectionEvent[];
 }
 
 export interface MessageHeader {
@@ -101,7 +103,7 @@ export interface Message {
 @Injectable({
     providedIn: 'root'
 })
-export class WebsocketService extends EventEmitter {
+export class WebsocketService {
     /** Active WebSocket connection */
     private socket: WebSocket | null = null;
     /** Map of pending requests awaiting responses */
@@ -109,15 +111,13 @@ export class WebsocketService extends EventEmitter {
     /** Current state of the WebSocket connection */
     private _state = ConnectionState.DISCONNECTED;
     /** URL of the WebSocket server */
-    private _url = 'ws://localhost:3000';
+    private _url = location.protocol.startsWith('https:') ? `wss://${location.hostname}:${location.port}` : `ws://${location.hostname}:3000`;
     /** Time of last successful connection */
     private _lastConnected?: Date;
     /** Number of reconnection attempts */
     private _reconnectAttempts = 0;
     /** Latest connection latency */
     private _latency?: number;
-    /** Recent connection events */
-    private _recentEvents: ConnectionEvent[] = [];
     /** Maximum number of recent events to keep */
     private readonly MAX_RECENT_EVENTS = 50;
     /** Heartbeat interval timer */
@@ -132,6 +132,22 @@ export class WebsocketService extends EventEmitter {
     private readonly RECONNECT_DELAY = 5000;
     /** Whether to suppress automatic reconnection */
     private suppressReconnect = false;
+    /** Recent connection events */
+    private _events: ConnectionEvent[] = [];
+
+    /** Events */
+    /** Connection events */
+    connection$ = new SingleEmitter<(event: ConnectionEvent) => void>();
+    /** Connected events */
+    connected$ = new SingleEmitter<() => void>();
+    /** State change events */
+    stateChange$ = new SingleEmitter<(state: ConnectionState) => void>();
+    /** Latency update events */
+    latencyUpdate$ = new SingleEmitter<(latency: number) => void>();
+    /** Error events */
+    error$ = new SingleEmitter<(error: Event) => void>();
+    /** Message events */
+    message$ = new MultiEmitter<(message: Message) => void>();
 
     /** Gets the current connection state */
     get state(): ConnectionState {
@@ -146,7 +162,7 @@ export class WebsocketService extends EventEmitter {
             lastConnected: this._lastConnected,
             reconnectAttempts: this._reconnectAttempts,
             latency: this._latency,
-            recentEvents: [...this._recentEvents]
+            events: this._events
         };
     }
 
@@ -155,7 +171,6 @@ export class WebsocketService extends EventEmitter {
      * Automatically connects to the WebSocket server.
      */
     constructor() {
-        super();
         // Connect to the WebSocket server
         this.connect();
     }
@@ -174,12 +189,12 @@ export class WebsocketService extends EventEmitter {
             attempt: type === ConnectionEventType.RECONNECTING ? this._reconnectAttempts : undefined
         };
 
-        this._recentEvents.unshift(event);
-        if (this._recentEvents.length > this.MAX_RECENT_EVENTS) {
-            this._recentEvents.pop();
+        this._events.unshift(event);
+        if (this._events.length > this.MAX_RECENT_EVENTS) {
+            this._events.pop();
         }
 
-        this.emit('connectionEvent', event);
+        this.connection$.emit(event);
     }
 
     /**
@@ -202,7 +217,7 @@ export class WebsocketService extends EventEmitter {
             const start = new Date().getTime();
             await this.request('system.heartbeat');
             this._latency = new Date().getTime() - start;
-            this.emit('latencyUpdate', this._latency);
+            this.latencyUpdate$.emit(this._latency);
         } catch (error) {
             console.error('Heartbeat failed:', error);
         }
@@ -238,17 +253,13 @@ export class WebsocketService extends EventEmitter {
         // Stop any pending reconnection
         this.stopReconnectTimeout();
 
+        this._url = url;
         if (this.socket) {
             // Suppress reconnection when manually closing
             this.suppressReconnect = true;
             this.socket.close();
-            // Wait for the close event to complete before continuing
-            setTimeout(() => {
-                this.suppressReconnect = false;
-                this.initializeConnection(url);
-            }, 0);
         } else {
-            this.initializeConnection(url);
+            this.initializeConnection(this._url);
         }
     }
 
@@ -272,7 +283,7 @@ export class WebsocketService extends EventEmitter {
             this.addEvent(ConnectionEventType.RECONNECTING);
         }
 
-        this.emit('stateChange', this._state);
+        this.stateChange$.emit(this._state);
         this.socket = new WebSocket(url);
 
         this.socket.onopen = () => {
@@ -280,8 +291,8 @@ export class WebsocketService extends EventEmitter {
             this._lastConnected = new Date();
             this._reconnectAttempts = 0;
             this.addEvent(ConnectionEventType.CONNECTED);
-            this.emit('stateChange', this._state);
-            this.emit('connected');
+            this.connected$.emit();
+            this.stateChange$.emit(this._state);
             this.startHeartbeat();
             this.request('system.service.register', { name: 'Insights Client', description: 'A Message Broker Insights client' });
         };
@@ -292,10 +303,8 @@ export class WebsocketService extends EventEmitter {
                 const [action, topic, version, requestId] = header.split(':');
                 const message = JSON.parse(payload);
 
-                if (topic === 'system.heartbeat') {
-                    if (action === ActionType.REQUEST) {
-                        this.send(ActionType.RESPONSE, 'system.heartbeat', { timestamp: new Date().toISOString() }, requestId);
-                    }
+                if (topic === 'system.heartbeat' && action === ActionType.REQUEST) {
+                    this.send(ActionType.RESPONSE, 'system.heartbeat', { timestamp: new Date().toISOString() }, requestId);
                 } else if (action === ActionType.RESPONSE && requestId) {
                     const request = this.pendingRequests.get(requestId);
                     if (request == null) return;
@@ -312,7 +321,7 @@ export class WebsocketService extends EventEmitter {
                 }
 
                 // Emit the message
-                this.emit(header, message);
+                this.message$.emit(header, message);
             } catch (error) {
                 console.error('Error parsing message:', error);
                 this.addEvent(ConnectionEventType.ERROR, error instanceof Error ? error.message : String(error));
@@ -322,20 +331,24 @@ export class WebsocketService extends EventEmitter {
         this.socket.onclose = () => {
             this._state = ConnectionState.DISCONNECTED;
             this.addEvent(ConnectionEventType.DISCONNECTED);
-            this.emit('stateChange', this._state);
-            this.emit('disconnected');
+            this.stateChange$.emit(this._state);
             this.stopHeartbeat();
 
             // Only attempt to reconnect if not suppressed
-            if (!this.suppressReconnect) {
-                this.reconnectTimeout = window.setTimeout(() => this.connect(url), this.RECONNECT_DELAY);
+            if (this.suppressReconnect) {
+                this.suppressReconnect = false;
+                this.initializeConnection(this._url);
+            } else {
+                this.reconnectTimeout = window.setTimeout(() => {
+                    this.suppressReconnect = false;
+                    this.initializeConnection(this._url);
+                }, this.RECONNECT_DELAY);
             }
         };
 
-        this.socket.onerror = (error) => {
-            console.error('WebSocket error:', error);
+        this.socket.onerror = (error: Event) => {
             this.addEvent(ConnectionEventType.ERROR, error instanceof Error ? error.message : 'Unknown error');
-            this.emit('error', error);
+            this.error$.emit(error);
         };
     }
 
@@ -385,8 +398,7 @@ export class WebsocketService extends EventEmitter {
             this.socket.close();
             this.socket = null;
             this._state = ConnectionState.DISCONNECTED;
-            this.emit('stateChange', this._state);
-            this.emit('disconnected');
+            this.stateChange$.emit(this._state);
         }
     }
 
@@ -399,7 +411,7 @@ export class WebsocketService extends EventEmitter {
         if (this._state === ConnectionState.CONNECTED) return;
 
         return new Promise<void>(resolve => {
-            this.once('connected', resolve);
+            this.connection$.once(event => event.type === ConnectionEventType.CONNECTED ? resolve() : undefined);
         });
     }
 }

@@ -1,66 +1,93 @@
 :host {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+mat-card {
     width: 100%;
-    max-width: 600px;
+
+    mat-card-title {
+        color: var(--mat-sys-on-surface);
+        padding-bottom: 0.5rem;
+    }
+
+    mat-card-header {
+        position: relative;
+
+        .close-button {
+            position: absolute;
+            right: 0;
+            top: 0;
+            color: var(--mat-sys-on-surface);
+        }
+    }
+}
+
+.url-field {
+    width: 100%;
+}
+
+.url-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.history-card {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+
+    mat-card-content {
+        flex: 1;
+        overflow: auto;
+        min-height: 0;
+    }
+}
+
+.event-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.event-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
     background-color: var(--mat-sys-surface-container-high);
-}
-
-.events-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    padding: 8px 0;
-}
-
-.event {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.event-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
 
     mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-
-        &.connected {
-            color: #4caf50;
-        }
-
-        &.connecting, &.reconnecting {
-            color: #ff9800;
-        }
-
-        &.disconnected, &.error {
-            color: #f44336;
-        }
+        margin-top: 0.25rem;
     }
 
-    .event-type {
+    .event-details {
         flex: 1;
-        font-weight: 500;
-    }
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
 
-    .event-time {
-        color: var(--mat-sys-on-surface-variant);
-        font-size: 12px;
-    }
-}
+        .event-type {
+            font-weight: 500;
+            color: var(--mat-sys-on-surface);
+        }
 
-.event-details {
-    margin-left: 28px;
-    font-size: 14px;
+        .event-time {
+            font-size: 0.875rem;
+            color: var(--mat-sys-on-surface);
+        }
 
-    .error {
-        color: #f44336;
-    }
-
-    .attempt {
-        color: var(--mat-sys-on-surface-variant);
+        .event-meta {
+            font-size: 0.875rem;
+            color: var(--mat-sys-on-surface);
+        }
     }
 }
