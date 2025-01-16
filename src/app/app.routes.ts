@@ -5,12 +5,15 @@ import { MetricsComponent } from './components/metrics/metrics.component';
 import { ServicesComponent } from './components/services/services.component';
 import { SubscriptionsComponent } from './components/subscriptions/subscriptions.component';
 import { TrackerComponent } from './components/tracker/tracker.component';
+import { Component } from '@angular/core';
 
 /**
  * Interface defining the data structure for route metadata.
  * Used to configure navigation items in the layout.
  */
 export interface RouteData {
+    /** Whether the route is enabled */
+    enabled: boolean;
     /** Icon name from Material Icons library */
     icon: string;
     /** Icon class for custom icons */
@@ -40,6 +43,17 @@ export const routes: Routes = [
         }
     },
     {
+        path: 'database',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'database_search',
+            iconClass: 'material-symbols-filled',
+            label: 'Database Viewer',
+            shortLabel: 'Database'
+        }
+    },
+    {
         path: 'logs',
         component: LogsComponent,
         data: {
@@ -56,6 +70,17 @@ export const routes: Routes = [
             iconClass: 'material-symbols-outlined',
             label: 'System Metrics',
             shortLabel: 'Metrics'
+        }
+    },
+    {
+        path: 'security',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'security',
+            iconClass: 'material-symbols-filled',
+            label: 'Security',
+            shortLabel: 'Security'
         }
     },
     {

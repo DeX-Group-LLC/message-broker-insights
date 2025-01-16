@@ -20,6 +20,7 @@ import { routes, RouteData } from '../../app.routes';
 
 interface NavItem {
     path: string;
+    enabled: boolean;
     icon: string;
     iconClass?: string;
     label: string;
@@ -88,6 +89,7 @@ export class LayoutComponent implements OnInit {
         .filter((route: Route) => route.data)
         .map((route: Route) => ({
             path: `/${route.path}`,
+            enabled: (route.data as RouteData).enabled ?? true,
             icon: (route.data as RouteData).icon,
             iconClass: (route.data as RouteData).iconClass,
             label: (route.data as RouteData).label,
