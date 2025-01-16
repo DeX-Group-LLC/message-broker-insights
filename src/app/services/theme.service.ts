@@ -1,5 +1,6 @@
 import { Injectable, Renderer2, RendererFactory2 } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { SingleEmitter } from '../utils/single-emitter';
 
 /** Available theme options for the application */
 export type Theme = 'light' | 'dark' | 'system';
@@ -20,15 +21,13 @@ export class ThemeService {
     private renderer: Renderer2;
     /** Media query for detecting system dark theme preference */
     private darkThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    /** Subject holding the current theme selection */
-    private currentTheme = new BehaviorSubject<Theme>(this.getSavedTheme());
-    /** Subject holding the current color palette selection */
-    private currentColorPalette = new BehaviorSubject<ColorPalette>(this.getSavedColorPalette());
+    /** Current theme selection */
+    private currentTheme = this.getSavedTheme();
+    /** Current color palette selection */
+    private currentColorPalette = this.getSavedColorPalette();
 
-    /** Observable stream of theme changes */
-    theme$ = this.currentTheme.asObservable();
-    /** Observable stream of color palette changes */
-    colorPalette$ = this.currentColorPalette.asObservable();
+    /** Event emitter for theme changes */
+    themeChanged$ = new SingleEmitter<(mode: Theme, colorPalette: ColorPalette) => void>();
 
     /**
      * Creates an instance of ThemeService.
@@ -41,12 +40,20 @@ export class ThemeService {
 
         // Listen for system theme changes
         this.darkThemeMediaQuery.addEventListener('change', (e) => {
-            if (this.currentTheme.value === 'system') {
+            if (this.currentTheme === 'system') {
                 this.applyTheme('system');
             }
         });
 
-        this.applyTheme(this.currentTheme.value);
+        this.applyTheme(this.currentTheme);
+    }
+
+    get theme(): Theme {
+        return this.currentTheme;
+    }
+
+    get colorPalette(): ColorPalette {
+        return this.currentColorPalette;
     }
 
     /**
@@ -66,16 +73,16 @@ export class ThemeService {
      */
     private saveTheme(theme: Theme): void {
         localStorage.setItem('theme', theme);
+        this.currentTheme = theme;
     }
 
     /**
      * Sets the current theme.
-     * Updates the theme subject, saves the selection, and applies the theme.
+     * Saves the selection, and applies the theme.
      *
      * @param theme - Theme to set
      */
     setTheme(theme: Theme): void {
-        this.currentTheme.next(theme);
         this.saveTheme(theme);
         this.applyTheme(theme);
     }
@@ -97,18 +104,18 @@ export class ThemeService {
      */
     private saveColorPalette(colorPalette: ColorPalette): void {
         localStorage.setItem('colorPalette', colorPalette);
+        this.currentColorPalette = colorPalette;
     }
 
     /**
      * Sets the current color palette.
-     * Updates the color palette subject, saves the selection, and applies the theme.
+     * Saves the selection, and applies the theme.
      *
      * @param colorPalette - Color palette to set
      */
     setColorPalette(colorPalette: ColorPalette): void {
-        this.currentColorPalette.next(colorPalette);
         this.saveColorPalette(colorPalette);
-        this.applyTheme(this.currentTheme.value);
+        this.applyTheme(this.currentTheme);
     }
 
     /**
@@ -118,15 +125,7 @@ export class ThemeService {
      * @param theme - Theme to apply
      */
     private applyTheme(theme: Theme): void {
-        let effectiveTheme: 'light' | 'dark';
-
-        if (theme === 'system') {
-            effectiveTheme = this.darkThemeMediaQuery.matches ? 'dark' : 'light';
-        } else {
-            effectiveTheme = theme;
-        }
-
-        const colorPalette = this.currentColorPalette.value;
+        const effectiveTheme = theme === 'system' ? (this.darkThemeMediaQuery.matches ? 'dark' : 'light') : theme;
 
         this.renderer.removeClass(document.body, 'light-theme');
         this.renderer.removeClass(document.body, 'dark-theme');
@@ -139,8 +138,12 @@ export class ThemeService {
         });
 
         this.renderer.addClass(document.body, `${effectiveTheme}-theme`);
-        this.renderer.addClass(document.body, `${colorPalette}-palette`);
+        this.renderer.addClass(document.body, `${this.currentColorPalette}-palette`);
 
         document.documentElement.setAttribute('color-scheme', effectiveTheme);
+
+        // Notify all components that the theme has changed
+        console.log('Theme changed to', this.currentTheme, this.currentColorPalette);
+        this.themeChanged$.emit(this.currentTheme, this.currentColorPalette);
     }
 }

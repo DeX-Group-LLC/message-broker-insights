@@ -75,8 +75,8 @@ export class LogService implements OnDestroy {
         await this.setupLogSubscription();
 
         // Set up event listeners
-        this.websocketService.on('connected', this._setupLogSubscription);
-        this.websocketService.on('response:system.log:1.0.0', this._addLog);
+        this.websocketService.connected$.on(this._setupLogSubscription);
+        this.websocketService.message$.on('response:system.log:1.0.0', this._addLog);
 
         this.isInitialized = true;
     }
@@ -86,8 +86,8 @@ export class LogService implements OnDestroy {
      * Removes event listeners and completes observables.
      */
     ngOnDestroy() {
-        this.websocketService.off('connected', this._setupLogSubscription);
-        this.websocketService.off('response:system.log:1.0.0', this._addLog);
+        this.websocketService.connected$.off(this._setupLogSubscription);
+        this.websocketService.message$.off('response:system.log:1.0.0', this._addLog);
         this.logsSubject.complete();
     }
 

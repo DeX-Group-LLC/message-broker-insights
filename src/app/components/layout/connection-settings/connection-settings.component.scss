@@ -1,0 +1,35 @@
+:host {
+    display: block;
+    padding: 1rem;
+}
+
+mat-card {
+    width: 100%;
+
+    mat-card-title {
+        color: var(--mat-sys-on-surface);
+        padding-bottom: 0.5rem;
+    }
+
+    mat-card-header {
+        position: relative;
+
+        .close-button {
+            position: absolute;
+            right: 0;
+            top: 0;
+            color: var(--mat-sys-on-surface);
+        }
+    }
+}
+
+.url-field {
+    width: 100%;
+}
+
+.url-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}

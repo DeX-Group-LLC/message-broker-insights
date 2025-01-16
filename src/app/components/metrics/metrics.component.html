@@ -19,7 +19,7 @@
             [defaultSort]="{ active: 'name', direction: 'asc' }"
             [refreshFn]="refreshMetrics.bind(this)"
             [selectable]="true"
-            [multiSelect]="false"
+            [multiSelect]="true"
             [canExpand]="canExpand"
             [getGroupName]="getMetricGroup"
             [groupDisplayColumn]="'name'"
@@ -62,16 +62,20 @@
 
 
 <!-- Chart Card -->
-<mat-card *ngIf="selectedMetric" class="metric-chart-card">
+<mat-card *ngIf="selectedMetrics.length" class="metric-chart-card">
     <mat-card-header>
-        <mat-card-title>{{ selectedMetric.name }}</mat-card-title>
+        <mat-card-title>{{ selectedMetrics.length === 1 ? selectedMetrics[0].name : selectedMetrics.length + ' Metrics' }}</mat-card-title>
         <div class="header-actions">
+            <button mat-icon-button (click)="togglePause()"
+                    [matTooltip]="isPaused ? 'Resume' : 'Pause'">
+                <mat-icon>{{ isPaused ? 'play_arrow' : 'pause' }}</mat-icon>
+            </button>
             <app-export
                 [data]="getChartExportData()"
-                filename="metric-history-{{selectedMetric.name}}"
+                filename="metric-history{{selectedMetrics.length === 1 ? '-' + selectedMetrics[0].name : ''}}"
                 tooltip="Export Chart Data"
                 [customizable]="true"
-                [disabled]="!selectedMetric"/>
+                [disabled]="!selectedMetrics.length"/>
             <button mat-icon-button class="close-button" (click)="table.clearSelection()" matTooltip="Close chart">
                 <mat-icon>close</mat-icon>
             </button>
@@ -81,7 +85,8 @@
         <canvas baseChart
             [data]="chartData"
             [options]="chartOptions"
-            [type]="'line'">
+            [type]="'line'"
+            [legend]="false">
         </canvas>
     </mat-card-content>
 </mat-card>

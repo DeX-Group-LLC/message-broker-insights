@@ -12,9 +12,10 @@
                     <span *ngIf="isExpanded">Insights</span>
                 </mat-toolbar>
                 <mat-nav-list (click)="toggleNavbar()">
-                    <a mat-list-item [routerLink]="item.path" *ngFor="let item of navItems"
+                    <a mat-list-item [routerLink]="item.enabled ? item.path : null" [routerLinkActive]="['active']" *ngFor="let item of navItems"
                        (click)="$event.stopPropagation()"
-                       [matTooltip]="!isExpanded ? item.shortLabel : ''"
+                       [disabled]="!item.enabled"
+                       [matTooltip]="item.label"
                        matTooltipPosition="right">
                         <mat-icon matListItemIcon [class]="item.iconClass">{{item.icon}}</mat-icon>
                         <span matListItemTitle>{{item.shortLabel}}</span>
@@ -42,7 +43,7 @@
                                 <div class="label">Status:</div>
                                 <div class="label">Last Connected:</div>
                                 <div class="label">Latency:</div>
-                                <div class="label"  *ngIf="(connectionDetails$ | async)?.reconnectAttempts">Reconnect Attempts:</div>
+                                <div class="label" *ngIf="(connectionDetails$ | async)?.reconnectAttempts">Reconnect Attempts:</div>
                             </div>
                             <div class="detail-col">
                                 <div class="value">{{ (connectionDetails$ | async)?.url }}</div>
@@ -53,9 +54,13 @@
                             </div>
                         </div>
                         <mat-divider></mat-divider>
-                        <button mat-menu-item (click)="showConnectionEvents()">
+                        <button mat-menu-item (click)="showConnectionHistory()">
                             <mat-icon>history</mat-icon>
-                            <span>View Connection History</span>
+                            <span>View History</span>
+                        </button>
+                        <button mat-menu-item (click)="showConnectionSettings()">
+                            <mat-icon>settings</mat-icon>
+                            <span>Connection Settings</span>
                         </button>
                         <button mat-menu-item (click)="reconnect()" *ngIf="(connectionState$ | async) === connectionState.DISCONNECTED">
                             <mat-icon>refresh</mat-icon>
@@ -66,19 +71,19 @@
                        (click)="$event.stopPropagation()"
                        [matTooltip]="'Change theme'"
                        matTooltipPosition="right">
-                        <mat-icon matListItemIcon class="palette-icon">{{ getThemeIcon((currentTheme$ | async) || 'system') }}</mat-icon>
-                        <span matListItemTitle>{{ getThemeLabel((currentTheme$ | async) || 'system') }}</span>
+                        <mat-icon matListItemIcon class="palette-icon">{{ getThemeIcon(themeService.theme || 'system') }}</mat-icon>
+                        <span matListItemTitle>{{ getThemeLabel(themeService.theme || 'system') }}</span>
                     </a>
                     <mat-menu #themeMenu="matMenu" class="theme-menu">
-                        <button mat-menu-item (click)="setTheme('light')" [class.active]="(currentTheme$ | async) === 'light'">
+                        <button mat-menu-item (click)="setTheme('light')" [class.active]="themeService.theme === 'light'">
                             <mat-icon class="palette-icon">light_mode</mat-icon>
                             <span>Light</span>
                         </button>
-                        <button mat-menu-item (click)="setTheme('dark')" [class.active]="(currentTheme$ | async) === 'dark'">
+                        <button mat-menu-item (click)="setTheme('dark')" [class.active]="themeService.theme === 'dark'">
                             <mat-icon class="palette-icon">dark_mode</mat-icon>
                             <span>Dark</span>
                         </button>
-                        <button mat-menu-item (click)="setTheme('system')" [class.active]="(currentTheme$ | async) === 'system'">
+                        <button mat-menu-item (click)="setTheme('system')" [class.active]="themeService.theme === 'system'">
                             <mat-icon class="palette-icon">brightness_auto</mat-icon>
                             <span>System</span>
                         </button>
@@ -86,7 +91,7 @@
                         <div class="color-palette-section">
                             <mat-form-field appearance="fill">
                                 <mat-label>Color Theme</mat-label>
-                                <mat-select [value]="currentColorPalette$ | async" (selectionChange)="setColorPalette($event.value)">
+                                <mat-select [value]="themeService.colorPalette" (selectionChange)="setColorPalette($event.value)">
                                     <mat-option *ngFor="let palette of colorPalettes" [value]="palette">
                                         <div class="color-option">
                                             <div class="color-preview" [class]="palette + '-palette'"></div>

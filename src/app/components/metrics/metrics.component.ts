@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild, AfterViewInit, TemplateRef } from '@angular/core';
+import { Component, OnDestroy, ViewChild, AfterViewInit, TemplateRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,8 +6,8 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription } from 'rxjs';
-import { NgChartsModule } from 'ng2-charts';
-import { ChartConfiguration, ChartOptions } from 'chart.js';
+import { NgChartsModule, BaseChartDirective } from 'ng2-charts';
+import { Chart, ChartConfiguration, ChartOptions, Point, TooltipItem } from 'chart.js';
 import 'chartjs-adapter-moment';
 import { MetricsService, Metric } from '../../services/metrics.service';
 import { ThemeService } from '../../services/theme.service';
@@ -15,7 +15,7 @@ import { TimeFormatService } from '../../services/time-format.service';
 import { LayoutComponent } from '../layout/layout.component';
 import { ExportComponent } from '../common/export/export.component';
 import { TableComponent, TableColumn } from '../common/table/table.component';
-import { cssvar } from '../utils/style.utils';
+import { cssvar, hexToRGBA, scaledLightDark, scaledMix } from '../utils/style.utils';
 
 /**
  * Component for displaying and managing system metrics.
@@ -47,10 +47,16 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         { name: 'timestamp', label: 'Last Updated', sortable: true, filterable: true }
     ];
 
-    private subscriptions: Subscription[] = [];
-
     /** Currently selected metric */
-    selectedMetric?: Metric;
+    selectedMetrics: Metric[] = [];
+
+    /** Whether the chart is paused */
+    isPaused = false;
+
+    /** Toggles the pause state */
+    togglePause(): void {
+        this.isPaused = !this.isPaused;
+    }
 
     /** Function that always returns false since we don't want expansion when using selection */
     canExpand = (row: any): boolean => {
@@ -70,7 +76,7 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
     private metricsSubscription?: Subscription;
 
     /** Chart data configuration */
-    chartData: ChartConfiguration<'line'>['data'] = {
+    chartData: ChartConfiguration<'line', Point[]>['data'] = {
         datasets: [{
             data: [],
             label: 'Value',
@@ -94,7 +100,7 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
             mode: 'nearest'
         },
         scales: {
-            y: {
+            /*y: {
                 beginAtZero: true,
                 title: {
                     display: true,
@@ -106,7 +112,7 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
                 ticks: {
                     color: cssvar('--mat-sys-on-surface-variant')
                 }
-            },
+            },*/
             x: {
                 type: 'time',
                 time: {
@@ -125,11 +131,23 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         },
         plugins: {
             legend: {
-                display: false
+                position: 'top',
+                labels: {
+                    padding: 20,
+                    color: cssvar('--mat-sys-on-surface'),
+                    usePointStyle: true,
+                    pointStyle: 'circle'
+                }
             },
+            tooltip: {
+                callbacks: {
+                    label: (context: TooltipItem<'line'>) => `${context.dataset.label}: ${this.getMetricDisplayValue((context.raw as any).metric)}`
+                }
+            }
         }
     };
 
+    @ViewChild(BaseChartDirective) private baseChart?: BaseChartDirective;
     @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
     @ViewChild(TableComponent) table!: TableComponent;
 
@@ -142,18 +160,7 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
 
     ngOnInit(): void {
         // Subscribe to theme changes
-        this.subscriptions.push(
-            this.themeService.theme$.subscribe(() => {
-                setTimeout(() => {
-                    this.updateChartColors();
-                });
-            }),
-            this.themeService.colorPalette$.subscribe(() => {
-                setTimeout(() => {
-                    this.updateChartColors();
-                });
-            })
-        );
+        this.themeService.themeChanged$.on(this._updateChartColorsDelayed);
     }
 
     ngAfterViewInit(): void {
@@ -164,14 +171,13 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         });
 
         // Subscribe to metrics updates
-        this.metricsSubscription = this.metricsService.metrics$.subscribe(metrics => {
-            this.updateChart();
-        });
+        this.metricsSubscription = this.metricsService.metrics$.subscribe(this._updateChart);
     }
 
     ngOnDestroy(): void {
         this.layout.activeToolbarContent = undefined;
         this.metricsSubscription?.unsubscribe();
+        this.themeService.themeChanged$.off(this._updateChartColorsDelayed);
     }
 
     /**
@@ -222,16 +228,12 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
      * @param metrics - Selected metrics
      */
     onSelectionChange(metrics: Metric[]): void {
-        // Clear selection if no metrics selected
-        if (!metrics.length) {
-            this.selectedMetric = undefined;
-            this.chartData.datasets[0].data = [];
-            this.chartData.labels = [];
-            return;
-        }
+        this.selectedMetrics = metrics;
 
-        // Since we're using single select, we only care about the first metric
-        this.selectedMetric = metrics[0];
+        // Clone chart data and options to avoid mutating the original objects, and forcing a rebuild of the entire chart
+        //this.chartData = { ...this.chartData };
+        this.chartOptions = { ...this.chartOptions };
+        // Update the chart
         this.updateChart();
     }
 
@@ -239,19 +241,70 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
      * Updates the chart with data for the selected metric
      */
     updateChart(): void {
+        // If paused, do nothing
+        if (this.isPaused) return;
+
+        // Clear chart data
+        this.chartData.datasets = [];
+        this.chartData.labels = [];
+        // Remove all y-axes
+        for (const scale of Object.keys(this.chartOptions.scales!)) {
+            if (scale.startsWith('y-')) {
+                delete this.chartOptions.scales![scale];
+            }
+        }
+
         // If no metric selected, do nothing
-        if (!this.selectedMetric) return;
+        if (this.selectedMetrics.length) {
+            const showYAxis = this.selectedMetrics.length === 1;
+            const primary = cssvar('--mat-sys-primary');
+            const primaryContainer = cssvar('--mat-sys-primary-container');
 
-        // Get metric history
-        const history = this.metricsService.getMetricHistory(this.selectedMetric.name);
-        if (!history.length) return;
+            // Add data for each selected metric
+            for (const metric of this.selectedMetrics) {
+                // Get metric history
+                const history = this.metricsService.getMetricHistory(metric.name);
+                if (!history.length) return;
 
-        // Create a new dataset to trigger change detection
-        this.chartData.datasets[0].data = history.map(h => ({ x: h.timestamp.getTime(), y: h.value }));
-        // Force update
-        this.chartData = { ...this.chartData };
+                // Add y-axis for each metric
+                this.chartOptions.scales![`y-${this.chartData.datasets.length}`] = {
+                    display: showYAxis,
+                    beginAtZero: true,
+                    ticks: {
+                        display: showYAxis
+                    },
+                    grid: {
+                        display: showYAxis
+                    }
+                };
+
+                // Add data for each metric
+                const alpha = this.chartData.datasets.length / Math.max(1, this.selectedMetrics.length - 1);
+                const color = scaledMix(primary, primaryContainer, 1 - alpha);
+                this.chartData.datasets.push({
+                    data: history.map(h => {
+                        const x = Math.round(h.timestamp.getTime() / 1000) * 1000;
+                        return { x, y: h.value, metric: h };
+                    }),
+                    label: metric.name,
+                    borderColor: color,
+                    pointBorderColor: color,
+                    backgroundColor: color,
+                    pointBackgroundColor: color,
+                    tension: 0.1,
+                    yAxisID: `y-${this.chartData.datasets.length}`
+                });
+            }
+
+            this.chartOptions.interaction!.mode = this.chartData.datasets.length > 1 ? 'index' : 'nearest';
+        }
+
+        // Update the chart
+        if (this.baseChart) {
+            this.baseChart.update();
+        }
     }
-
+    private _updateChart = this.updateChart.bind(this);
 
     /**
      * Updates the chart colors based on the current theme
@@ -260,15 +313,6 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
         const scales = this.chartOptions.scales as any;
         const plugins = this.chartOptions.plugins;
 
-        if (scales?.['y']?.grid) {
-            scales['y'].grid.color = cssvar('--mat-sys-outline-variant');
-        }
-        if (scales?.['y']?.ticks) {
-            scales['y'].ticks.color = cssvar('--mat-sys-on-surface-variant');
-        }
-        if (scales?.['y']?.title) {
-            scales['y'].title.color = cssvar('--mat-sys-on-surface');
-        }
         if (scales?.['x']?.grid) {
             scales['x'].grid.color = cssvar('--mat-sys-outline-variant');
         }
@@ -279,27 +323,59 @@ export class MetricsComponent implements AfterViewInit, OnDestroy {
             plugins.legend.labels.color = cssvar('--mat-sys-on-surface');
         }
 
-        // Update chart data
-        this.chartData.datasets[0].borderColor = cssvar('--mat-sys-primary');
-        this.chartData.datasets[0].backgroundColor = cssvar('--mat-sys-primary-container');
-        this.chartData.datasets[0].pointBackgroundColor = cssvar('--mat-sys-primary');
-        this.chartData.datasets[0].pointBorderColor = cssvar('--mat-sys-primary');
+        const primary = cssvar('--mat-sys-primary');
+        const primaryContainer = cssvar('--mat-sys-primary-container');
 
-        // Force update
-        this.chartData = { ...this.chartData };
-        this.chartOptions = { ...this.chartOptions };
+        // Update chart data
+        for (let i = 0; i < this.chartData.datasets.length; i++) {
+            const alpha = i / Math.max(1, this.chartData.datasets.length - 1);
+            const color = scaledMix(primary, primaryContainer, 1 - alpha);
+            this.chartData.datasets[i].borderColor = color;
+            this.chartData.datasets[i].backgroundColor = color;
+            this.chartData.datasets[i].pointBackgroundColor = color;
+            this.chartData.datasets[i].pointBorderColor = color;
+        }
+
+        // Update the chart after color changes
+        this.baseChart?.update();
     }
+    private _updateChartColors = this.updateChartColors.bind(this);
+    private _updateChartColorsDelayed = () => {
+        setTimeout(this._updateChartColors);
+    };
 
     /**
      * Gets chart data in exportable format
      * @returns Chart data for export
      */
     getChartExportData(): any {
-        if (!this.selectedMetric) return [];
-        return this.chartData.datasets[0].data.map((value, index) => ({
-            timestamp: this.chartData.labels?.[index],
-            value
-        }));
+        if (!this.chartData.datasets.length) return [];
+
+        // Get data for each selected metric
+        const data = new Map<number, Map<string, number>>();
+        for (const dataset of this.chartData.datasets) {
+            for (const h of dataset.data) {
+                // Get set for this timestamp
+                const set = data.get(h.x) || new Map<string, number>();
+                // Add value to set
+                set.set(dataset.label!.toLowerCase(), h.y);
+                // Add set to data
+                data.set(h.x, set);
+            }
+        }
+
+        const exportData = [];
+        for (const [timestamp, set] of data.entries()) {
+            exportData.push({
+                timestamp: new Date(timestamp),
+                ...Object.fromEntries(set.entries())
+            });
+        }
+        // Sort by timestamp
+        exportData.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+        // Return export data
+        return exportData;
     }
 
     /**

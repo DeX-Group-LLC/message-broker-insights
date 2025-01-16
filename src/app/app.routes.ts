@@ -4,12 +4,16 @@ import { LogsComponent } from './components/logs/logs.component';
 import { MetricsComponent } from './components/metrics/metrics.component';
 import { ServicesComponent } from './components/services/services.component';
 import { SubscriptionsComponent } from './components/subscriptions/subscriptions.component';
+import { TrackerComponent } from './components/tracker/tracker.component';
+import { Component } from '@angular/core';
 
 /**
  * Interface defining the data structure for route metadata.
  * Used to configure navigation items in the layout.
  */
 export interface RouteData {
+    /** Whether the route is enabled */
+    enabled: boolean;
     /** Icon name from Material Icons library */
     icon: string;
     /** Icon class for custom icons */
@@ -30,12 +34,48 @@ export interface RouteData {
  */
 export const routes: Routes = [
     {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+    },
+    {
+        path: 'alarms',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'alarm',
+            label: 'Alarms',
+            shortLabel: 'Alarms'
+        }
+    },
+    {
+        path: 'alerts',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'notifications',
+            label: 'Alerts',
+            shortLabel: 'Alerts'
+        }
+    },
+    {
         path: 'dashboard',
         component: DashboardComponent,
         data: {
             icon: 'dashboard',
             label: 'Dashboard',
             shortLabel: 'Dashboard'
+        }
+    },
+    {
+        path: 'database',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'database_search',
+            iconClass: 'material-symbols-filled',
+            label: 'Database Viewer',
+            shortLabel: 'Database'
         }
     },
     {
@@ -58,6 +98,27 @@ export const routes: Routes = [
         }
     },
     {
+        path: 'performance',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'speed',
+            label: 'Performance Bottlenecks',
+            shortLabel: 'Performance'
+        }
+    },
+    {
+        path: 'security',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'security',
+            iconClass: 'material-symbols-filled',
+            label: 'Security',
+            shortLabel: 'Security'
+        }
+    },
+    {
         path: 'services',
         component: ServicesComponent,
         data: {
@@ -76,8 +137,16 @@ export const routes: Routes = [
         }
     },
     {
-        path: '',
-        redirectTo: 'logs',
-        pathMatch: 'full'
+        path: 'tracker',
+        component: TrackerComponent,
+        data: {
+            icon: 'mediation',
+            label: 'Message Tracker',
+            shortLabel: 'Tracker'
+        }
+    },
+    {
+        path: '**',
+        redirectTo: 'dashboard'
     }
 ];
