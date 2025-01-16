@@ -304,7 +304,7 @@ export class WebsocketService {
      */
     connect(url?: string): void {
         if (url) {
-            this.updateUrl(url);
+            return this.updateUrl(url);
         } else {
             url = this._url;
         }
