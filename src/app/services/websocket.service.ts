@@ -58,6 +58,8 @@ export interface ConnectionEvent {
     type: ConnectionEventType;
     /** Timestamp of the event */
     timestamp: Date;
+    /** URL of the WebSocket server */
+    url: string;
     /** Optional error message */
     error?: string;
     /** Optional attempt number for reconnection events */
@@ -113,7 +115,14 @@ export class WebsocketService {
     /** Storage key for the WebSocket URL */
     private readonly WS_URL_KEY = 'websocket_url';
     /** Default WebSocket URL based on current location */
-    private readonly DEFAULT_URL = location.protocol.startsWith('https:') ? `wss://${location.hostname}:3000` : `ws://${location.hostname}:3000`;
+    private readonly DEFAULT_URL = (() => {
+        const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        // Force WSS only for HTTPS on non-localhost domains
+        const forceWSS = location.protocol.startsWith('https:') && !isLocalhost;
+        // Default to matching the page protocol, but allow both for HTTP or localhost
+        const protocol = forceWSS ? 'wss:' : (location.protocol.startsWith('https:') ? 'wss:' : 'ws:');
+        return `${protocol}//${location.hostname}:3000`;
+    })();
     /** URL of the WebSocket server */
     private _url: string;
     /** Time of last successful connection */
@@ -201,8 +210,17 @@ export class WebsocketService {
     /**
      * Updates the WebSocket URL and reconnects
      * @param url - The new WebSocket URL
+     * @throws Error if trying to use WS protocol on HTTPS for non-localhost domains
      */
     public updateUrl(url: string): void {
+        const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        const isHttps = location.protocol.startsWith('https:');
+
+        // Only enforce WSS for HTTPS on non-localhost domains
+        if (isHttps && !isLocalhost && url.startsWith('ws://')) {
+            throw new Error('Cannot use WS protocol on HTTPS for non-localhost domains. Use WSS instead.');
+        }
+
         this.setStoredUrl(url);
         this._url = url;
         this.disconnect();
@@ -220,6 +238,7 @@ export class WebsocketService {
             type,
             timestamp: new Date(),
             error,
+            url: this._url,
             attempt: type === ConnectionEventType.RECONNECTING ? this._reconnectAttempts : undefined
         };
 
@@ -323,7 +342,14 @@ export class WebsocketService {
         }
 
         this.stateChange$.emit(this._state);
-        this.socket = new WebSocket(url);
+        try {
+            this.socket = new WebSocket(url);
+        } catch (error: any) {
+            console.error('Error connecting to WebSocket:', error);
+            this.addEvent(ConnectionEventType.ERROR, error instanceof Error ? error.message : 'Unknown error');
+            this.error$.emit(error);
+            return;
+        }
 
         this.socket.onopen = () => {
             this._state = ConnectionState.CONNECTED;

@@ -18,7 +18,7 @@ Chart.register(
 
 export const appConfig: ApplicationConfig = {
     providers: [
-        provideRouter(routes, withHashLocation()),
+        provideRouter(routes),
         provideAnimations()
     ]
 };
