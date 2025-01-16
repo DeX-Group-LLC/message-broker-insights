@@ -111,7 +111,7 @@ export class WebsocketService {
     /** Current state of the WebSocket connection */
     private _state = ConnectionState.DISCONNECTED;
     /** URL of the WebSocket server */
-    private _url = location.protocol.startsWith('https:') ? `wss://${location.hostname}:${location.port}` : `ws://${location.hostname}:3000`;
+    private _url = location.protocol.startsWith('https:') ? `wss://${location.hostname}:3000` : `ws://${location.hostname}:3000`;
     /** Time of last successful connection */
     private _lastConnected?: Date;
     /** Number of reconnection attempts */
