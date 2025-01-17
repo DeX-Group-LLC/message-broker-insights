@@ -50,7 +50,7 @@
 <mat-card *ngIf="selectedFlow" class="detail-container">
     <mat-card-header>
         <mat-card-title>
-            {{ selectedFlow.request.message.header.requestId }}
+            {{ selectedFlow.request.message.header.requestid }}
         </mat-card-title>
         <div class="header-actions">
             <app-export
@@ -120,7 +120,7 @@
                             </div>
                             <div class="pill-item">
                                 <span class="label">Request ID</span>
-                                <span class="value">{{selectedFlow.request.message.header.requestId}}</span>
+                                <span class="value">{{selectedFlow.request.message.header.requestid}}</span>
                             </div>
                             <ng-container *ngFor="let item of getHeaderItems(selectedFlow.request.message.header)">
                                 <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestId'].includes(item.key)">
@@ -171,7 +171,7 @@
                                 </div>
                                 <div class="pill-item">
                                     <span class="label">Request ID</span>
-                                    <span class="value">{{selectedFlow.response.message.header.requestId}}</span>
+                                    <span class="value">{{selectedFlow.response.message.header.requestid}}</span>
                                 </div>
                                 <ng-container *ngFor="let item of getHeaderItems(selectedFlow.response.message.header)">
                                     <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestId'].includes(item.key)">
@@ -255,8 +255,8 @@
                                 matTooltip="Messages that were triggered as a result of processing this request. Click to view details.">
                                 <span class="label">{{msg.header.action}}</span>
                                 <span class="value">{{msg.header.topic}}</span>
-                                @if (msg.header.requestId) {
-                                    <span class="property">Request ID: {{msg.header.requestId}}</span>
+                                @if (msg.header.requestid) {
+                                    <span class="property">Request ID: {{msg.header.requestid}}</span>
                                 }
                                 @for (target of msg.targetServiceIds; track target) {
                                     <span class="property">To: {{target}}</span>

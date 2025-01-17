@@ -89,7 +89,7 @@ export class ServicesService implements OnDestroy {
     private async pollServices(): Promise<void> {
         try {
             this.loadingSubject.next(true);
-            const response = await this.websocketService.request('system.service.list', {});
+            const response = (await this.websocketService.request('system.service.list', {})).payload as any;
             if (response && response.services && Array.isArray(response.services)) {
                 const currentServiceIds = new Set<string>();
                 const currentServices = this.servicesSubject.value;
@@ -216,7 +216,8 @@ export class ServicesService implements OnDestroy {
      * @returns Promise resolving to the subscriptions response
      */
     async fetchServiceSubscriptions(serviceId: string): Promise<{ subscriptions: { topic: string; priority: number }[] }> {
-        return this.websocketService.request('system.service.subscriptions', { serviceId });
+        const response = await this.websocketService.request('system.service.subscriptions', { serviceId });
+        return response.payload as any;
     }
 
     /**

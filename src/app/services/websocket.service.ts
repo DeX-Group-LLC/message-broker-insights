@@ -82,28 +82,85 @@ export interface ConnectionDetails {
     events: ConnectionEvent[];
 }
 
-export interface MessageHeader {
+/**
+ * Represents the header section of a message.
+ * Contains metadata about the message including its action type, topic, and version.
+ */
+export type BrokerHeader = {
+    /** The type of action this message represents (e.g., REQUEST, RESPONSE, PUBLISH) */
     action: ActionType;
+
+    /** The topic this message belongs to, using dot notation (e.g., 'service.event') */
     topic: string;
+
+    /** The version of the message format (e.g., '1.0.0') */
     version: string;
-    requestId?: string;
+
+    /** Optional unique identifier for request-response message pairs */
+    requestid?: string;
+};
+
+export type ClientHeader = {
+    /** The type of action this message represents (e.g., REQUEST, RESPONSE, PUBLISH) */
+    action: ActionType;
+
+    /** The topic this message belongs to, using dot notation (e.g., 'service.event') */
+    topic: string;
+
+    /** The version of the message format (e.g., '1.0.0') */
+    version: string;
+
+    /** Optional unique identifier for request-response message pairs */
+    requestid?: string;
+
+    /** Optional unique identifier for parent request-response message pairs */
     parentRequestId?: string;
+
+    /** Optional timeout for request-response message pairs */
     timeout?: number;
-}
+};
 
-export interface MessagePayload extends Record<string, any> {
-    error?: {
+export type MessageHeader = BrokerHeader | ClientHeader;
+
+export type MessagePayloadError = {
+    /**
+     * Represents an error structure within a message.
+     * Used to communicate error details in a standardized format.
+     */
+    error: {
+        /** Unique error code identifying the type of error */
         code: string;
-        message: string;
-        timestamp: Date;
-        details?: Record<string, any>;
-    }
-}
 
-export interface Message {
-    header: MessageHeader;
-    payload: MessagePayload;
-}
+        /** Human-readable error message describing what went wrong */
+        message: string;
+
+        /** Timestamp when the error occurred in ISO 8601 format */
+        timestamp: string; // ISO 8601 format (e.g., "2023-10-27T10:30:00Z")
+
+        /** Optional additional error details as a structured object */
+        details?: object;
+    };
+};
+
+export type MessagePayloadSuccess = Record<string, any>;
+
+/**
+ * Represents the payload section of a message.
+ * Contains the actual data being transmitted along with optional control fields.
+ */
+export type MessagePayload = MessagePayloadSuccess | MessagePayloadError;
+
+/**
+ * Represents a complete message in the system.
+ * Combines a header and payload to form a full message structure.
+ */
+export type Message<T extends MessageHeader = MessageHeader, U extends MessagePayload = MessagePayload> = {
+    /** Message metadata and routing information */
+    header: T;
+
+    /** Message content and data */
+    payload: U;
+};
 
 /**
  * Service for managing WebSocket communication with the server.
@@ -116,7 +173,7 @@ export class WebsocketService {
     /** Active WebSocket connection */
     private socket: WebSocket | null = null;
     /** Map of pending requests awaiting responses */
-    private pendingRequests = new Map<string, { resolve: (response: Message) => void; reject: (error: any, message: Message) => void }>();
+    private pendingRequests = new Map<string, { resolve: (message: Message<BrokerHeader, MessagePayloadSuccess>) => void; reject: (message: Message<BrokerHeader, MessagePayloadError>) => void }>();
     /** Current state of the WebSocket connection */
     private _state = ConnectionState.DISCONNECTED;
     /** Storage key for the WebSocket URL */
@@ -167,7 +224,7 @@ export class WebsocketService {
     /** Error events */
     error$ = new SingleEmitter<(error: Event) => void>();
     /** Message events */
-    message$ = new MultiEmitter<(message: Message) => void>();
+    message$ = new MultiEmitter<(header: MessageHeader, payload: MessagePayload) => void>();
 
     /** Gets the current connection state */
     get state(): ConnectionState {
@@ -371,20 +428,22 @@ export class WebsocketService {
 
         this.socket.onmessage = (event) => {
             try {
-                const [header, payload] = event.data.split('\n');
-                const [headerParts, timeout] = header.split('?');
-                const [action, topic, version, requestId, parentRequestId] = headerParts.split(':');
-                const messagePayload = JSON.parse(payload);
-                const message: Message = {
-                    header: { action, topic, version, requestId, parentRequestId, timeout: Number(timeout) },
-                    payload: messagePayload
-                };
+                const [headerStr, payloadStr] = event.data.split('\n');
+                const [action, topic, version, requestId] = headerStr.split(':');
+                const header: MessageHeader = { action, topic, version, requestid: requestId };
+                const payload: MessagePayload = JSON.parse(payloadStr);
 
                 // Parse the error timestamp
-                if (message.payload.error) {
-                    message.payload.error.timestamp = new Date(message.payload.error.timestamp);
+                if (payload.error) {
+                    payload.error.timestamp = new Date(payload.error.timestamp);
                 }
 
+                // Emit the message
+                this.message$.emit(`${action}:${topic}`, header, payload);
+                this.message$.emit(`${action}:${topic}:${version}`, header, payload);
+                this.message$.emit(`${action}:${topic}:${version}:${requestId}`, header, payload);
+
+                // Handle the message
                 if (topic === 'system.heartbeat' && action === ActionType.REQUEST) {
                     this.send(ActionType.RESPONSE, 'system.heartbeat', { timestamp: new Date().toISOString() }, requestId);
                 } else if (action === ActionType.RESPONSE && requestId) {
@@ -395,17 +454,12 @@ export class WebsocketService {
                     this.pendingRequests.delete(requestId);
 
                     // Resolve the request
-                    if (message.payload.error) {
-                        request.reject(message.payload.error, message);
+                    if (payload.error) {
+                        request.reject({ header, payload: payload as MessagePayloadError });
                     } else {
-                        request.resolve(message);
+                        request.resolve({ header, payload: payload as MessagePayloadSuccess });
                     }
                 }
-
-                // Emit the message
-                this.message$.emit(`${action}:${topic}`, message);
-                this.message$.emit(`${action}:${topic}:${version}`, message);
-                this.message$.emit(`${action}:${topic}:${version}:${requestId}`, message);
             } catch (error) {
                 console.error('Error parsing message:', error);
                 this.addEvent(ConnectionEventType.ERROR, error instanceof Error ? error.message : String(error));
@@ -447,13 +501,10 @@ export class WebsocketService {
      */
     private async send(action: ActionType, topic: string, payload: Object = {}, requestId?: string): Promise<void> {
         await this.waitForReady();
-        // Serialize the header:
-        let header = `${action}:${topic}:1.0.0`;
-        if (requestId) header += `:${requestId}`;
-        // Serialize the payload:
-        let payloadString = JSON.stringify(payload);
+        // Serialize the message:
+        const message = this.serializeMessage({ action, topic, version: '1.0.0', requestid: requestId }, payload);
         // Serialize and send the message:
-        this.socket!.send(`${header}\n${payloadString}`);
+        this.socket!.send(message);
     }
 
     /**
@@ -498,5 +549,34 @@ export class WebsocketService {
         return new Promise<void>(resolve => {
             this.connection$.once(event => event.type === ConnectionEventType.CONNECTED ? resolve() : undefined);
         });
+    }
+
+    /**
+     * Serializes a message into a string.
+     * @param header - The header of the message
+     * @param payload - The payload of the message
+     * @returns The serialized message
+     */
+    serializeMessage(header: MessageHeader, payload: MessagePayload): string {
+        // Create the header line
+        let headerLine = `${header.action}:${header.topic}:${header.version}`;
+
+        if ((header as ClientHeader).timeout) headerLine += `:${(header as ClientHeader).requestid ?? ''}:${(header as ClientHeader).parentRequestId ?? ''}:${(header as ClientHeader).timeout}`;
+        else if ((header as ClientHeader).parentRequestId) headerLine += `:${(header as ClientHeader).requestid ?? ''}:${(header as ClientHeader).parentRequestId}`;
+        else if (header.requestid) headerLine += `:${header.requestid}`;
+
+        // Create the payload line
+        const payloadLine = JSON.stringify(payload);
+        return `${headerLine}\n${payloadLine}`;
+    }
+
+    /**
+     * Gets the size of a message in bytes.
+     * @param header - The header of the message
+     * @param payload - The payload of the message
+     * @returns The size of the message in bytes
+     */
+    getMessageSize(header: MessageHeader, payload: MessagePayload): number {
+        return new TextEncoder().encode(this.serializeMessage(header, payload)).length;
     }
 }

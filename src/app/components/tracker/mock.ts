@@ -14,7 +14,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.REQUEST,
                     topic: 'system.auth.request',
                     version: '1.0.0',
-                    requestId: 'req-001'
+                    requestid: 'req-001'
                 },
                 payload: { username: 'john.doe', action: 'login' }
             }
@@ -30,7 +30,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.RESPONSE,
                     topic: 'system.auth.request',
                     version: '1.0.0',
-                    requestId: 'req-001'
+                    requestid: 'req-001'
                 },
                 payload: { token: 'xyz123', expiresIn: 3600 }
             }
@@ -49,7 +49,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.REQUEST,
                     topic: 'system.user.validate',
                     version: '1.0.0',
-                    requestId: 'req-001-1'
+                    requestid: 'req-001-1'
                 },
                 targetServiceIds: ['user-service']
             }
@@ -66,9 +66,9 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.REQUEST,
                     topic: 'system.email.request',
                     version: '1.0.0',
-                    requestId: 'req-002'
+                    requestid: 'req-002'
                 },
-                payload: { to: 'user@example.com', template: 'welcome' }
+                payload: { timeout: 2000, to: 'user@example.com', template: 'welcome' }
             }
         },
         response: {
@@ -82,7 +82,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.RESPONSE,
                     topic: 'system.email.request',
                     version: '1.0.0',
-                    requestId: 'req-002'
+                    requestid: 'req-002'
                 },
                 payload: {
                     error: {
@@ -109,7 +109,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.REQUEST,
                     topic: 'system.inventory.request',
                     version: '1.0.0',
-                    requestId: 'req-003'
+                    requestid: 'req-003'
                 },
                 payload: { productId: '123', quantity: 5 }
             }
@@ -125,7 +125,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.RESPONSE,
                     topic: 'system.inventory.request',
                     version: '1.0.0',
-                    requestId: 'req-003'
+                    requestid: 'req-003'
                 },
                 payload: {
                     error: {
@@ -152,7 +152,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.REQUEST,
                     topic: 'system.pricing.request',
                     version: '1.0.0',
-                    requestId: 'req-004'
+                    requestid: 'req-004'
                 },
                 payload: { productId: '123', quantity: 1 }
             }
@@ -164,7 +164,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.RESPONSE,
                     topic: 'system.pricing.request',
                     version: '1.0.0',
-                    requestId: 'req-004'
+                    requestid: 'req-004'
                 },
                 payload: {
                     error: {
@@ -190,7 +190,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.REQUEST,
                     topic: 'system.transaction.request',
                     version: '1.0.0',
-                    requestId: 'req-005'
+                    requestid: 'req-005'
                 },
                 payload: { accountId: 'acc123', amount: 100.00, currency: 'USD' }
             }
@@ -202,7 +202,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.RESPONSE,
                     topic: 'system.transaction.request',
                     version: '1.0.0',
-                    requestId: 'req-005'
+                    requestid: 'req-005'
                 },
                 payload: {
                     error: {
@@ -228,7 +228,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.REQUEST,
                     topic: 'system.shipping.calculate',
                     version: '1.0.0',
-                    requestId: 'req-006'
+                    requestid: 'req-006'
                 },
                 payload: {
                     orderId: 'ord123',
@@ -254,7 +254,7 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.RESPONSE,
                     topic: 'system.shipping.calculate',
                     version: '1.0.0',
-                    requestId: 'req-006'
+                    requestid: 'req-006'
                 },
                 payload: {
                     error: {

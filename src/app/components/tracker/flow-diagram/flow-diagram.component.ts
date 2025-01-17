@@ -2,7 +2,7 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, NO_ER
 import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
-import { ActionType, MessageHeader } from '../../../services/websocket.service';
+import { ActionType, BrokerHeader, ClientHeader } from '../../../services/websocket.service';
 import { MessageFlow } from '../tracker.component';
 
 interface FlowNode {
@@ -294,7 +294,7 @@ export class FlowDiagramComponent implements OnChanges {
         return parts.join('\n');
     }
 
-    private getMessageHeader(msg: FlowMessage): MessageHeader | null {
+    private getMessageHeader(msg: FlowMessage): BrokerHeader |ClientHeader | null {
         if (!this.messageFlow) return null;
 
         // For the main request/response flow
@@ -327,13 +327,13 @@ export class FlowDiagramComponent implements OnChanges {
 
     isMessageClickable(msg: FlowMessage): boolean {
         const header = this.getMessageHeader(msg);
-        return !!header?.requestId && header.requestId !== this.messageFlow.request.message.header.requestId;
+        return !!header?.requestid && header.requestid !== this.messageFlow.request.message.header.requestid;
     }
 
     onMessageClick(msg: FlowMessage): void {
         const header = this.getMessageHeader(msg);
-        if (header?.requestId && header.requestId !== this.messageFlow.request.message.header.requestId) {
-            this.messageSelect.emit(header.requestId);
+        if (header?.requestid && header.requestid !== this.messageFlow.request.message.header.requestid) {
+            this.messageSelect.emit(header.requestid);
         }
     }
 

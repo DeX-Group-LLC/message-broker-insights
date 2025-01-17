@@ -7,14 +7,14 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TableComponent, TableColumn } from '../common/table/table.component';
 import { FlowDiagramComponent } from './flow-diagram/flow-diagram.component';
-import { BehaviorSubject, map } from 'rxjs';
-import { Message, MessageHeader } from '../../services/websocket.service';
+import { BehaviorSubject } from 'rxjs';
+import { ClientHeader, Message, WebsocketService } from '../../services/websocket.service';
 import { MOCK_DATA } from './mock';
 import { ExportComponent } from '../common/export/export.component';
 import { MatButtonModule } from '@angular/material/button';
 
 interface RelatedMessage {
-    header: MessageHeader;
+    header: ClientHeader;
     targetServiceIds: string[];
 }
 
@@ -74,7 +74,7 @@ export class TrackerComponent implements OnInit {
         } }
     ];
 
-    constructor() {}
+    constructor(private websocketService: WebsocketService) {}
 
     ngOnInit(): void {
         // Initialize the data
@@ -106,11 +106,7 @@ export class TrackerComponent implements OnInit {
     }
 
     getMessageSize(message: Message): number {
-        const headerObj = message.header;
-        const headerStr = `${headerObj.action}:${headerObj.topic}:${headerObj.version}${headerObj.requestId ? `:${headerObj.requestId}` : ''}`;
-        const payloadStr = JSON.stringify(message.payload);
-        const buffer = new TextEncoder().encode(`${headerStr}\n${payloadStr}`);
-        return buffer.length;
+        return this.websocketService.getMessageSize(message.header, message.payload);
     }
 
     getNestedValue(obj: any, path: string): any {

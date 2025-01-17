@@ -95,7 +95,7 @@ export class MetricsService implements OnDestroy {
         try {
             this.loadingSubject.next(true);
             const payload = await this.websocketService.request('system.metrics', { showAll: true });
-            const metricsMap = payload.metrics as Record<string, MetricInfo>;
+            const metricsMap = (payload.payload as any).metrics as Record<string, MetricInfo>;
             if (metricsMap && typeof metricsMap === 'object') {
                 // Transform metrics from server format to application format
                 const newMetrics = Object.entries(metricsMap).map(([name, info]) => ({
