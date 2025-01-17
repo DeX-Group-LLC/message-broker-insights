@@ -88,7 +88,8 @@ export const MOCK_DATA: MessageFlow[] = [
                     error: {
                         code: 'REQUEST_TIMEOUT',
                         message: 'Request timed out after 2000ms',
-                        metadata: {
+                        timestamp: new Date('2024-01-20T10:05:02'),
+                        details: {
                             timeout: 2000,
                             responderServiceId: 'email-service'
                         }
@@ -130,8 +131,11 @@ export const MOCK_DATA: MessageFlow[] = [
                     error: {
                         code: 'INSUFFICIENT_STOCK',
                         message: 'Not enough stock available',
-                        requestedQuantity: 5,
-                        availableQuantity: 3
+                        timestamp: new Date('2024-01-20T10:10:01'),
+                        details: {
+                            requestedQuantity: 5,
+                            availableQuantity: 3
+                        }
                     }
                 }
             }
@@ -166,7 +170,10 @@ export const MOCK_DATA: MessageFlow[] = [
                     error: {
                         code: 'NO_RESPONDERS',
                         message: 'No responders available for topic',
-                        topic: 'system.pricing.request'
+                        timestamp: new Date('2024-01-20T10:15:00'),
+                        details: {
+                            topic: 'system.pricing.request'
+                        }
                     }
                 }
             }
@@ -201,7 +208,10 @@ export const MOCK_DATA: MessageFlow[] = [
                     error: {
                         code: 'INTERNAL_ERROR',
                         message: 'Message broker internal error',
-                        details: 'Failed to route message due to internal error'
+                        timestamp: new Date('2024-01-20T10:20:00'),
+                            details: {
+                            error: 'Failed to route message due to internal error'
+                        }
                     }
                 }
             }
@@ -250,7 +260,10 @@ export const MOCK_DATA: MessageFlow[] = [
                     error: {
                         code: 'SERVICE_UNAVAILABLE',
                         message: 'Message broker is busy',
-                        details: 'Request dropped due to broker capacity limit'
+                        timestamp: new Date('2024-01-20T10:25:02'),
+                        details: {
+                            error: 'Request dropped due to broker capacity limit'
+                        }
                     }
                 }
             }

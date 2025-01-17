@@ -87,10 +87,17 @@ export interface MessageHeader {
     topic: string;
     version: string;
     requestId?: string;
+    parentRequestId?: string;
+    timeout?: number;
 }
 
 export interface MessagePayload extends Record<string, any> {
-    timeout?: number;
+    error?: {
+        code: string;
+        message: string;
+        timestamp: Date;
+        details?: Record<string, any>;
+    }
 }
 
 export interface Message {
@@ -109,7 +116,7 @@ export class WebsocketService {
     /** Active WebSocket connection */
     private socket: WebSocket | null = null;
     /** Map of pending requests awaiting responses */
-    private pendingRequests = new Map<string, { resolve: (response: any) => void; reject: (error: any) => void }>();
+    private pendingRequests = new Map<string, { resolve: (response: Message) => void; reject: (error: any, message: Message) => void }>();
     /** Current state of the WebSocket connection */
     private _state = ConnectionState.DISCONNECTED;
     /** Storage key for the WebSocket URL */
@@ -365,8 +372,18 @@ export class WebsocketService {
         this.socket.onmessage = (event) => {
             try {
                 const [header, payload] = event.data.split('\n');
-                const [action, topic, version, requestId] = header.split(':');
-                const message = JSON.parse(payload);
+                const [headerParts, timeout] = header.split('?');
+                const [action, topic, version, requestId, parentRequestId] = headerParts.split(':');
+                const messagePayload = JSON.parse(payload);
+                const message: Message = {
+                    header: { action, topic, version, requestId, parentRequestId, timeout: Number(timeout) },
+                    payload: messagePayload
+                };
+
+                // Parse the error timestamp
+                if (message.payload.error) {
+                    message.payload.error.timestamp = new Date(message.payload.error.timestamp);
+                }
 
                 if (topic === 'system.heartbeat' && action === ActionType.REQUEST) {
                     this.send(ActionType.RESPONSE, 'system.heartbeat', { timestamp: new Date().toISOString() }, requestId);
@@ -378,15 +395,17 @@ export class WebsocketService {
                     this.pendingRequests.delete(requestId);
 
                     // Resolve the request
-                    if (message.error) {
-                        request.reject(message);
+                    if (message.payload.error) {
+                        request.reject(message.payload.error, message);
                     } else {
                         request.resolve(message);
                     }
                 }
 
                 // Emit the message
-                this.message$.emit(header, message);
+                this.message$.emit(`${action}:${topic}`, message);
+                this.message$.emit(`${action}:${topic}:${version}`, message);
+                this.message$.emit(`${action}:${topic}:${version}:${requestId}`, message);
             } catch (error) {
                 console.error('Error parsing message:', error);
                 this.addEvent(ConnectionEventType.ERROR, error instanceof Error ? error.message : String(error));

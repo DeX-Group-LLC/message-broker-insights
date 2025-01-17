@@ -173,6 +173,16 @@ export class TrackerComponent implements OnInit {
     }
 
     /**
+     * Gets the formatted date string for a timestamp.
+     *
+     * @param timestamp - Timestamp to format
+     * @returns Formatted date string
+     */
+    getFormattedDate(timestamp: Date): string {
+        return timestamp.toLocaleString();
+    }
+
+    /**
      * Closes the service details panel.
      */
     closeDetails(): void {
