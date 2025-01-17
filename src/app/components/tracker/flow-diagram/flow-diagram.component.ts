@@ -19,28 +19,13 @@ interface FlowMessage {
     label: string;
     type: 'request' | 'response' | 'publish';
     timestamp?: Date;
-    status?: 'success' | 'error' | 'dropped' | 'timeout';
+    status?: string;  // error code or 'SUCCESS'
     isBrokerInput?: boolean;  // True if message is going to broker
 }
 
 interface FlowData {
     nodes: FlowNode[];
     messages: FlowMessage[];
-}
-
-interface RelatedMessage {
-    type: 'Publish' | 'Request';
-    topic: string;
-    originatorServiceId: string;
-    responderServiceIds?: string[];  // For Publish type
-    responderServiceId?: string;     // For Request type
-    status: 'success' | 'error' | 'dropped' | 'timeout';
-    requestId?: string;              // For Request type
-}
-
-interface Listener {
-    serviceId: string;
-    topic: string;
 }
 
 @Component({
@@ -79,7 +64,7 @@ export class FlowDiagramComponent implements OnChanges {
         const boxWidth = 100;
         const topPadding = 16;
         const horizontalPadding = 50;
-        const sideServicesX = serviceSpacing *4;
+        const sideServicesX = serviceSpacing * 4;
 
         // Track all Y positions for each service
         const serviceMessageYPositions = new Map<string, number[]>();
@@ -102,8 +87,9 @@ export class FlowDiagramComponent implements OnChanges {
         });
 
         // Only add responder node if it exists and is needed
-        const isInternalError = this.messageFlow.error?.code === 'INTERNAL_ERROR';
-        const isNoResponders = this.messageFlow.error?.code === 'NO_RESPONDERS';
+        const errorCode = this.messageFlow.response?.message?.payload?.['error']?.code;
+        const isInternalError = errorCode === 'INTERNAL_ERROR';
+        const isNoResponders = errorCode === 'NO_RESPONDERS';
         if (this.messageFlow.response?.target?.serviceId && !isNoResponders) {
             nodes.push({
                 id: this.messageFlow.response.target.serviceId,
@@ -114,12 +100,11 @@ export class FlowDiagramComponent implements OnChanges {
             });
         }
 
-        // Calculate base width without listeners
+        // Calculate base width without auditors
         let baseWidth = horizontalPadding * 2 + boxWidth + serviceSpacing * (nodes.length - 1);
 
-        // Add listeners if they exist
-        if (this.messageFlow.listeners?.length) {
-            // Add extra space for listeners column
+        // Add extra space for auditors if they exist
+        if (this.messageFlow.auditors?.length) {
             baseWidth += serviceSpacing + horizontalPadding;
         }
 
@@ -134,7 +119,7 @@ export class FlowDiagramComponent implements OnChanges {
             to: 'message-broker',
             label: this.messageFlow.request.message.header.topic,
             type: 'request',
-            timestamp: this.messageFlow.receivedAt,
+            timestamp: this.messageFlow.request.receivedAt,
             isBrokerInput: true
         });
         messageIndex++;
@@ -146,141 +131,93 @@ export class FlowDiagramComponent implements OnChanges {
                 to: this.messageFlow.response!.target!.serviceId!,
                 label: this.messageFlow.request.message.header.topic,
                 type: 'request',
-                timestamp: new Date(this.messageFlow.receivedAt.getTime() + this.messageFlow.brokerProcessingTime),
                 isBrokerInput: false
             });
             messageIndex++;
 
-            // Add messages to listeners after forwarding to responder
-            this.messageFlow.listeners?.forEach((listener: Listener) => {
+            // Add messages to auditors after forwarding to responder
+            this.messageFlow.auditors?.forEach(serviceId => {
                 const msgY = messageStartY + messageIndex * messageSpacing;
 
                 // Track Y position for this service
-                if (!serviceMessageYPositions.has(listener.serviceId)) {
-                    serviceMessageYPositions.set(listener.serviceId, []);
+                if (!serviceMessageYPositions.has(serviceId)) {
+                    serviceMessageYPositions.set(serviceId, []);
                 }
-                serviceMessageYPositions.get(listener.serviceId)?.push(msgY);
+                serviceMessageYPositions.get(serviceId)?.push(msgY);
 
                 messages.push({
                     from: 'message-broker',
-                    to: listener.serviceId,
+                    to: serviceId,
                     label: this.messageFlow.request.message.header.topic,
                     type: 'publish',
-                    timestamp: new Date(this.messageFlow.receivedAt.getTime() + this.messageFlow.brokerProcessingTime),
                     isBrokerInput: false
                 });
                 messageIndex++;
             });
         }
 
-        // Add response messages if exists or timeout/dropped/internal error response
-        if (this.messageFlow.status === 'timeout') {
-            // For timeout, add response from broker to originator
+        // Add response messages if exists
+        if (this.messageFlow.response?.message) {
+            const status = this.messageFlow.response.message.payload?.['error']?.code ?? 'SUCCESS';
+            const isFromBroker = this.messageFlow.response.fromBroker;
+
+            if (!isFromBroker) {
+                // Add response from target to broker
+                messages.push({
+                    from: this.messageFlow.response.target!.serviceId!,
+                    to: 'message-broker',
+                    label: this.messageFlow.request.message.header.topic,
+                    type: 'response',
+                    status,
+                    isBrokerInput: true
+                });
+            }
+
+            // Add response from broker to originator
             messages.push({
                 from: 'message-broker',
                 to: this.messageFlow.request.serviceId,
                 label: this.messageFlow.request.message.header.topic,
                 type: 'response',
-                timestamp: new Date(this.messageFlow.receivedAt.getTime() + this.messageFlow.timeout),
-                status: 'timeout',
+                timestamp: this.messageFlow.request.respondedAt,
+                status,
                 isBrokerInput: false
             });
-            messageIndex++;
-        } else if (this.messageFlow.status === 'dropped' || isInternalError) {
-            // For dropped/internal error, add response from broker to originator
-            messages.push({
-                from: 'message-broker',
-                to: this.messageFlow.request.serviceId,
-                label: this.messageFlow.request.message.header.topic,
-                type: 'response',
-                timestamp: this.messageFlow.completedAt,
-                status: isInternalError ? 'error' : 'dropped',
-                isBrokerInput: false
-            });
-            messageIndex++;
-        } else if (this.messageFlow.response) {
-            messages.push({
-                from: this.messageFlow.response.target!.serviceId!,
-                to: 'message-broker',
-                label: this.messageFlow.request.message.header.topic,
-                type: 'response',
-                timestamp: new Date(this.messageFlow.completedAt.getTime() - this.messageFlow.brokerProcessingTime),
-                status: this.messageFlow.status,
-                isBrokerInput: true
-            });
-            messages.push({
-                from: 'message-broker',
-                to: this.messageFlow.request.serviceId,
-                label: this.messageFlow.request.message.header.topic,
-                type: 'response',
-                timestamp: this.messageFlow.completedAt,
-                status: this.messageFlow.status,
-                isBrokerInput: false
-            });
-            messageIndex += 2;
+            messageIndex += isFromBroker ? 1 : 2;
         }
 
         // Add related messages
         this.messageFlow.relatedMessages?.forEach(msg => {
-            if (msg.action === ActionType.PUBLISH) {
-                messages.push({
-                    from: msg.originatorServiceId,
-                    to: 'message-broker',
-                    label: msg.topic,
-                    type: 'publish',
-                    timestamp: this.messageFlow.completedAt,
-                    isBrokerInput: true
-                });
-                messageIndex++;
+            const isPublish = msg.header.action === ActionType.PUBLISH;
 
-                // Add messages from broker to each responder
-                msg.responderServiceIds?.forEach((responder: string) => {
-                    const msgY = messageStartY + messageIndex * messageSpacing;
+            messages.push({
+                from: this.messageFlow.response?.target?.serviceId || 'message-broker',
+                to: 'message-broker',
+                label: msg.header.topic,
+                type: isPublish ? 'publish' : 'request',
+                isBrokerInput: true
+            });
+            messageIndex++;
 
-                    // Track Y position for this service
-                    if (!serviceMessageYPositions.has(responder)) {
-                        serviceMessageYPositions.set(responder, []);
-                    }
-                    serviceMessageYPositions.get(responder)?.push(msgY);
+            // Add messages from broker to each target
+            msg.targetServiceIds.forEach(targetId => {
+                const msgY = messageStartY + messageIndex * messageSpacing;
 
-                    messages.push({
-                        from: 'message-broker',
-                        to: responder,
-                        label: msg.topic,
-                        type: 'publish',
-                        timestamp: this.messageFlow.completedAt,
-                        isBrokerInput: false
-                    });
-                    messageIndex++;
-                });
-            } else {
-                // For request type, track the Y position when the message is going TO the service
-                const toServiceY = messageStartY + (messageIndex + 1) * messageSpacing; // +1 to get the second message Y
-                if (msg.responderServiceId && !serviceMessageYPositions.has(msg.responderServiceId)) {
-                    serviceMessageYPositions.set(msg.responderServiceId, []);
+                // Track Y position for this service
+                if (!serviceMessageYPositions.has(targetId)) {
+                    serviceMessageYPositions.set(targetId, []);
                 }
-                if (msg.responderServiceId) {
-                    serviceMessageYPositions.get(msg.responderServiceId)?.push(toServiceY);
-                }
+                serviceMessageYPositions.get(targetId)?.push(msgY);
 
-                messages.push({
-                    from: msg.originatorServiceId,
-                    to: 'message-broker',
-                    label: msg.topic,
-                    type: 'request',
-                    timestamp: this.messageFlow.completedAt,
-                    isBrokerInput: true
-                });
                 messages.push({
                     from: 'message-broker',
-                    to: msg.responderServiceId!,
-                    label: msg.topic,
-                    type: 'request',
-                    timestamp: this.messageFlow.completedAt,
+                    to: targetId,
+                    label: msg.header.topic,
+                    type: isPublish ? 'publish' : 'request',
                     isBrokerInput: false
                 });
-                messageIndex += 2;
-            }
+                messageIndex++;
+            });
         });
 
         // Add side services for each message position
@@ -332,11 +269,14 @@ export class FlowDiagramComponent implements OnChanges {
     getMessageTooltip(msg: FlowMessage): string {
         const parts = [
             `Type: ${msg.type}`,
+            `Topic: ${msg.label}`,
             `From: ${msg.from}`,
             `To: ${msg.to}`,
-            `Topic: ${msg.label}`,
-            `Time: ${msg.timestamp ? msg.timestamp.toLocaleTimeString() : 'N/A'}`,
         ];
+
+        if (msg.timestamp) {
+            parts.push(`Time: ${msg.timestamp.toLocaleTimeString()}`);
+        }
 
         if (msg.status) {
             parts.push(`Status: ${msg.status}`);
@@ -372,25 +312,14 @@ export class FlowDiagramComponent implements OnChanges {
         }
 
         // For related messages
-        const relatedMsg = this.messageFlow.relatedMessages?.find((rm: any) => {
-            if (rm.type === 'Publish') {
-                return rm.topic === msg.label &&
-                    ((msg.isBrokerInput && rm.originatorServiceId === msg.from) ||
-                     (!msg.isBrokerInput && rm.responderServiceIds?.includes(msg.to)));
-            } else {
-                return rm.topic === msg.label &&
-                    ((msg.isBrokerInput && rm.originatorServiceId === msg.from) ||
-                     (!msg.isBrokerInput && rm.responderServiceId === msg.to));
-            }
+        const relatedMsg = this.messageFlow.relatedMessages?.find(rm => {
+            return rm.header.topic === msg.label &&
+                ((msg.isBrokerInput && msg.from === this.messageFlow.response?.target?.serviceId) ||
+                 (!msg.isBrokerInput && rm.targetServiceIds.includes(msg.to)));
         });
 
         if (relatedMsg) {
-            return {
-                action: relatedMsg.action,
-                topic: relatedMsg.topic,
-                version: relatedMsg.version,
-                requestId: relatedMsg.requestId
-            };
+            return relatedMsg.header;
         }
 
         return null;
@@ -398,23 +327,43 @@ export class FlowDiagramComponent implements OnChanges {
 
     isMessageClickable(msg: FlowMessage): boolean {
         const header = this.getMessageHeader(msg);
-        return !!header?.['requestId'] && header['requestId'] !== this.messageFlow.request.message.header.requestId;
+        return !!header?.requestId && header.requestId !== this.messageFlow.request.message.header.requestId;
     }
 
     onMessageClick(msg: FlowMessage): void {
         const header = this.getMessageHeader(msg);
-        if (header?.['requestId'] && header['requestId'] !== this.messageFlow.request.message.header.requestId) {
-            this.messageSelect.emit(header['requestId']);
+        if (header?.requestId && header.requestId !== this.messageFlow.request.message.header.requestId) {
+            this.messageSelect.emit(header.requestId);
         }
     }
 
     getStatusIcon(status: string): string {
         switch (status) {
-            case 'success': return 'check_circle';
-            case 'error': return 'cancel';
-            case 'dropped': return 'unpublished';
-            case 'timeout': return 'timer_off';
-            default: return '';
+            case 'SUCCESS': return 'check_circle';
+            case 'NO_RESPONDERS':
+            case 'SERVICE_UNAVAILABLE': return 'unpublished';
+            case 'REQUEST_TIMEOUT': return 'timer_off';
+            default: return 'cancel';
+        }
+    }
+
+    getStatusColor(code: string): string {
+        switch (code) {
+            case 'SUCCESS': return 'success';
+            case 'NO_RESPONDERS':
+            case 'SERVICE_UNAVAILABLE': return 'dropped';
+            case 'REQUEST_TIMEOUT': return 'timeout';
+            default: return 'error';
+        }
+    }
+
+    getStatusText(code: string): string {
+        switch (code) {
+            case 'SUCCESS': return 'Success';
+            case 'NO_RESPONDERS':
+            case 'SERVICE_UNAVAILABLE': return 'Dropped';
+            case 'REQUEST_TIMEOUT': return 'Timeout';
+            default: return 'Error';
         }
     }
 }

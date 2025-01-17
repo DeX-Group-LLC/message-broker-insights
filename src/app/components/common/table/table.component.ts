@@ -370,7 +370,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
 
                     // 3. For non-group rows within same group, sort by column
                     if (!aIsGroup) {
-                        return this.compareValues(a[active], b[active]) * (direction === 'asc' ? 1 : -1);
+                        return this.compareValues(this.getNestedValue(a, active), this.getNestedValue(b, active)) * (direction === 'asc' ? 1 : -1);
                     }
 
                     // Group rows with same name maintain their order
@@ -378,7 +378,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
                 }
 
                 // If no grouping, just sort by the column
-                return this.compareValues(a[active], b[active]) * (direction === 'asc' ? 1 : -1);
+                return this.compareValues(this.getNestedValue(a, active), this.getNestedValue(b, active)) * (direction === 'asc' ? 1 : -1);
             });
         };
 
@@ -812,41 +812,5 @@ export class TableComponent implements AfterViewInit, OnDestroy {
     private getNestedValue(obj: any, path: string): any {
         if (!obj) return null;
         return path.split('.').reduce((current, key) => current?.[key], obj);
-    }
-
-    /** Applies sorting to the data */
-    private applySorting(data: any[]): any[] {
-        if (!this.sort?.active || !this.sort.direction) {
-            return data;
-        }
-
-        return data.slice().sort((a, b) => {
-            const isAsc = this.sort.direction === 'asc';
-            const column = this.columns.find(col => col.name === this.sort.active);
-            if (!column?.sortable) return 0;
-
-            const aValue = this.getNestedValue(a, this.sort.active);
-            const bValue = this.getNestedValue(b, this.sort.active);
-
-            return this.compareValues(aValue, bValue) * (isAsc ? 1 : -1);
-        });
-    }
-
-    /** Applies filtering to the data */
-    private applyFiltering(data: any[]): any[] {
-        const activeFilters = Array.from(this.filters.entries())
-            .filter(([_, value]) => value);
-
-        if (activeFilters.length === 0) {
-            return data;
-        }
-
-        return data.filter(row => {
-            return activeFilters.every(([column, filterValue]) => {
-                const value = this.getNestedValue(row, column);
-                if (value == null) return false;
-                return String(value).toLowerCase().includes(filterValue.toLowerCase());
-            });
-        });
     }
 }

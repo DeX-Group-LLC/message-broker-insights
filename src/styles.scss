@@ -162,6 +162,12 @@ body {
     font-style: italic;
 }
 
+.ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /*mat-icon {
     font-variation-settings: 'FILL' 0;
     font-family: 'Material Symbols Outlined';

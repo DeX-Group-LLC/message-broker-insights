@@ -3,7 +3,7 @@
         <app-table
             [data$]="data$"
             [columns]="columns"
-            [defaultSort]="{ active: 'receivedAt', direction: 'desc' }"
+            [defaultSort]="{ active: 'request.respondedAt', direction: 'desc' }"
             [paginationConfig]="{
                 pageSizeOptions: [10, 25, 50, 100],
                 defaultPageSize: 25,
@@ -16,22 +16,26 @@
             <!-- Cell Templates -->
             <ng-template #cellTemplate let-element let-column="column">
                 <ng-container [ngSwitch]="column.name">
-                    <ng-container *ngSwitchCase="'status'">
-                        <span *ngIf="element?.status" class="pill-item" [style.color]="getStatusColor(element.status)">
-                            {{element.status}}
+                    <ng-container *ngSwitchCase="'request.message.header.requestId'">
+                        <span>{{element.request.message.header.requestId}}</span>
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'response.message.payload.error.code'">
+                        <span class="pill-item" [style.color]="getStatusColor(element)">
+                            {{element?.response?.message?.payload?.['error']?.code ?? 'SUCCESS'}}
                         </span>
                     </ng-container>
 
-                    <ng-container *ngSwitchCase="'receivedAt'">
-                        <span *ngIf="element?.receivedAt">{{element.receivedAt | date:'medium'}}</span>
+                    <ng-container *ngSwitchCase="'request.receivedAt'">
+                        <span *ngIf="element?.request?.receivedAt">{{element.request.receivedAt | date:'medium'}}</span>
                     </ng-container>
 
-                    <ng-container *ngSwitchCase="'completedAt'">
-                        <span *ngIf="element?.completedAt">{{element.completedAt | date:'medium'}}</span>
+                    <ng-container *ngSwitchCase="'request.respondedAt'">
+                        <span *ngIf="element?.request?.respondedAt">{{element.request.respondedAt | date:'medium'}}</span>
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'meta'">
-                        <span class="muted italic">{{getMetaText(element)}}</span>
+                        <span class="muted italic ellipsis">{{getMetaText(element)}}</span>
                     </ng-container>
 
                     <ng-container *ngSwitchDefault>
@@ -44,6 +48,23 @@
 </mat-card>
 
 <mat-card *ngIf="selectedFlow" class="detail-container">
+    <mat-card-header>
+        <mat-card-title>
+            {{ selectedFlow.request.message.header.requestId }}
+        </mat-card-title>
+        <div class="header-actions">
+            <app-export
+                [data]="selectedFlow"
+                filename="flow-details"
+                tooltip="Export Flow Details"
+                [customizable]="true"
+                [disabled]="!selectedFlow">
+            </app-export>
+            <button mat-icon-button class="close-button" (click)="closeDetails()" matTooltip="Close details">
+                <mat-icon>close</mat-icon>
+            </button>
+        </div>
+    </mat-card-header>
     <mat-card-content>
         <mat-tab-group animationDuration="150">
             <mat-tab label="Message Details">
@@ -54,29 +75,25 @@
                         <div class="pill-section">
                             <div class="pill-item">
                                 <span class="label">Status</span>
-                                <span class="value" [style.color]="getStatusColor(selectedFlow.status)">
-                                    {{selectedFlow.status}}
+                                <span class="value" [style.color]="getStatusColor(selectedFlow)">
+                                    {{selectedFlow.response?.message?.payload?.['error']?.code ?? 'SUCCESS'}}
                                 </span>
                             </div>
                             <div class="pill-item" matTooltip="When the message broker received the request from the originator">
                                 <span class="label">Started</span>
-                                <span class="value">{{selectedFlow.receivedAt | date:'medium'}}</span>
+                                <span class="value">{{selectedFlow.request.receivedAt | date:'medium'}}</span>
                             </div>
-                            <div class="pill-item" matTooltip="When the message broker forwarded the final response back to the originator">
+                            <div class="pill-item" matTooltip="When the target service responded to the request">
                                 <span class="label">Completed</span>
-                                <span class="value">{{selectedFlow.completedAt | date:'medium'}}</span>
+                                <span class="value">{{selectedFlow.request.respondedAt | date:'medium'}}</span>
                             </div>
-                            <div class="pill-item" matTooltip="Total time from broker receiving the request to sending the response">
+                            <div class="pill-item" matTooltip="Total time from broker receiving the request to getting the response">
                                 <span class="label">Total Duration</span>
                                 <span class="value">{{getProcessingDuration(selectedFlow)}}ms</span>
                             </div>
-                            <div class="pill-item" matTooltip="Time spent by the message broker to process and route the message">
-                                <span class="label">Broker Processing</span>
-                                <span class="value">{{selectedFlow.brokerProcessingTime}}ms</span>
-                            </div>
                             <div class="pill-item" matTooltip="Maximum time allowed for the responder to send a response">
                                 <span class="label">Timeout</span>
-                                <span class="value">{{selectedFlow.timeout}}ms</span>
+                                <span class="value">{{selectedFlow.request.timeout}}ms</span>
                             </div>
                         </div>
                     </div>
@@ -178,28 +195,28 @@
                         </div>
                     </div>
 
-                    <!-- Listeners Section -->
-                    <div class="section" *ngIf="selectedFlow.listeners?.length">
-                        <h3>Listeners</h3>
+                    <!-- Auditors Section -->
+                    <div class="section" *ngIf="selectedFlow.auditors?.length">
+                        <h3>Auditors</h3>
                         <div class="pill-section">
-                            <div class="pill-item" *ngFor="let listener of selectedFlow.listeners"
+                            <div class="pill-item" *ngFor="let serviceId of selectedFlow.auditors"
                                 matTooltip="Services that receive a copy of the message but don't respond">
                                 <span class="label">Service</span>
-                                <span class="value">{{listener.serviceId}}</span>
+                                <span class="value">{{serviceId}}</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Error Details Section (if error) -->
-                    <div class="section" *ngIf="selectedFlow.error">
+                    <div class="section" *ngIf="selectedFlow.response?.message?.payload?.['error']">
                         <h3>Error Details</h3>
                         <div class="pill-section">
                             <div class="pill-item error-pill">
                                 <span class="label">Error Code</span>
-                                <span class="value">{{selectedFlow.error.code}}</span>
-                                <span class="property">{{selectedFlow.error.message}}</span>
-                                <ng-container *ngIf="selectedFlow.error.metadata">
-                                    <span class="property" *ngFor="let item of getHeaderItems(selectedFlow.error.metadata)">
+                                <span class="value">{{selectedFlow.response?.message?.payload?.['error']?.code}}</span>
+                                <span class="property">{{selectedFlow.response?.message?.payload?.['error']?.message}}</span>
+                                <ng-container *ngIf="selectedFlow.response?.message?.payload?.['error']?.metadata">
+                                    <span class="property" *ngFor="let item of getHeaderItems(selectedFlow.response?.message?.payload?.['error']?.metadata)">
                                         {{item.key}}: {{item.value}}
                                     </span>
                                 </ng-container>
@@ -230,19 +247,14 @@
                         <div class="pill-section">
                             <div class="pill-item message-pill" *ngFor="let msg of selectedFlow.relatedMessages"
                                 matTooltip="Messages that were triggered as a result of processing this request">
-                                <span class="label">{{msg.action}}</span>
-                                <span class="value">{{msg.topic}}</span>
-                                <span class="property">From: {{msg.originatorServiceId}}</span>
-                                <ng-container [ngSwitch]="msg.action">
-                                    <ng-container *ngSwitchCase="'Publish'">
-                                        <span class="property" *ngFor="let id of msg.responderServiceIds">To: {{id}}</span>
-                                    </ng-container>
-                                    <ng-container *ngSwitchCase="'Request'">
-                                        <span class="property">To: {{msg.responderServiceId}}</span>
-                                        <span class="property">Request ID: {{msg.requestId}}</span>
-                                    </ng-container>
-                                </ng-container>
-                                <span class="property">Status: {{msg.status}}</span>
+                                <span class="label">{{msg.header.action}}</span>
+                                <span class="value">{{msg.header.topic}}</span>
+                                @if (msg.header.requestId) {
+                                    <span class="property">Request ID: {{msg.header.requestId}}</span>
+                                }
+                                @for (target of msg.targetServiceIds; track target) {
+                                    <span class="property">To: {{target}}</span>
+                                }
                             </div>
                         </div>
                     </div>

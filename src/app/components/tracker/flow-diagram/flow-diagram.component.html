@@ -27,8 +27,8 @@
                 <!-- Status Symbol -->
                 <foreignObject [attr.x]="getNodeX(msg.from) - 8" y="-8" width="80" height="16" *ngIf="msg.status">
                     <div class="status-icon-container">
-                        <mat-icon [class]="'material-symbols-outlined status-symbol ' + msg.status">{{getStatusIcon(msg.status)}}</mat-icon>
-                        <span [class]="'status-text ' + msg.status">{{msg.status}}</span>
+                        <mat-icon [class]="'material-symbols-outlined status-symbol ' + getStatusColor(msg.status)">{{getStatusIcon(msg.status)}}</mat-icon>
+                        <span [class]="'status-text ' + getStatusColor(msg.status)">{{getStatusText(msg.status)}}</span>
                     </div>
                 </foreignObject>
 
@@ -38,7 +38,7 @@
                 </foreignObject>
 
                 <!-- Timestamp -->
-                <foreignObject [attr.x]="(getNodeX(msg.from) + getNodeX(msg.to)) / 2 - 50" y="0" width="100" height="20">
+                <foreignObject [attr.x]="(getNodeX(msg.from) + getNodeX(msg.to)) / 2 - 50" y="0" width="100" height="20" *ngIf="msg.timestamp">
                     <div class="timestamp">{{msg.timestamp | date:'HH:mm:ss.SSS'}}</div>
                 </foreignObject>
             </g>

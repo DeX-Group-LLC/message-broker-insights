@@ -8,38 +8,24 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TableComponent, TableColumn } from '../common/table/table.component';
 import { FlowDiagramComponent } from './flow-diagram/flow-diagram.component';
 import { BehaviorSubject, map } from 'rxjs';
-import { ActionType, Message, MessageHeader } from '../../services/websocket.service';
+import { Message, MessageHeader } from '../../services/websocket.service';
 import { MOCK_DATA } from './mock';
+import { ExportComponent } from '../common/export/export.component';
+import { MatButtonModule } from '@angular/material/button';
 
-interface ErrorDetails {
-    code: string;
-    message: string;
-    metadata?: Record<string, any>;
-}
-
-interface Listener {
-    serviceId: string;
-    topic: string;
-}
-
-interface RelatedMessage extends MessageHeader {
-    originatorServiceId: string;
-    responderServiceIds?: string[];  // For Publish type
-    responderServiceId?: string;     // For Request type
-    status: string;
+interface RelatedMessage {
+    header: MessageHeader;
+    targetServiceIds: string[];
 }
 
 export interface MessageFlow {
-    status: 'success' | 'error' | 'dropped' | 'timeout';
-    receivedAt: Date;
-    completedAt: Date;
-    brokerProcessingTime: number; // in milliseconds
-    timeout: number;              // in milliseconds
-    error?: ErrorDetails;
-    listeners?: Listener[];
+    auditors?: string[];  // Array of service IDs that receive a copy of the message
     request: {
         serviceId: string;
         message: Message;
+        timeout: number;     // in milliseconds
+        receivedAt: Date;    // when the broker received the request
+        respondedAt: Date;   // when the response was sent back to the originator
     };
     response?: {
         target?: {
@@ -59,7 +45,9 @@ export interface MessageFlow {
     standalone: true,
     imports: [
         CommonModule,
+        ExportComponent,
         MatCardModule,
+        MatButtonModule,
         MatTabsModule,
         MatIconModule,
         MatExpansionModule,
@@ -75,11 +63,12 @@ export class TrackerComponent implements OnInit {
     data$ = new BehaviorSubject<MessageFlow[]>([]);
 
     columns: TableColumn[] = [
+        { name: 'request.message.header.requestId', label: 'Request ID', sortable: true, filterable: true },
         { name: 'request.serviceId', label: 'Originator', sortable: true, filterable: true },
-        { name: 'response.serviceId', label: 'Responder', sortable: true, filterable: true },
-        { name: 'request.topic', label: 'Topic', sortable: true, filterable: true },
-        { name: 'status', label: 'Status', sortable: true, filterable: true },
-        { name: 'completedAt', label: 'Completed', sortable: true, filterable: true },
+        { name: 'response.target.serviceId', label: 'Responder', sortable: true, filterable: true },
+        { name: 'request.message.header.topic', label: 'Topic', sortable: true, filterable: true },
+        { name: 'response.message.payload.error.code', label: 'Status', sortable: true, filterable: true },
+        { name: 'request.respondedAt', label: 'Completed', sortable: true, filterable: true },
         { name: 'meta', label: 'Meta', sortable: false, filterable: (data: any, filter: string) => {
             return this.getMetaSearchContent(data).includes(filter);
         } }
@@ -96,13 +85,13 @@ export class TrackerComponent implements OnInit {
         this.selectedFlow = selected[0];
     }
 
-    getStatusColor(status: string): string {
-        switch (status) {
-            case 'success': return '#4caf50';
-            case 'error': return '#f44336';
-            case 'dropped':// return '#9e9e9e';
-            case 'timeout': return '#ff9800';
-            default: return '#9e9e9e';
+    getStatusColor(messageFlow: MessageFlow): string {
+        switch (messageFlow.response?.message?.payload?.['error']?.code) {
+            case undefined: return '#4caf50'; // success
+            case 'NO_RESPONDERS':
+            case 'SERVICE_UNAVAILABLE':
+            case 'REQUEST_TIMEOUT': return '#ff9800';
+            default:return '#f44336';
         }
     }
 
@@ -112,7 +101,8 @@ export class TrackerComponent implements OnInit {
     }
 
     getProcessingDuration(flow: MessageFlow): number {
-        return flow.completedAt.getTime() - flow.receivedAt.getTime();
+        if (!flow.request.respondedAt) return 0;
+        return flow.request.respondedAt.getTime() - flow.request.receivedAt.getTime();
     }
 
     getMessageSize(message: Message): number {
@@ -133,8 +123,8 @@ export class TrackerComponent implements OnInit {
     getMetaText(flow: MessageFlow): string {
         const parts = ['Request', 'Response'];
 
-        if (flow.listeners?.length) {
-            parts.push(`${flow.listeners.length} Listener${flow.listeners.length > 1 ? 's' : ''}`);
+        if (flow.auditors?.length) {
+            parts.push(`${flow.auditors.length} Auditor${flow.auditors.length > 1 ? 's' : ''}`);
         }
 
         if (flow.relatedMessages?.length) {
@@ -166,19 +156,26 @@ export class TrackerComponent implements OnInit {
             }
         }
 
-        // Listeners
-        if (flow.listeners?.length) {
-            searchParts.push(flow.listeners.map((l: Listener) => l.serviceId).join(' '));
+        // Auditors
+        if (flow.auditors?.length) {
+            searchParts.push(flow.auditors.join(' '));
         }
 
         // Related messages
         if (flow.relatedMessages?.length) {
             const relatedContent = flow.relatedMessages.map((msg: RelatedMessage) =>
-                `${msg.originatorServiceId} ${msg.topic}`
+                `${msg.header.topic} ${msg.targetServiceIds.join(' ')}`
             ).join(' ');
             searchParts.push(relatedContent);
         }
 
         return searchParts.join(' ');
+    }
+
+    /**
+     * Closes the service details panel.
+     */
+    closeDetails(): void {
+        this.selectedFlow = null;
     }
 }
