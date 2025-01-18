@@ -192,3 +192,24 @@ pre {
         }
     }
 }
+
+mat-card {
+    width: 100%;
+
+    mat-card-title {
+        color: var(--mat-sys-on-surface);
+    }
+
+    mat-card-header {
+        position: relative;
+        flex: 1;
+        margin-bottom: 0.5em;
+
+        .close-button {
+            position: absolute;
+            right: 0;
+            top: 0;
+            color: var(--mat-sys-on-surface);
+        }
+    }
+}

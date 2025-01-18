@@ -1,9 +1,9 @@
 <mat-card>
     <mat-card-content>
         <app-table
-            [data$]="data$"
+            [data$]="trackerService.flows$"
             [columns]="columns"
-            [defaultSort]="{ active: 'request.respondedAt', direction: 'desc' }"
+            [defaultSort]="{ active: 'response.sentAt', direction: 'desc' }"
             [paginationConfig]="{
                 pageSizeOptions: [10, 25, 50, 100],
                 defaultPageSize: 25,
@@ -20,6 +20,14 @@
                         <span>{{element.request.message.header.requestId}}</span>
                     </ng-container>
 
+                    <ng-container *ngSwitchCase="'request.serviceId'">
+                        <span>{{getServiceName(element.request.serviceId)}}</span>
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'response.target.serviceId'">
+                        <span [class.warning]="element.response?.fromBroker">{{!element.response?.fromBroker ? getServiceName(element.response?.target?.serviceId) : 'message-broker'}}</span>
+                    </ng-container>
+
                     <ng-container *ngSwitchCase="'response.message.payload.error.code'">
                         <span class="pill-item" [style.color]="getStatusColor(element)">
                             {{element?.response?.message?.payload?.['error']?.code ?? 'SUCCESS'}}
@@ -27,11 +35,11 @@
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'request.receivedAt'">
-                        <span *ngIf="element?.request?.receivedAt">{{element.request.receivedAt | date:'medium'}}</span>
+                        <span *ngIf="element?.request?.receivedAt">{{getFormattedDate(element.request.receivedAt)}}</span>
                     </ng-container>
 
-                    <ng-container *ngSwitchCase="'request.respondedAt'">
-                        <span *ngIf="element?.request?.respondedAt">{{element.request.respondedAt | date:'medium'}}</span>
+                    <ng-container *ngSwitchCase="'response.sentAt'">
+                        <span *ngIf="element?.response?.sentAt">{{getFormattedDate(element.response.sentAt)}}</span>
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'meta'">
@@ -50,7 +58,7 @@
 <mat-card *ngIf="selectedFlow" class="detail-container">
     <mat-card-header>
         <mat-card-title>
-            {{ selectedFlow.request.message.header.requestid }}
+            Request: <span class="muted italic">{{ selectedFlow.request.message.header.requestId }}</span>
         </mat-card-title>
         <div class="header-actions">
             <app-export
@@ -85,15 +93,15 @@
                             </div>
                             <div class="pill-item" matTooltip="When the message broker sent the response to the originator.">
                                 <span class="label">Completed</span>
-                                <span class="value">{{selectedFlow.request.respondedAt | date:'medium'}}</span>
+                                <span class="value">{{selectedFlow.response?.sentAt != null ? (selectedFlow.response!.sentAt | date:'medium') : 'N/A'}}</span>
                             </div>
                             <div class="pill-item" matTooltip="Total time from broker receiving the request to getting the response.">
                                 <span class="label">Total Duration</span>
-                                <span class="value">{{getProcessingDuration(selectedFlow)}}ms</span>
+                                <span class="value">{{getProcessingDuration(selectedFlow)}}</span>
                             </div>
                             <div class="pill-item" matTooltip="Maximum time allowed for the responder to send a response.">
                                 <span class="label">Timeout</span>
-                                <span class="value">{{selectedFlow.request.timeout}}ms</span>
+                                <span class="value">{{selectedFlow.request.timeout.toLocaleString(undefined, { maximumFractionDigits: 0 })}}ms</span>
                             </div>
                         </div>
                     </div>
@@ -102,9 +110,9 @@
                     <div class="section">
                         <h3>Request</h3>
                         <div class="pill-section">
-                            <div class="pill-item service-pill">
+                            <div class="pill-item service-pill fit-tooltip" [matTooltip]="'Name: ' + getServiceName(selectedFlow.request.serviceId) + '\n' + 'ID: ' + selectedFlow.request.serviceId">
                                 <span class="label">Originator</span>
-                                <span class="value">{{selectedFlow.request.serviceId}}</span>
+                                <span class="value">{{getServiceName(selectedFlow.request.serviceId)}}</span>
                             </div>
                             <div class="pill-item">
                                 <span class="label">Action</span>
@@ -120,10 +128,10 @@
                             </div>
                             <div class="pill-item">
                                 <span class="label">Request ID</span>
-                                <span class="value">{{selectedFlow.request.message.header.requestid}}</span>
+                                <span class="value">{{selectedFlow.request.message.header.requestId}}</span>
                             </div>
                             <ng-container *ngFor="let item of getHeaderItems(selectedFlow.request.message.header)">
-                                <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestid'].includes(item.key)">
+                                <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestId'].includes(item.key)">
                                     <span class="label">{{item.key}}</span>
                                     <span class="value">{{item.value}}</span>
                                 </div>
@@ -147,10 +155,10 @@
                     <div class="section" *ngIf="selectedFlow.response">
                         <h3>Response</h3>
                         <div class="pill-section">
-                            <div class="pill-item service-pill">
+                            <div class="pill-item service-pill fit-tooltip" [matTooltip]="selectedFlow.response.fromBroker ? null : 'Name: ' + getServiceName(selectedFlow.response.target?.serviceId!) + '\n' + 'ID: ' + selectedFlow.response.target?.serviceId">
                                 <span class="label">Responder</span>
                                 @if (selectedFlow.response.target && !selectedFlow.response.fromBroker) {
-                                    <span class="value">{{selectedFlow.response.target.serviceId}}</span>
+                                    <span class="value">{{getServiceName(selectedFlow.response.target.serviceId)}}</span>
                                     <span class="property" matTooltip="Higher number means lower priority.">Priority: {{selectedFlow.response.target.priority}}</span>
                                 } @else if (selectedFlow.response.message) {
                                     <span class="value warning">message-broker</span>
@@ -171,10 +179,10 @@
                                 </div>
                                 <div class="pill-item">
                                     <span class="label">Request ID</span>
-                                    <span class="value">{{selectedFlow.response.message.header.requestid}}</span>
+                                    <span class="value">{{selectedFlow.response.message.header.requestId}}</span>
                                 </div>
                                 <ng-container *ngFor="let item of getHeaderItems(selectedFlow.response.message.header)">
-                                    <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestid'].includes(item.key)">
+                                    <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestId'].includes(item.key)">
                                         <span class="label">{{item.key}}</span>
                                         <span class="value">{{item.value}}</span>
                                     </div>
@@ -202,7 +210,7 @@
                             <div class="pill-item" *ngFor="let serviceId of selectedFlow.auditors"
                                 matTooltip="Services that receive a copy of the message but don't respond.">
                                 <span class="label">Service</span>
-                                <span class="value">{{serviceId}}</span>
+                                <span class="value">{{getServiceName(serviceId)}}</span>
                             </div>
                         </div>
                     </div>
@@ -237,12 +245,12 @@
                             @if (selectedFlow.parentMessage) {
                                 <div class="pill-item message-pill" matTooltip="The message that triggered the current message's flow.">
                                     <span class="label">Parent Request</span>
-                                    <span class="value">{{selectedFlow.parentMessage.serviceId}}</span>
+                                    <span class="value">{{getServiceName(selectedFlow.parentMessage.serviceId)}}</span>
                                     <span class="property">Action: {{selectedFlow.parentMessage.header.action}}</span>
                                     <span class="property">Topic: {{selectedFlow.parentMessage.header.topic}}</span>
                                     <span class="property">Version: {{selectedFlow.parentMessage.header.version}}</span>
-                                    @if (selectedFlow.parentMessage.header.requestid) {
-                                        <span class="property">Request ID: {{selectedFlow.parentMessage.header.requestid}}</span>
+                                    @if (selectedFlow.parentMessage.header.requestId) {
+                                        <span class="property">Request ID: {{selectedFlow.parentMessage.header.requestId}}</span>
                                     }
                                     @if (selectedFlow.parentMessage.header.parentRequestId) {
                                         <span class="property">Parent Request ID: {{selectedFlow.parentMessage.header.parentRequestId}}</span>
@@ -255,12 +263,12 @@
                             @for (child of selectedFlow.childMessages; track child) {
                                 <div class="pill-item message-pill" matTooltip="Messages that were triggered by the current message's flow.">
                                     <span class="label">Child Request</span>
-                                    <span class="value">{{child.serviceId}}</span>
+                                    <span class="value">{{getServiceName(child.serviceId)}}</span>
                                     <span class="property">Action: {{child.header.action}}</span>
                                     <span class="property">Topic: {{child.header.topic}}</span>
                                     <span class="property">Version: {{child.header.version}}</span>
-                                    @if (child.header.requestid) {
-                                        <span class="property">Request ID: {{child.header.requestid}}</span>
+                                    @if (child.header.requestId) {
+                                        <span class="property">Request ID: {{child.header.requestId}}</span>
                                     }
                                     @if (child.header.parentRequestId) {
                                         <span class="property">Parent Request ID: {{child.header.parentRequestId}}</span>

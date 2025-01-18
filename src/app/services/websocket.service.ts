@@ -97,25 +97,13 @@ export type BrokerHeader = {
     version: string;
 
     /** Optional unique identifier for request-response message pairs */
-    requestid?: string;
-};
-
-export type ClientHeader = {
-    /** The type of action this message represents (e.g., REQUEST, RESPONSE, PUBLISH) */
-    action: ActionType;
-
-    /** The topic this message belongs to, using dot notation (e.g., 'service.event') */
-    topic: string;
-
-    /** The version of the message format (e.g., '1.0.0') */
-    version: string;
-
-    /** Optional unique identifier for request-response message pairs */
-    requestid?: string;
+    requestId?: string;
 
     /** Optional unique identifier for parent request-response message pairs */
     parentRequestId?: string;
+};
 
+export type ClientHeader = BrokerHeader & {
     /** Optional timeout for request-response message pairs */
     timeout?: number;
 };
@@ -429,8 +417,8 @@ export class WebsocketService {
         this.socket.onmessage = (event) => {
             try {
                 const [headerStr, payloadStr] = event.data.split('\n');
-                const [action, topic, version, requestId] = headerStr.split(':');
-                const header: MessageHeader = { action, topic, version, requestid: requestId };
+                const [action, topic, version, requestId, parentRequestId, timeout] = headerStr.split(':');
+                const header: MessageHeader = { action, topic, version, requestId, parentRequestId, timeout };
                 const payload: MessagePayload = JSON.parse(payloadStr);
 
                 // Parse the error timestamp
@@ -502,7 +490,7 @@ export class WebsocketService {
     private async send(action: ActionType, topic: string, payload: Object = {}, requestId?: string): Promise<void> {
         await this.waitForReady();
         // Serialize the message:
-        const message = this.serializeMessage({ action, topic, version: '1.0.0', requestid: requestId }, payload);
+        const message = this.serializeMessage({ action, topic, version: '1.0.0', requestId }, payload);
         // Serialize and send the message:
         this.socket!.send(message);
     }
@@ -515,13 +503,41 @@ export class WebsocketService {
      * @param timeout - Optional timeout in milliseconds
      * @returns Promise that resolves with the response
      */
-    async request(topic: string, payload: Object = {}, timeout?: number): Promise<any> {
+    async request(topic: string, payload: Object = {}, timeout?: number): Promise<Message<BrokerHeader, MessagePayloadSuccess>> {
         return await new Promise((resolve, reject) => {
             const requestId = uuidv4();
             if (timeout) (payload as any).timeout = timeout;
             this.send(ActionType.REQUEST, topic, payload, requestId);
             this.pendingRequests.set(requestId, { resolve, reject });
         });
+    }
+
+    /**
+     * Subscribes to a topic.
+     * @param action - The action type
+     * @param topic - The topic to subscribe to
+     * @param priority - The priority of the subscription
+     * @param callback - The callback function to handle incoming messages
+     * @returns Promise that resolves with the subscription response
+     */
+    async subscribe(action: ActionType.PUBLISH | ActionType.REQUEST, topic: string, priority: number = 0, callback: (header: MessageHeader, payload: MessagePayload) => void): Promise<Message<BrokerHeader, MessagePayloadSuccess>> {
+        // Clear all existing subscriptions
+        this.message$.clear(`${action}:${topic}`);
+        // Subscribe to the topic
+        this.message$.on(`${action}:${topic}`, callback);
+        // Request to subscribe to the topic
+        return await this.request('system.topic.subscribe', { topic, priority });
+    }
+
+    /**
+     * Unsubscribes from a topic.
+     * @param action - The action type
+     * @param topic - The topic to unsubscribe from
+     */
+    unsubscribe(action: ActionType.PUBLISH | ActionType.REQUEST, topic: string): void {
+        this.message$.clear(`${action}:${topic}`);
+        // Request to unsubscribe from the topic
+        this.request('system.topic.unsubscribe', { topic });
     }
 
     /**
@@ -561,9 +577,9 @@ export class WebsocketService {
         // Create the header line
         let headerLine = `${header.action}:${header.topic}:${header.version}`;
 
-        if ((header as ClientHeader).timeout) headerLine += `:${(header as ClientHeader).requestid ?? ''}:${(header as ClientHeader).parentRequestId ?? ''}:${(header as ClientHeader).timeout}`;
-        else if ((header as ClientHeader).parentRequestId) headerLine += `:${(header as ClientHeader).requestid ?? ''}:${(header as ClientHeader).parentRequestId}`;
-        else if (header.requestid) headerLine += `:${header.requestid}`;
+        if ((header as ClientHeader).timeout) headerLine += `:${header.requestId ?? ''}:${header.parentRequestId ?? ''}:${(header as ClientHeader).timeout}`;
+        else if (header.parentRequestId) headerLine += `:${header.requestId ?? ''}:${header.parentRequestId}`;
+        else if (header.requestId) headerLine += `:${header.requestId}`;
 
         // Create the payload line
         const payloadLine = JSON.stringify(payload);

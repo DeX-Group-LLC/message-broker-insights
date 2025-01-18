@@ -1,6 +1,12 @@
-<h2 mat-dialog-title>Customize {{data.format.toUpperCase()}} Export</h2>
+<mat-card>
+    <mat-card-header>
+        <mat-card-title>Customize {{data.format.toUpperCase()}} Export</mat-card-title>
+        <button mat-icon-button (click)="dialogRef.close()" matTooltip="Close">
+            <mat-icon>close</mat-icon>
+    </button>
+    </mat-card-header>
 
-<mat-dialog-content>
+    <mat-dialog-content>
     <div class="customizer-layout">
         <!-- Left Column: Fields Selection -->
         <div class="fields-section">
@@ -116,33 +122,34 @@
             </div>
         </div>
     </div>
-</mat-dialog-content>
+    </mat-dialog-content>
+</mat-card>
 
 <!-- Field Tree Template -->
 <ng-template #fieldTree let-fields>
-    <div class="field-group">
-        <div *ngFor="let field of fields" class="field-item" [style.margin-left.px]="field.level * 24">
-            <mat-checkbox [(ngModel)]="field.included"
-                        [indeterminate]="isFieldIndeterminate(field)"
-                        (change)="toggleField(field, $event)">
-                <span class="field-name">{{field.name}}</span>
-                <span class="field-type">
-                    <ng-container [ngSwitch]="field.type">
-                        <ng-container *ngSwitchCase="'object'">{{ '{' }}object{{ '}' }}</ng-container>
-                        <ng-container *ngSwitchCase="'array'">[array]</ng-container>
-                        <ng-container *ngSwitchDefault>: {{getPreviewValue(field)}}</ng-container>
-                    </ng-container>
-                </span>
-            </mat-checkbox>
-            <ng-container *ngIf="field.children?.length">
-                <ng-container *ngTemplateOutlet="fieldTree; context: { $implicit: field.children }"></ng-container>
-            </ng-container>
-        </div>
+<div class="field-group">
+    <div *ngFor="let field of fields" class="field-item" [style.margin-left.px]="field.level * 24">
+        <mat-checkbox [(ngModel)]="field.included"
+                    [indeterminate]="isFieldIndeterminate(field)"
+                    (change)="toggleField(field, $event)">
+            <span class="field-name">{{field.name}}</span>
+            <span class="field-type">
+                <ng-container [ngSwitch]="field.type">
+                    <ng-container *ngSwitchCase="'object'">{{ '{' }}object{{ '}' }}</ng-container>
+                    <ng-container *ngSwitchCase="'array'">[array]</ng-container>
+                    <ng-container *ngSwitchDefault>: {{getPreviewValue(field)}}</ng-container>
+                </ng-container>
+            </span>
+        </mat-checkbox>
+        <ng-container *ngIf="field.children?.length">
+            <ng-container *ngTemplateOutlet="fieldTree; context: { $implicit: field.children }"></ng-container>
+        </ng-container>
     </div>
+</div>
 </ng-template>
 
 <mat-dialog-actions align="end">
-    <button mat-button (click)="dialogRef.close()">Cancel</button>
-    <button mat-button (click)="copy()" color="accent">Copy</button>
-    <button mat-button color="primary" (click)="save()">Export</button>
+<button mat-button (click)="dialogRef.close()">Cancel</button>
+<button mat-button (click)="copy()" color="accent">Copy</button>
+<button mat-button color="primary" (click)="save()">Export</button>
 </mat-dialog-actions>

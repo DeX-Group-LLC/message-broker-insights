@@ -8,12 +8,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { TableComponent, TableColumn } from '../common/table/table.component';
 import { FlowDiagramComponent } from './flow-diagram/flow-diagram.component';
 import { BehaviorSubject } from 'rxjs';
-import { ClientHeader, Message, WebsocketService } from '../../services/websocket.service';
-import { MOCK_DATA } from './mock';
+import { Message, WebsocketService } from '../../services/websocket.service';
+//import { MOCK_DATA } from './mock';
 import { ExportComponent } from '../common/export/export.component';
 import { MatButtonModule } from '@angular/material/button';
+import { MessageFlow, RelatedMessage, TrackerService } from '../../services/tracker.service';
+import { ServicesService } from '../../services/services.service';
 
-interface RelatedMessage {
+/*interface RelatedMessage {
     serviceId: string;
     header: ClientHeader;
     targetServiceIds?: string[];
@@ -38,7 +40,7 @@ export interface MessageFlow {
     };
     parentMessage?: RelatedMessage;
     childMessages?: RelatedMessage[];
-}
+}*/
 
 @Component({
     selector: 'app-tracker',
@@ -60,7 +62,6 @@ export interface MessageFlow {
 })
 export class TrackerComponent implements OnInit {
     selectedFlow: MessageFlow | null = null;
-    data$ = new BehaviorSubject<MessageFlow[]>([]);
 
     columns: TableColumn[] = [
         { name: 'request.message.header.requestId', label: 'Request ID', sortable: true, filterable: true },
@@ -68,18 +69,29 @@ export class TrackerComponent implements OnInit {
         { name: 'response.target.serviceId', label: 'Responder', sortable: true, filterable: true },
         { name: 'request.message.header.topic', label: 'Topic', sortable: true, filterable: true },
         { name: 'response.message.payload.error.code', label: 'Status', sortable: true, filterable: true },
-        { name: 'request.respondedAt', label: 'Completed', sortable: true, filterable: true },
+        { name: 'response.sentAt', label: 'Completed', sortable: true, filterable: true },
         { name: 'meta', label: 'Meta', sortable: false, filterable: (data: any, filter: string) => {
             return this.getMetaSearchContent(data).includes(filter);
         } }
     ];
 
-    constructor(private websocketService: WebsocketService) {}
+    constructor(private websocketService: WebsocketService, private servicesService: ServicesService, public trackerService: TrackerService) {}
 
     ngOnInit(): void {
-        // Initialize the data
-        this.data$.next(MOCK_DATA);
+        this.trackerService.data$.on(this._handleDataChange);
     }
+
+    ngOnDestroy(): void {
+        this.trackerService.data$.off(this._handleDataChange);
+    }
+
+    handleDataChange(data: MessageFlow): void {
+        // If the selected flow is no longer in the data, clear the selection
+        if (this.selectedFlow && !this.trackerService.flows.includes(this.selectedFlow)) {
+            this.selectedFlow = null;
+        }
+    }
+    private _handleDataChange = this.handleDataChange.bind(this);
 
     onSelectionChange(selected: MessageFlow[]): void {
         this.selectedFlow = selected[0];
@@ -100,9 +112,9 @@ export class TrackerComponent implements OnInit {
         return Object.entries(header).map(([key, value]) => ({ key, value }));
     }
 
-    getProcessingDuration(flow: MessageFlow): number {
-        if (!flow.request.respondedAt) return 0;
-        return flow.request.respondedAt.getTime() - flow.request.receivedAt.getTime();
+    getProcessingDuration(flow: MessageFlow): string {
+        if (!flow.response?.sentAt) return 'N/A';
+        return (flow.response.sentAt.getTime() - flow.request.receivedAt.getTime()).toLocaleString(undefined, { maximumFractionDigits: 0 }) + 'ms';
     }
 
     getMessageSize(message: Message): number {
@@ -184,6 +196,16 @@ export class TrackerComponent implements OnInit {
      */
     getFormattedDate(timestamp: Date): string {
         return timestamp.toLocaleString();
+    }
+
+    /**
+     * Gets the service name for a given service ID.
+     *
+     * @param serviceId - Service ID to get the name for
+     * @returns Service name
+     */
+    getServiceName(serviceId: string): string {
+        return this.servicesService.getService(serviceId)?.name || serviceId;
     }
 
     /**

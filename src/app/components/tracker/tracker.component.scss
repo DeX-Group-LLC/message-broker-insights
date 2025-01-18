@@ -274,3 +274,12 @@ mat-tab-group {
     flex-direction: column;
     padding: 16px;
 }
+
+::ng-deep .fit-tooltip {
+    white-space: pre-wrap;
+
+    > div {
+        text-align: left;
+        max-width: unset;
+    }
+}

@@ -199,6 +199,18 @@ export class ServicesService implements OnDestroy {
     }
 
     /**
+     * Gets the service info for a given service ID.
+     *
+     * @param serviceId - Service ID to get the info for
+     * @returns Service info
+     */
+    public getService(serviceId: string): ServiceInfo | undefined {
+        const service = this.servicesSubject.value.find(service => service.id === serviceId);
+        if (service) return service;
+        return this.disconnectedServices.get(serviceId);
+    }
+
+    /**
      * Stops the services polling interval.
      * Cleans up the interval timer.
      */

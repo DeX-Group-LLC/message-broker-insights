@@ -2,8 +2,9 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, NO_ER
 import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
-import { ActionType, BrokerHeader, ClientHeader, MessageHeader } from '../../../services/websocket.service';
-import { MessageFlow } from '../tracker.component';
+import { MessageHeader } from '../../../services/websocket.service';
+import { MessageFlow } from '../../../services/tracker.service';
+import { ServicesService } from '../../../services/services.service';
 
 interface FlowNode {
     id: string;
@@ -42,6 +43,8 @@ export class FlowDiagramComponent implements OnChanges {
     width = 800;
     height = 400;
     flowData: FlowData | null = null;
+
+    constructor(private servicesService: ServicesService) {}
 
     ngOnChanges(changes: SimpleChanges): void {
         if (changes['messageFlow']) {
@@ -151,7 +154,7 @@ export class FlowDiagramComponent implements OnChanges {
         messageIndex++;
 
         // Only add message to responder if not NO_RESPONDERS and no internal error
-        if (!isNoResponders && !isInternalError) {
+        if (!this.messageFlow.response?.fromBroker) {//!isNoResponders && !isInternalError) {
             messages.push({
                 from: 'message-broker',
                 to: this.messageFlow.response!.target!.serviceId!,
@@ -201,7 +204,7 @@ export class FlowDiagramComponent implements OnChanges {
                 from: 'message-broker',
                 to: this.messageFlow.request.serviceId,
                 header: this.messageFlow.request.message.header,
-                timestamp: this.messageFlow.request.respondedAt,
+                timestamp: this.messageFlow.response?.sentAt,
                 status,
                 isBrokerInput: false
             });
@@ -219,7 +222,7 @@ export class FlowDiagramComponent implements OnChanges {
             messageIndex++;
 
             // Add messages from broker to each target
-            for (const targetId of msg.targetServiceIds || []) {
+            /*for (const targetId of msg.targetServiceIds || []) {
                 const msgY = messageStartY + messageIndex * messageSpacing;
 
                 // Track Y position for this service
@@ -235,7 +238,7 @@ export class FlowDiagramComponent implements OnChanges {
                     isBrokerInput: false
                 });
                 messageIndex++;
-            }
+            }*/
         }
 
         // Add parent message Y position if it exists
@@ -300,8 +303,8 @@ export class FlowDiagramComponent implements OnChanges {
 
     getMessageTooltip(msg: FlowMessage): string {
         const parts = [
-            `From: ${msg.from}`,
-            `To: ${msg.to}`,
+            `From: ${this.getServiceName(msg.from)}`,
+            `To: ${this.getServiceName(msg.to)}`,
         ];
 
         if (msg.timestamp) {
@@ -330,13 +333,13 @@ export class FlowDiagramComponent implements OnChanges {
 
     isMessageClickable(msg: FlowMessage): boolean {
         const header = msg.header;
-        return !!header?.requestid && msg.from !== 'message-broker' && header.requestid !== this.messageFlow.request.message.header.requestid;
+        return !!header?.requestId && msg.from !== 'message-broker' && header.requestId !== this.messageFlow.request.message.header.requestId;
     }
 
     onMessageClick(msg: FlowMessage): void {
         const header = msg.header;
-        if (header?.requestid && header.requestid !== this.messageFlow.request.message.header.requestid) {
-            this.messageSelect.emit(header.requestid);
+        if (header?.requestId && header.requestId !== this.messageFlow.request.message.header.requestId) {
+            this.messageSelect.emit(header.requestId);
         }
     }
 
@@ -368,5 +371,12 @@ export class FlowDiagramComponent implements OnChanges {
             case 'REQUEST_TIMEOUT': return 'Timeout';
             default: return 'Error';
         }
+    }
+
+    getServiceName(serviceId: string): string {
+        if (serviceId === 'message-broker') {
+            return 'Message Broker';
+        }
+        return this.servicesService.getService(serviceId)?.name || serviceId;
     }
 }
