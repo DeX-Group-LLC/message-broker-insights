@@ -123,7 +123,7 @@
                                 <span class="value">{{selectedFlow.request.message.header.requestid}}</span>
                             </div>
                             <ng-container *ngFor="let item of getHeaderItems(selectedFlow.request.message.header)">
-                                <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestId'].includes(item.key)">
+                                <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestid'].includes(item.key)">
                                     <span class="label">{{item.key}}</span>
                                     <span class="value">{{item.value}}</span>
                                 </div>
@@ -174,7 +174,7 @@
                                     <span class="value">{{selectedFlow.response.message.header.requestid}}</span>
                                 </div>
                                 <ng-container *ngFor="let item of getHeaderItems(selectedFlow.response.message.header)">
-                                    <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestId'].includes(item.key)">
+                                    <div class="pill-item header-pill" *ngIf="!['action', 'topic', 'version', 'requestid'].includes(item.key)">
                                         <span class="label">{{item.key}}</span>
                                         <span class="value">{{item.value}}</span>
                                     </div>
@@ -231,37 +231,45 @@
                     }
 
                     <!-- Message Chain Section -->
-                    <div class="section" *ngIf="selectedFlow.parentRequestId || selectedFlow.childRequestIds?.length">
+                    <div class="section" *ngIf="selectedFlow.parentMessage || selectedFlow.childMessages?.length">
                         <h3>Message Chain</h3>
                         <div class="pill-section">
-                            <div class="pill-item" *ngIf="selectedFlow.parentRequestId">
-                                <span class="label">Parent Request</span>
-                                <span class="value">{{selectedFlow.parentRequestId}}</span>
-                            </div>
-                            <ng-container *ngIf="selectedFlow.childRequestIds?.length">
-                                <div class="pill-item" *ngFor="let childId of selectedFlow.childRequestIds">
-                                    <span class="label">Child Request</span>
-                                    <span class="value">{{childId}}</span>
+                            @if (selectedFlow.parentMessage) {
+                                <div class="pill-item message-pill" matTooltip="The message that triggered the current message's flow.">
+                                    <span class="label">Parent Request</span>
+                                    <span class="value">{{selectedFlow.parentMessage.serviceId}}</span>
+                                    <span class="property">Action: {{selectedFlow.parentMessage.header.action}}</span>
+                                    <span class="property">Topic: {{selectedFlow.parentMessage.header.topic}}</span>
+                                    <span class="property">Version: {{selectedFlow.parentMessage.header.version}}</span>
+                                    @if (selectedFlow.parentMessage.header.requestid) {
+                                        <span class="property">Request ID: {{selectedFlow.parentMessage.header.requestid}}</span>
+                                    }
+                                    @if (selectedFlow.parentMessage.header.parentRequestId) {
+                                        <span class="property">Parent Request ID: {{selectedFlow.parentMessage.header.parentRequestId}}</span>
+                                    }
+                                    @if (selectedFlow.parentMessage.header.timeout) {
+                                        <span class="property">Timeout: {{selectedFlow.parentMessage.header.timeout}}ms</span>
+                                    }
                                 </div>
-                            </ng-container>
-                        </div>
-                    </div>
-
-                    <!-- Related Messages Section -->
-                    <div class="section" *ngIf="selectedFlow.relatedMessages?.length">
-                        <h3>Related Messages</h3>
-                        <div class="pill-section">
-                            <div class="pill-item message-pill" *ngFor="let msg of selectedFlow.relatedMessages"
-                                matTooltip="Messages that were triggered as a result of processing this request. Click to view details.">
-                                <span class="label">{{msg.header.action}}</span>
-                                <span class="value">{{msg.header.topic}}</span>
-                                @if (msg.header.requestid) {
-                                    <span class="property">Request ID: {{msg.header.requestid}}</span>
-                                }
-                                @for (target of msg.targetServiceIds; track target) {
-                                    <span class="property">To: {{target}}</span>
-                                }
-                            </div>
+                            }
+                            @for (child of selectedFlow.childMessages; track child) {
+                                <div class="pill-item message-pill" matTooltip="Messages that were triggered by the current message's flow.">
+                                    <span class="label">Child Request</span>
+                                    <span class="value">{{child.serviceId}}</span>
+                                    <span class="property">Action: {{child.header.action}}</span>
+                                    <span class="property">Topic: {{child.header.topic}}</span>
+                                    <span class="property">Version: {{child.header.version}}</span>
+                                    @if (child.header.requestid) {
+                                        <span class="property">Request ID: {{child.header.requestid}}</span>
+                                    }
+                                    @if (child.header.parentRequestId) {
+                                        <span class="property">Parent Request ID: {{child.header.parentRequestId}}</span>
+                                    }
+                                    @if (child.header.timeout) {
+                                        <span class="property">Timeout: {{child.header.timeout}}ms</span>
+                                    }
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>

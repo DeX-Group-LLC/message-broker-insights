@@ -14,7 +14,8 @@ export const MOCK_DATA: MessageFlow[] = [
                     action: ActionType.REQUEST,
                     topic: 'system.auth.request',
                     version: '1.0.0',
-                    requestid: 'req-001'
+                    requestid: 'req-001',
+                    parentRequestId: 'req-000'
                 },
                 payload: { username: 'john.doe', action: 'login' }
             }
@@ -35,8 +36,18 @@ export const MOCK_DATA: MessageFlow[] = [
                 payload: { token: 'xyz123', expiresIn: 3600 }
             }
         },
-        relatedMessages: [
+        parentMessage: {
+            serviceId: 'login-service',
+            header: {
+                action: ActionType.REQUEST,
+                topic: 'frontend-service.auth.login',
+                version: '1.0.0',
+                requestid: 'req-000'
+            }
+        },
+        childMessages: [
             {
+                serviceId: 'auth-service',
                 header: {
                     action: ActionType.PUBLISH,
                     topic: 'system.audit.log',
@@ -45,13 +56,13 @@ export const MOCK_DATA: MessageFlow[] = [
                 targetServiceIds: ['audit-service', 'logging-service']
             },
             {
+                serviceId: 'auth-service',
                 header: {
                     action: ActionType.REQUEST,
                     topic: 'system.user.validate',
                     version: '1.0.0',
                     requestid: 'req-001-1'
                 },
-                targetServiceIds: ['user-service']
             }
         ]
     },

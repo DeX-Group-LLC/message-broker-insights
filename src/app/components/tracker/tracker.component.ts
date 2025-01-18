@@ -14,8 +14,9 @@ import { ExportComponent } from '../common/export/export.component';
 import { MatButtonModule } from '@angular/material/button';
 
 interface RelatedMessage {
+    serviceId: string;
     header: ClientHeader;
-    targetServiceIds: string[];
+    targetServiceIds?: string[];
 }
 
 export interface MessageFlow {
@@ -35,9 +36,8 @@ export interface MessageFlow {
         fromBroker: boolean;
         message?: Message;
     };
-    relatedMessages?: RelatedMessage[];
-    parentRequestId?: string;
-    childRequestIds?: string[];
+    parentMessage?: RelatedMessage;
+    childMessages?: RelatedMessage[];
 }
 
 @Component({
@@ -123,8 +123,12 @@ export class TrackerComponent implements OnInit {
             parts.push(`${flow.auditors.length} Auditor${flow.auditors.length > 1 ? 's' : ''}`);
         }
 
-        if (flow.relatedMessages?.length) {
-            parts.push(`${flow.relatedMessages.length} Related Message${flow.relatedMessages.length > 1 ? 's' : ''}`);
+        if (flow.parentMessage) {
+            parts.push(`Parent Message`);
+        }
+
+        if (flow.childMessages?.length) {
+            parts.push(`${flow.childMessages.length} Child Message${flow.childMessages.length > 1 ? 's' : ''}`);
         }
 
         return parts.join(', ');
@@ -158,9 +162,13 @@ export class TrackerComponent implements OnInit {
         }
 
         // Related messages
-        if (flow.relatedMessages?.length) {
-            const relatedContent = flow.relatedMessages.map((msg: RelatedMessage) =>
-                `${msg.header.topic} ${msg.targetServiceIds.join(' ')}`
+        if (flow.parentMessage) {
+            searchParts.push(`${flow.parentMessage.serviceId} ${JSON.stringify(flow.parentMessage.header)}`);
+        }
+
+        if (flow.childMessages?.length) {
+            const relatedContent = flow.childMessages.map((msg: RelatedMessage) =>
+                `${msg.serviceId} ${JSON.stringify(msg.header)}`
             ).join(' ');
             searchParts.push(relatedContent);
         }

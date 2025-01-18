@@ -128,7 +128,7 @@ mat-tab-group {
     }
 
     .property {
-        flex: 1;
+        flex: 0;
         padding: 0.25em 0.75em;
         border-radius: 1em;
         font-size: 0.75rem;
@@ -162,7 +162,7 @@ mat-tab-group {
     }
 
     &.message-pill {
-        background-color: var(--mat-sys-surface-container);
+        //background-color: var(--mat-sys-surface-container);
         cursor: pointer;
 
         &:hover {

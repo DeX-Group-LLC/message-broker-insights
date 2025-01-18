@@ -4,7 +4,7 @@
         preserveAspectRatio="xMidYMin slice">
         <!-- Lifelines first (bottom layer) -->
         <ng-container *ngFor="let node of flowData?.nodes">
-            <line *ngIf="node.type !== 'listener'"
+            <line *ngIf="!['parent', 'auditor', 'child'].includes(node.type)"
                 [attr.x1]="node.x" [attr.y1]="node.y + 24" [attr.x2]="node.x" [attr.y2]="height - 10"
                 class="lifeline" />
         </ng-container>
@@ -18,11 +18,11 @@
                (click)="onMessageClick(msg)">
                 <!-- Arrow Line -->
                 <line [attr.x1]="getNodeX(msg.from)" [attr.x2]="getNodeX(msg.to)" y1="0" y2="0"
-                    [class]="'message-line ' + msg.type + ' ' + (msg.status || '') + (msg.isBrokerInput ? ' isBrokerInput' : '')" />
+                    [class]="'message-line ' + msg.header.action + ' ' + (msg.status || '') + (msg.isBrokerInput ? ' isBrokerInput' : '')" />
 
                 <!-- Arrow Head -->
                 <path [attr.d]="getArrowPath(getNodeX(msg.from), getNodeX(msg.to), 0)"
-                    [class]="'message-arrow ' + msg.type + ' ' + (msg.status || '')" />
+                    [class]="'message-arrow ' + msg.header.action + ' ' + (msg.status || '')" />
 
                 <!-- Status Symbol -->
                 <foreignObject [attr.x]="getNodeX(msg.from) - 8" y="-8" width="80" height="16" *ngIf="msg.status">
@@ -34,7 +34,7 @@
 
                 <!-- Message Label -->
                 <foreignObject [attr.x]="(getNodeX(msg.from) + getNodeX(msg.to)) / 2 - 75" y="-13" width="150" height="20">
-                    <div class="message-label">{{msg.label}}</div>
+                    <div class="message-label">{{msg.header.topic}}</div>
                 </foreignObject>
 
                 <!-- Timestamp -->
