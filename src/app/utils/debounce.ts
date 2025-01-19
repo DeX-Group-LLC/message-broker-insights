@@ -6,7 +6,7 @@
 export class DebounceTimer<T extends (...args: any[]) => void> {
     private timeoutId: number | undefined;
     private latestArgs!: Parameters<T>;
-    private startTime: number | undefined;
+    private lastTime: number = -Number.MAX_SAFE_INTEGER;
 
     constructor(
         private fn: T,
@@ -16,27 +16,38 @@ export class DebounceTimer<T extends (...args: any[]) => void> {
     /**
      * Executes the debounced function with the provided arguments.
      * If a timeout is already scheduled, it will cache the new arguments
-     * for when the timeout executes.
-     * If delay is negative, executes immediately without debouncing.
+     * and reschedule based on the remaining delay.
+     * If the computed delay is <= 0, executes immediately.
      */
     execute(...args: Parameters<T>): void {
-        // Cache the latest arguments
-        this.latestArgs = args;
-
-        // If delay is negative, execute immediately
-        if (this.delay < 0) {
+        // If delay is <= 0, execute immediately
+        if (this.delay <= 0) {
+            this.lastTime = Date.now();
             this.fn(...args);
             return;
         }
 
+        // Cache the latest arguments
+        this.latestArgs = args;
+
         // If no timeout is scheduled, create one
         if (this.timeoutId === undefined) {
-            this.startTime = Date.now();
-            this.timeoutId = window.setTimeout(() => {
+            // Calculate the actual delay based on lastTime if it exists
+            const actualDelay = this.delay - (Date.now() - this.lastTime);
+            // If delay is <= 0, execute immediately
+            if (actualDelay <= 0) {
+                this.lastTime = Date.now();
                 this.fn(...this.latestArgs);
+                return;
+            }
+            // Otherwise, schedule a timeout
+            this.timeoutId = window.setTimeout(() => {
+                // Clear the timeout and update lastTime
                 this.timeoutId = undefined;
-                this.startTime = undefined;
-            }, this.delay);
+                this.lastTime = Date.now();
+                // Execute the function with the latest arguments
+                this.fn(...this.latestArgs);
+            }, actualDelay);
         }
     }
 
@@ -46,30 +57,17 @@ export class DebounceTimer<T extends (...args: any[]) => void> {
      * accounting for time already elapsed.
      */
     setDelay(delay: number): void {
-        if (this.timeoutId !== undefined && this.startTime !== undefined) {
-            // Calculate how much time has elapsed
-            const elapsed = Date.now() - this.startTime;
-            // Calculate remaining time with new delay
-            const remaining = delay - elapsed;
+        // Update the delay
+        this.delay = delay;
 
+        // If there's an active timeout, cancel it and re-execute
+        if (this.timeoutId !== undefined) {
             // Cancel the current timeout
             this.cancel();
 
-            if (remaining <= 0) {
-                // If we've already waited longer than the new delay, execute immediately
-                this.fn(...this.latestArgs);
-            } else {
-                // Otherwise reschedule with remaining time
-                this.startTime = Date.now();
-                this.timeoutId = window.setTimeout(() => {
-                    this.fn(...this.latestArgs);
-                    this.timeoutId = undefined;
-                    this.startTime = undefined;
-                }, remaining);
-            }
+            // Execute:
+            this.execute(...this.latestArgs);
         }
-
-        this.delay = delay;
     }
 
     /**
@@ -79,7 +77,6 @@ export class DebounceTimer<T extends (...args: any[]) => void> {
         if (this.timeoutId !== undefined) {
             window.clearTimeout(this.timeoutId);
             this.timeoutId = undefined;
-            this.startTime = undefined;
         }
     }
 }
