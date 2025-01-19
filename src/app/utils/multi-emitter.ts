@@ -1,3 +1,5 @@
+import { DebounceTimer } from "./debounce";
+
 /**
  * Base class providing event emitter functionality.
  * Allows components to subscribe to and emit events.
@@ -6,11 +8,26 @@ export class MultiEmitter<T extends (...args: any[]) => void> {
     /** Map storing event listeners for each event type */
     private listeners = new Map<string, Set<T>>();
 
-    /** Last time the emitter was called */
-    private lastTime: Date = new Date();
-    private debounceTimer?: number;
+    /** Debounce timer for emitting events */
+    private debounceTimer: DebounceTimer<(event: string, ...args: Parameters<T>) => void>;
 
-    constructor(private debounceTime: number = 0) {}
+    /**
+     * Constructor for MultiEmitter.
+     * @param debounceTime - The debounce time in milliseconds. If set to -1, events are emitted immediately. If set to 0, events are emitted in the next tick.
+     */
+    constructor(debounceTime: number = 0) {
+        this.debounceTimer = new DebounceTimer(
+            (event: string, ...args: Parameters<T>) => {
+                const callbacks = this.listeners.get(event);
+                if (callbacks) {
+                    for (const callback of callbacks) {
+                        callback(...args);
+                    }
+                }
+            },
+            debounceTime
+        );
+    }
 
     /**
      * Adds a listener for the specified event.
@@ -63,27 +80,7 @@ export class MultiEmitter<T extends (...args: any[]) => void> {
      * @param args - Arguments to pass to event listeners
      */
     emit(event: string, ...args: Parameters<T>): void {
-        // If debounce time is set and the last time the emitter was called is less than the debounce time,
-        if (this.debounceTime > 0) {
-            const timeLeft = this.debounceTime - (new Date().getTime() - this.lastTime.getTime());
-            if (timeLeft > 0) {
-                if (this.debounceTimer) window.clearTimeout(this.debounceTimer);
-                this.debounceTimer = window.setTimeout(() => {
-                    this.emit(event, ...args);
-                    this.debounceTimer = undefined;
-                }, timeLeft);
-                return;
-            }
-        }
-
-        // Otherwise, emit the event immediately
-        this.lastTime = new Date();
-        const callbacks = this.listeners.get(event);
-        if (callbacks) {
-            for (const callback of callbacks) {
-                callback(...args);
-            }
-        }
+        this.debounceTimer.execute(event, ...args);
     }
 
     /**
