@@ -29,6 +29,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable, Subscription } from 'rxjs';
 import { SelectionModel } from '@angular/cdk/collections';
 import { fastClone } from './utils/table.utils';
+import { DebounceTimer } from '../../../utils/debounce';
 
 /**
  * Configuration for table pagination
@@ -251,15 +252,39 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         return result;
     }
 
+    /** Timer for debouncing data source updates */
+    private debounceTimer: DebounceTimer<(data: any[], shouldGroup: boolean) => void>;
+
+    /** Delay in milliseconds for debouncing data source updates */
+    @Input() set debounceDelay(delay: number) {
+        this._debounceDelay = delay;
+        this.debounceTimer.setDelay(delay);
+    }
+    get debounceDelay(): number {
+        return this._debounceDelay;
+    }
+    private _debounceDelay = 1000; // Default 1000ms delay
+
+    constructor() {
+        // Initialize debounce timer with default delay
+        this.debounceTimer = new DebounceTimer(
+            (data: any[], shouldGroup: boolean = true) => {
+                this.dataSource.data = this.processData(data, shouldGroup);
+            },
+            this._debounceDelay
+        );
+    }
+
     private processData(data: any[], shouldGroup: boolean = true): any[] {
         // First apply any active filters
         let filteredData;
         if (this.filters.size > 0) {
-            const filterString = JSON.stringify(Array.from(this.filters.entries()));
+            //const filterString = JSON.stringify(Array.from(this.filters.entries()));
             filteredData = [];
             for (const row of data) {
                 if (this.isGroupRow(row)) continue;
-                if (this.dataSource.filterPredicate(row, filterString)) {
+                // NOTE: We don't use filterString here because our filterPredicate is already set up to use the filters map
+                if (this.dataSource.filterPredicate(row, '')) {
                     filteredData.push(row);
                 }
             }
@@ -339,7 +364,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
      * @param data - The data to update with
      */
     private updateDataSource(data: any[], shouldGroup: boolean = true): void {
-        this.dataSource.data = this.processData(data, shouldGroup);;
+        this.debounceTimer.execute(data, shouldGroup);
     }
 
     ngAfterViewInit() {
@@ -430,6 +455,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
 
     ngOnDestroy() {
         this.dataSubscription?.unsubscribe();
+        this.debounceTimer.cancel();
     }
 
     /**
@@ -609,6 +635,8 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         if (!this.isPaused) {
             // When unpausing, update with the latest cached data
             this.dataSource.data = this.cachedData;
+            // Cancel the debounce timer
+            this.debounceTimer.cancel();
         }
     }
 
@@ -620,6 +648,9 @@ export class TableComponent implements AfterViewInit, OnDestroy {
 
         try {
             this.loading = true;
+
+            // Cancel the debounce timer
+            this.debounceTimer.cancel();
 
             if (this.refreshFn) {
                 // Use custom refresh function
