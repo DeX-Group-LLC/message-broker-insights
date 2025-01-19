@@ -137,7 +137,10 @@ export class FlowDiagramComponent implements OnChanges {
             messages.push({
                 from: 'message-broker',
                 to: this.messageFlow.request.serviceId,
-                header: this.messageFlow.parentMessage.header,
+                header: {
+                    ...this.messageFlow.parentMessage.header,
+                    requestId: this.messageFlow.request.message.header.parentRequestId
+                },
                 isBrokerInput: false
             });
             messageIndex++;
@@ -158,7 +161,10 @@ export class FlowDiagramComponent implements OnChanges {
             messages.push({
                 from: 'message-broker',
                 to: this.messageFlow.response!.target!.serviceId!,
-                header: this.messageFlow.request.message.header,
+                header: {
+                    ...this.messageFlow.request.message.header,
+                    requestId: this.messageFlow.response?.message?.header?.requestId
+                },
                 isBrokerInput: false
             });
             messageIndex++;
@@ -193,7 +199,7 @@ export class FlowDiagramComponent implements OnChanges {
                 messages.push({
                     from: this.messageFlow.response.target!.serviceId!,
                     to: 'message-broker',
-                    header: this.messageFlow.request.message.header,
+                    header: this.messageFlow.response.message.header,
                     status,
                     isBrokerInput: true
                 });
@@ -203,7 +209,10 @@ export class FlowDiagramComponent implements OnChanges {
             messages.push({
                 from: 'message-broker',
                 to: this.messageFlow.request.serviceId,
-                header: this.messageFlow.request.message.header,
+                header: {
+                    ...this.messageFlow.response!.message.header,
+                    requestId: this.messageFlow.request.message.header.requestId
+                },
                 timestamp: this.messageFlow.response?.sentAt,
                 status,
                 isBrokerInput: false

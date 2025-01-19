@@ -9,6 +9,8 @@ export interface RelatedMessage {
     serviceId: string;
     /** The message header */
     header: ClientHeader;
+    /** The maskedId of the message */
+    maskedId?: string;
     /** Target service IDs */
     //targetServiceIds?: string[];
 }
@@ -64,6 +66,9 @@ export class TrackerService implements OnDestroy {
     /** Map of requestId to message flow */
     private flowMap = new Map<string, MessageFlow>();
 
+    /** Map of maskedId to requestId */
+    private flowMapMasked = new Map<string, string>();
+
     /** Queue of MessageFlows for maintaining size limit */
     private flowQueue: MessageFlow[] = [];
 
@@ -111,74 +116,115 @@ export class TrackerService implements OnDestroy {
         const requestId = message.message.header.requestId;
         if (!requestId) return;
 
-        let flow = this.flowMap.get(requestId);
-        if (!flow) {
-            if ('from' in message) {
-                const clientMessage = message as ClientMessageAudit;
-                flow = {
-                    request: {
-                        receivedAt: new Date(clientMessage.timestamp),
-                        serviceId: clientMessage.from,
-                        timeout: clientMessage.timeout,
-                        message: clientMessage.message
-                    }
-                };
-                this.flowMap.set(requestId, flow);
-                this.flowQueue.push(flow);
-
-                // Check if too many flows
-                if (this.flowQueue.length > this.MAX_REQUESTS) {
-                    const oldestFlow = this.flowQueue.shift()!;
-                    this.flowMap.delete(oldestFlow.request.message.header.requestId!);
-                }
-
-                // Check if the flow has a parent
-                if (clientMessage.message.header.parentRequestId) {
-                    const parentFlow = this.flowMap.get(clientMessage.message.header.parentRequestId);
-                    if (parentFlow) {
-                        parentFlow.childMessages ??= [];
-                        parentFlow.childMessages.push({
-                            serviceId: flow.request.serviceId,
-                            header: flow.request.message.header
-                        });
-                    }
-                }
-
-                // Children usually come after the parent, so no need to handle them here
-
-                // Emit the flow
-                this.data$.emit(flow);
-                this.flowsSubject.next(this.flows);
-            }
-        } else {
-            // Update the flow
-            // If from, and not a response, update the request
-            // If to, and not a response, update the response
-            if ('from' in message) {
-                const clientMessage = message as ClientMessageAudit;
-                if (clientMessage.message.header.action !== ActionType.RESPONSE) {
-                    // Initial request
-                    flow.request.receivedAt = new Date(clientMessage.timestamp);
-                    flow.request.serviceId = clientMessage.from;
-                    flow.request.timeout = clientMessage.timeout;
-                    flow.request.message = clientMessage.message;
-                } else {
-                    // Response
-                    flow.response ??= { fromBroker: false };
-                    flow.response.target = {
-                        serviceId: clientMessage.from,
-                        priority: 0
+        // How to determine what type of message it is?
+        // If it has a from, it is a client message
+        // If it has a to, it is a broker message
+        // If it isn't a RESPONSE and it has a from, it is the initial request, use it to create a new flow
+        // If it is a RESPONSE and it has a from, it is the initial response, use it to update the flow's response for target and message. Lookup the maskedId to find the original requestId.
+        // If it is a RESPONSE and it has a to, it is the final response, use it to update the flow's response for just the message. If no response yet, then mark `fromBroker` to true.
+        // All other cases are ignored.
+        let flow: MessageFlow | undefined;
+        if ('from' in message) {
+            const clientMessage = message as ClientMessageAudit;
+            if (clientMessage.message.header.action !== ActionType.RESPONSE) {
+                // Initial request
+                flow = this.flowMap.get(requestId);
+                if (!flow) {
+                    flow = {
+                        request: {
+                            receivedAt: new Date(clientMessage.timestamp),
+                            serviceId: clientMessage.from,
+                            timeout: clientMessage.timeout,
+                            message: clientMessage.message
+                        }
                     };
-                    flow.response.message = clientMessage.message;
+                    this.flowMap.set(requestId, flow);
+                    this.flowQueue.push(flow);
+
+                    // Check if too many flows
+                    if (this.flowQueue.length > this.MAX_REQUESTS) {
+                        const oldestFlow = this.flowQueue.shift()!;
+                        this.flowMap.delete(oldestFlow.request.message.header.requestId!);
+                        this.flowMapMasked.delete(oldestFlow.request.message.header.requestId!);
+                    }
+
+                    // Check if the flow has a parent
+                    const parentRequestId = clientMessage.message.header.parentRequestId;
+                    if (parentRequestId) {
+                        /*console.log('parentRequestId', parentRequestId);
+                        const parentFlow = this.flowMap.get(parentRequestId);
+                        if (parentFlow) {
+                            parentFlow.childMessages ??= [];
+                            parentFlow.childMessages.push({
+                                serviceId: flow.request.serviceId,
+                                header: flow.request.message.header
+                            });
+                        }*/
+
+                        // Add to childMessages if requestId matches a maskedId
+                        const maskedFlow = this.flowMapMasked.get(parentRequestId);
+                        if (maskedFlow) {
+                            const parentFlow = this.flowMap.get(maskedFlow);
+                            if (parentFlow) {
+                                parentFlow.childMessages ??= [];
+                                parentFlow.childMessages.push({
+                                    serviceId: clientMessage.from,
+                                    header: flow.request.message.header
+                                });
+
+                                // Add parent to this flow
+                                flow.parentMessage = {
+                                    serviceId: parentFlow.request.serviceId,
+                                    header: parentFlow.request.message.header
+                                };
+                            }
+                        }
+                    }
                 }
             } else {
-                const brokerMessage = message as BrokerMessageAudit;
-                flow.response ??= { fromBroker: true };
-                flow.response.sentAt = new Date(brokerMessage.timestamp);
-                flow.response.message = brokerMessage.message;
+                // Lookup the original requestId from the maskedId
+                const originalRequestId = this.flowMapMasked.get(requestId);
+                if (!originalRequestId) return; // TODO: Should we handle this case?
+                // Initial request
+                flow = this.flowMap.get(originalRequestId);
+                if (!flow) return; // TODO: Should we handle this case?
+                // Response
+                flow.response = {
+                    sentAt: new Date(clientMessage.timestamp),
+                    fromBroker: false,
+                    target: {
+                        serviceId: clientMessage.from,
+                        priority: 0
+                    },
+                    message: clientMessage.message
+                };
             }
+        } else {
+            // Broker message
+            const brokerMessage = message as BrokerMessageAudit;
 
-            // Emit the flow
+            if (brokerMessage.message.header.action !== ActionType.RESPONSE) {
+                if (brokerMessage.maskedId) {
+                    // Add the maskedId to the flowMapMasked
+                    this.flowMapMasked.set(requestId, brokerMessage.maskedId);
+                }
+            } else {
+                // Lookup the original requestId from the maskedId
+                const originalRequestId = this.flowMapMasked.get(requestId) ?? requestId;
+                //if (!originalRequestId) return; // TODO: Should we handle this case?
+                // Initial request
+                flow = this.flowMap.get(originalRequestId);
+                if (flow) {
+                    // Flow exists, update the response
+                    if (!flow.response) flow.response = { fromBroker: true, target: { serviceId: 'message-broker', priority: Number.MAX_VALUE }, message: brokerMessage.message };
+                    flow.response.sentAt = new Date(brokerMessage.timestamp);
+                    //flow.response.message = brokerMessage.message;
+                }
+            }
+        }
+
+        // Emit the flow
+        if (flow) {
             this.data$.emit(flow);
             this.flowsSubject.next(this.flows);
         }
@@ -210,6 +256,7 @@ export class TrackerService implements OnDestroy {
         this.websocketService.connected$.off(this._initialize);
         this.websocketService.unsubscribe(ActionType.PUBLISH, 'system.message');
         this.flowMap.clear();
+        this.flowMapMasked.clear();
         this.flowQueue = [];
     }
 }

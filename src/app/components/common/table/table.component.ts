@@ -239,7 +239,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
      */
     get data(): any[] {
         // Start with cached data (unfiltered, unsorted)
-        let result = this.processData(fastClone(this.cachedData), false);
+        let result = this.processData(/*fastClone(this.cachedData)*/this.cachedData, false);
         // Sort:
         if (this.sort?.active && this.sort.direction !== '') {
             result.sort((a, b) => {

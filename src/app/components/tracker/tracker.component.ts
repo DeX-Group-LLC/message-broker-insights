@@ -1,19 +1,19 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
-import { MatTabsModule } from '@angular/material/tabs';
+import { MatTabGroup, MatTabsModule } from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TableComponent, TableColumn } from '../common/table/table.component';
 import { FlowDiagramComponent } from './flow-diagram/flow-diagram.component';
-import { BehaviorSubject } from 'rxjs';
 import { Message, WebsocketService } from '../../services/websocket.service';
 //import { MOCK_DATA } from './mock';
 import { ExportComponent } from '../common/export/export.component';
 import { MatButtonModule } from '@angular/material/button';
 import { MessageFlow, RelatedMessage, TrackerService } from '../../services/tracker.service';
 import { ServicesService } from '../../services/services.service';
+import { LayoutComponent } from '../layout/layout.component';
 
 /*interface RelatedMessage {
     serviceId: string;
@@ -64,21 +64,64 @@ export class TrackerComponent implements OnInit {
     selectedFlow: MessageFlow | null = null;
 
     columns: TableColumn[] = [
-        { name: 'request.message.header.requestId', label: 'Request ID', sortable: true, filterable: true },
-        { name: 'request.serviceId', label: 'Originator', sortable: true, filterable: true },
-        { name: 'response.target.serviceId', label: 'Responder', sortable: true, filterable: true },
-        { name: 'request.message.header.topic', label: 'Topic', sortable: true, filterable: true },
-        { name: 'response.message.payload.error.code', label: 'Status', sortable: true, filterable: true },
-        { name: 'response.sentAt', label: 'Completed', sortable: true, filterable: true },
-        { name: 'meta', label: 'Meta', sortable: false, filterable: (data: any, filter: string) => {
-            return this.getMetaSearchContent(data).includes(filter);
+        { name: 'request.message.header.requestId', label: 'Request ID', sortable: true, filterable: (data: MessageFlow, filter: string) => {
+            filter = filter.toLowerCase();
+            return data.request.message.header.requestId?.toLowerCase().includes(filter) || false;
+        } },
+        { name: 'request.serviceId', label: 'Originator', sortable: true, filterable: (data: MessageFlow, filter: string) => {
+            filter = filter.toLowerCase();
+            return this.getServiceName(data.request.serviceId).toLowerCase().includes(filter) || data.request.serviceId.toLowerCase().includes(filter);
+        } },
+        { name: 'response.target.serviceId', label: 'Responder', sortable: true, filterable: (data: MessageFlow, filter: string) => {
+            if (!data.response?.target?.serviceId) return 'message-broker'.includes(filter);
+            filter = filter.toLowerCase();
+            return this.getServiceName(data.response.target.serviceId).toLowerCase().includes(filter) || data.response.target.serviceId.toLowerCase().includes(filter);
+        } },
+        { name: 'request.message.header.topic', label: 'Topic', sortable: true, filterable: (data: MessageFlow, filter: string) => {
+            filter = filter.toLowerCase();
+            return data.request.message.header.topic.toLowerCase().includes(filter);
+        } },
+        { name: 'response.message.payload.error.code', label: 'Status', sortable: true, filterable: (data: MessageFlow, filter: string) => {
+            if (!data.response?.message?.payload?.error?.code) {
+                if (data.response) {
+                    return 'success'.includes(filter);
+                }
+                return 'pending'.includes(filter);
+            }
+            filter = filter.toLowerCase();
+            return data.response.message.payload.error.code.toLowerCase().includes(filter);
+        } },
+        { name: 'request.receivedAt', label: 'Started At', sortable: true, filterable: (data: MessageFlow, filter: string) => {
+            filter = filter.toLowerCase();
+            return data.request.receivedAt?.toLocaleString().toLowerCase().includes(filter) || false;
+        } },
+        { name: 'meta', label: 'Meta', sortable: false, filterable: (data: MessageFlow, filter: string) => {
+            filter = filter.toLowerCase();
+            return this.getMetaSearchContent(data).toLowerCase().includes(filter);
         } }
     ];
 
-    constructor(private websocketService: WebsocketService, private servicesService: ServicesService, public trackerService: TrackerService) {}
+    @ViewChild('tabGroup') tabGroup!: MatTabGroup;
+    @ViewChild(TableComponent) table!: TableComponent;
+    @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
+
+    constructor(
+        private websocketService: WebsocketService,
+        private servicesService: ServicesService,
+        public trackerService: TrackerService,
+        private layout: LayoutComponent
+    ) {}
 
     ngOnInit(): void {
         this.trackerService.data$.on(this._handleDataChange);
+    }
+
+    ngAfterViewInit() {
+        setTimeout(() => {
+            if (this.toolbarContent) {
+                this.layout.activeToolbarContent = this.toolbarContent;
+            }
+        });
     }
 
     ngOnDestroy(): void {
@@ -95,11 +138,18 @@ export class TrackerComponent implements OnInit {
 
     onSelectionChange(selected: MessageFlow[]): void {
         this.selectedFlow = selected[0];
+        if (!this.selectedFlow?.response) {
+            this.tabGroup.selectedIndex = 0;
+        }
     }
 
     getStatusColor(messageFlow: MessageFlow): string {
         switch (messageFlow.response?.message?.payload?.['error']?.code) {
-            case undefined: return '#4caf50'; // success
+            case undefined:
+                if (messageFlow.response) {
+                    return '#4caf50'; // success
+                }
+                return '#808080'; // pending
             case 'NO_RESPONDERS':
             case 'SERVICE_UNAVAILABLE':
             case 'REQUEST_TIMEOUT': return '#ff9800';

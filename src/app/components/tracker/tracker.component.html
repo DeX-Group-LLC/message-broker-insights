@@ -1,9 +1,20 @@
+<ng-template #toolbarContent>
+    <app-export
+        [data]="table.data"
+        filename="topics-export"
+        tooltip="Export Topics"
+        [customizable]="true"
+        [disabled]="!table.data.length">
+    </app-export>
+</ng-template>
+
 <mat-card>
     <mat-card-content>
         <app-table
+            #table
             [data$]="trackerService.flows$"
             [columns]="columns"
-            [defaultSort]="{ active: 'response.sentAt', direction: 'desc' }"
+            [defaultSort]="{ active: 'request.receivedAt', direction: 'desc' }"
             [paginationConfig]="{
                 pageSizeOptions: [10, 25, 50, 100],
                 defaultPageSize: 25,
@@ -30,7 +41,7 @@
 
                     <ng-container *ngSwitchCase="'response.message.payload.error.code'">
                         <span class="pill-item" [style.color]="getStatusColor(element)">
-                            {{element?.response?.message?.payload?.['error']?.code ?? 'SUCCESS'}}
+                            {{element?.response?.message?.payload?.['error']?.code ?? (element.response ? 'SUCCESS' : 'PENDING')}}
                         </span>
                     </ng-container>
 
@@ -74,7 +85,7 @@
         </div>
     </mat-card-header>
     <mat-card-content>
-        <mat-tab-group animationDuration="150">
+        <mat-tab-group #tabGroup animationDuration="150">
             <mat-tab label="Message Details">
                 <div class="tab-content">
                     <!-- Overview Section -->
@@ -84,16 +95,16 @@
                             <div class="pill-item">
                                 <span class="label">Status</span>
                                 <span class="value" [style.color]="getStatusColor(selectedFlow)">
-                                    {{selectedFlow.response?.message?.payload?.['error']?.code ?? 'SUCCESS'}}
+                                    {{selectedFlow.response?.message?.payload?.['error']?.code ?? (selectedFlow.response ? 'SUCCESS' : 'PENDING')}}
                                 </span>
                             </div>
                             <div class="pill-item" matTooltip="When the message broker received the request from the originator.">
                                 <span class="label">Started</span>
-                                <span class="value">{{selectedFlow.request.receivedAt | date:'medium'}}</span>
+                                <span class="value">{{getFormattedDate(selectedFlow.request.receivedAt)}}</span>
                             </div>
                             <div class="pill-item" matTooltip="When the message broker sent the response to the originator.">
                                 <span class="label">Completed</span>
-                                <span class="value">{{selectedFlow.response?.sentAt != null ? (selectedFlow.response!.sentAt | date:'medium') : 'N/A'}}</span>
+                                <span class="value">{{selectedFlow.response?.sentAt != null ? getFormattedDate(selectedFlow.response!.sentAt!) : 'N/A'}}</span>
                             </div>
                             <div class="pill-item" matTooltip="Total time from broker receiving the request to getting the response.">
                                 <span class="label">Total Duration</span>
@@ -243,7 +254,7 @@
                         <h3>Message Chain</h3>
                         <div class="pill-section">
                             @if (selectedFlow.parentMessage) {
-                                <div class="pill-item message-pill" matTooltip="The message that triggered the current message's flow.">
+                                <div class="pill-item message-pill" [matTooltip]="'The message that triggered the current message\'s flow.\nClick to view the flow diagram.'">
                                     <span class="label">Parent Request</span>
                                     <span class="value">{{getServiceName(selectedFlow.parentMessage.serviceId)}}</span>
                                     <span class="property">Action: {{selectedFlow.parentMessage.header.action}}</span>
@@ -261,7 +272,7 @@
                                 </div>
                             }
                             @for (child of selectedFlow.childMessages; track child) {
-                                <div class="pill-item message-pill" matTooltip="Messages that were triggered by the current message's flow.">
+                                <div class="pill-item message-pill" [matTooltip]="'Messages that were triggered by the current message\'s flow.\nClick to view the flow diagram.'">
                                     <span class="label">Child Request</span>
                                     <span class="value">{{getServiceName(child.serviceId)}}</span>
                                     <span class="property">Action: {{child.header.action}}</span>
@@ -283,12 +294,14 @@
                 </div>
             </mat-tab>
 
-            <mat-tab label="Flow Diagram">
-                <div class="tab-content">
-                    <div class="section">
-                        <app-flow-diagram [messageFlow]="selectedFlow"></app-flow-diagram>
+            <mat-tab label="Flow Diagram" [disabled]="false && !selectedFlow.response">
+                @if (true || selectedFlow.response) {
+                    <div class="tab-content">
+                        <div class="section">
+                            <app-flow-diagram [messageFlow]="selectedFlow"></app-flow-diagram>
+                        </div>
                     </div>
-                </div>
+                }
             </mat-tab>
         </mat-tab-group>
     </mat-card-content>

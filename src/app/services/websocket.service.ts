@@ -168,6 +168,7 @@ export class WebsocketService {
     private readonly WS_URL_KEY = 'websocket_url';
     /** Default WebSocket URL based on current location */
     private readonly DEFAULT_URL = (() => {
+        // Otherwise, use the current location
         const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
         // Force WSS only for HTTPS on non-localhost domains
         const forceWSS = location.protocol.startsWith('https:') && !isLocalhost;
