@@ -28,15 +28,19 @@
             <ng-template #cellTemplate let-element let-column="column">
                 <ng-container [ngSwitch]="column.name">
                     <ng-container *ngSwitchCase="'request.message.header.requestId'">
-                        <span>{{element.request.message.header.requestId}}</span>
+                        {{element.request.message.header.requestId}}
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'request.serviceId'">
-                        <span>{{getServiceName(element.request.serviceId)}}</span>
+                        {{getServiceName(element.request.serviceId)}}
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'response.target.serviceId'">
-                        <span [class.warning]="element.response?.fromBroker">{{!element.response?.fromBroker ? getServiceName(element.response?.target?.serviceId) : 'message-broker'}}</span>
+                        @if (element.response?.fromBroker) {
+                            <span class="warning">message-broker</span>
+                        } @else {
+                            {{getServiceName(element.response?.target?.serviceId)}}
+                        }
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'response.message.payload.error.code'">
@@ -46,11 +50,13 @@
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'request.receivedAt'">
-                        <span *ngIf="element?.request?.receivedAt">{{getFormattedDate(element.request.receivedAt)}}</span>
+                        {{getFormattedDate(element.request.receivedAt)}}
+                        <span class="muted italic">({{getElapsedTime(element.request.receivedAt)}})</span>
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'response.sentAt'">
-                        <span *ngIf="element?.response?.sentAt">{{getFormattedDate(element.response.sentAt)}}</span>
+                        {{getFormattedDate(element.response.sentAt)}}
+                        <span class="muted italic">({{getElapsedTime(element.response.sentAt)}})</span>
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'meta'">

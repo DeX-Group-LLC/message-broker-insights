@@ -14,6 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MessageFlow, RelatedMessage, TrackerService } from '../../services/tracker.service';
 import { ServicesService } from '../../services/services.service';
 import { LayoutComponent } from '../layout/layout.component';
+import { TimeFormatService } from '../../services/time-format.service';
 
 /*interface RelatedMessage {
     serviceId: string;
@@ -109,7 +110,8 @@ export class TrackerComponent implements OnInit {
         private websocketService: WebsocketService,
         private servicesService: ServicesService,
         public trackerService: TrackerService,
-        private layout: LayoutComponent
+        private layout: LayoutComponent,
+        private timeFormatService: TimeFormatService
     ) {}
 
     ngOnInit(): void {
@@ -246,6 +248,15 @@ export class TrackerComponent implements OnInit {
      */
     getFormattedDate(timestamp: Date): string {
         return timestamp.toLocaleString();
+    }
+
+    /**
+     * Gets elapsed time string
+     * @param timestamp - Date to get elapsed time from
+     * @returns Elapsed time string
+     */
+    getElapsedTime(timestamp: Date): string {
+        return this.timeFormatService.getElapsedTime(timestamp);
     }
 
     /**
