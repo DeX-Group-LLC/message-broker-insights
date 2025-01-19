@@ -45,20 +45,6 @@
         }
     }
 
-    &.responder {
-        .service-box {
-            stroke: var(--mat-sys-secondary);
-            fill: color-mix(in srgb, var(--mat-sys-secondary) 15%, var(--mat-sys-surface-container-high));
-        }
-    }
-
-    &.listener {
-        .service-box {
-            stroke: var(--mat-sys-tertiary);
-            fill: color-mix(in srgb, var(--mat-sys-tertiary) 15%, var(--mat-sys-surface-container-high));
-        }
-    }
-
     &.broker {
         .service-box {
             stroke: var(--mat-sys-outline);
@@ -67,6 +53,20 @@
             stroke-dasharray: 2 2;
         }
     }
+
+    &.responder {
+        .service-box {
+            stroke: var(--mat-sys-secondary);
+            fill: color-mix(in srgb, var(--mat-sys-secondary) 15%, var(--mat-sys-surface-container-high));
+        }
+    }
+
+    /* &.listener {
+        .service-box {
+            stroke: var(--mat-sys-tertiary);
+            fill: color-mix(in srgb, var(--mat-sys-tertiary) 15%, var(--mat-sys-surface-container-high));
+        }
+    }*/
 }
 
 .lifeline {
@@ -75,7 +75,7 @@
     stroke-dasharray: 4 4;
 }
 
-::ng-deep .flow-message-tooltip {
+::ng-deep .fit-tooltip {
     white-space: pre-wrap;
 
     > div {

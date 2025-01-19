@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { WebsocketService } from './websocket.service';
+import { BrokerHeader, Message, MessagePayload, MessagePayloadSuccess, WebsocketService } from './websocket.service';
 
 /** Enum defining available log levels in order of severity */
 export enum LogLevel {
@@ -136,24 +136,24 @@ export class LogService implements OnDestroy {
      *
      * @param message - Log message from the server
      */
-    private addLog(message: any): void {
-        if (!this.meetsMinLogLevel(message.level)) {
+    private addLog(_: BrokerHeader, payload: any): void {
+        if (!this.meetsMinLogLevel(payload.level)) {
             return;
         }
         const log: LogEntry = {
             id: this.logsSubject.value.length,
             timestamp: new Date(),
-            level: message.level,
-            module: message.module,
-            message: message.message
+            level: payload.level,
+            module: payload.module,
+            message: payload.message
         };
 
         const baseFields = new Set(Object.keys(log));
         // Add all other fields as meta
-        for (const key in message) {
+        for (const key in payload) {
             if (!baseFields.has(key)) {
                 log.meta ??= {};
-                log.meta[key] = message[key];
+                log.meta[key] = payload[key];
             }
         }
 
@@ -189,7 +189,7 @@ export class LogService implements OnDestroy {
      *
      * @returns Promise that resolves when the refresh is complete
      */
-    public async refresh(): Promise<void> {
-        return this.setupLogSubscription();
+    public async refresh(): Promise<Message<BrokerHeader, MessagePayloadSuccess>> {
+        return await this.setupLogSubscription();
     }
 }

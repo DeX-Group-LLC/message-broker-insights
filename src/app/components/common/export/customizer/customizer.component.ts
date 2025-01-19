@@ -10,8 +10,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ExportData, FieldSelection, SerializationOptions } from '../models/export.model';
-import { exportToCsv, exportToJson, toCsv, toJson } from '../utils/export.utils';
+import { toCsv, toJson } from '../utils/export.utils';
 import { initializeFieldSelection } from '../utils/field-analysis.utils';
+import { MatCardModule, MatCardHeader, MatCardTitle } from '@angular/material/card';
 
 interface CustomizerData {
     format: 'csv' | 'json';
@@ -44,7 +45,10 @@ interface ExportOptions {
         MatIconModule,
         MatSelectModule,
         MatCheckboxModule,
-        MatSnackBarModule
+        MatSnackBarModule,
+        MatCardModule,
+        MatCardTitle,
+        MatCardHeader
     ],
     templateUrl: './customizer.component.html',
     styleUrls: ['./customizer.component.scss']

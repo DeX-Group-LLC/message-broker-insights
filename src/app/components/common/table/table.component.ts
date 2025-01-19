@@ -29,6 +29,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable, Subscription } from 'rxjs';
 import { SelectionModel } from '@angular/cdk/collections';
 import { fastClone } from './utils/table.utils';
+import { DebounceTimer } from '../../../utils/debounce';
 
 /**
  * Configuration for table pagination
@@ -239,25 +240,56 @@ export class TableComponent implements AfterViewInit, OnDestroy {
      */
     get data(): any[] {
         // Start with cached data (unfiltered, unsorted)
-        let result = this.processData(fastClone(this.cachedData), false);
+        let result = this.processData(/*fastClone(this.cachedData)*/this.cachedData, false);
         // Sort:
         if (this.sort?.active && this.sort.direction !== '') {
+            const direction = this.sort.direction === 'asc' ? 1 : -1;
+            const active = this.sort.active;
             result.sort((a, b) => {
-                return this.compareValues(a[this.sort.active], b[this.sort.active])
-                    * (this.sort.direction === 'asc' ? 1 : -1);
+                return this.compareValues(a[active], b[active]) * direction;
             });
         }
         return result;
     }
 
+    /** Timer for debouncing data source updates */
+    private debounceTimer: DebounceTimer<(data: any[], shouldGroup: boolean) => void>;
+
+    /** Delay in milliseconds for debouncing data source updates */
+    @Input() set debounceDelay(delay: number) {
+        this._debounceDelay = delay;
+        this.debounceTimer.setDelay(delay);
+    }
+    get debounceDelay(): number {
+        return this._debounceDelay;
+    }
+    private _debounceDelay = 1000; // Default 1000ms delay
+
+    constructor() {
+        // Initialize debounce timer with default delay
+        this.debounceTimer = new DebounceTimer(
+            (data: any[], shouldGroup: boolean = true) => {
+                this.dataSource.data = this.processData(data, shouldGroup);
+            },
+            this._debounceDelay
+        );
+    }
+
     private processData(data: any[], shouldGroup: boolean = true): any[] {
         // First apply any active filters
-        let filteredData = data;
+        let filteredData;
         if (this.filters.size > 0) {
-            const filterString = JSON.stringify(Array.from(this.filters.entries()));
-            filteredData = data.filter(row =>
-                !this.isGroupRow(row) && this.dataSource.filterPredicate(row, filterString)
-            );
+            //const filterString = JSON.stringify(Array.from(this.filters.entries()));
+            filteredData = [];
+            for (const row of data) {
+                if (this.isGroupRow(row)) continue;
+                // NOTE: We don't use filterString here because our filterPredicate is already set up to use the filters map
+                if (this.dataSource.filterPredicate(row, '')) {
+                    filteredData.push(row);
+                }
+            }
+        } else {
+            filteredData = data;
         }
 
         if (!this.getGroupName || !shouldGroup) {
@@ -270,15 +302,15 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         this.groupNames = [];
 
         // Group the filtered data
-        filteredData.forEach(row => {
-            if (this.isGroupRow(row)) return; // Skip group rows in input data
+        for (const row of filteredData) {
+            if (this.isGroupRow(row)) continue; // Skip group rows in input data
 
             const groupName = this.getGroupName!(row);
 
             if (!groupName) {
                 // No group, add directly to data
                 this.groupNames.push(row);
-                return;
+                continue;
             }
 
             if (!this.groupedData.has(groupName)) {
@@ -295,11 +327,11 @@ export class TableComponent implements AfterViewInit, OnDestroy {
                 }
             }
             this.groupedData.get(groupName)!.push(row);
-        });
+        }
 
         // Create the flattened data array with group rows
         const flattenedData: any[] = [];
-        this.groupNames.forEach(nameOrRow => {
+        for (const nameOrRow of this.groupNames) {
             if (typeof nameOrRow === 'string') {
                 // Add group row
                 const groupRows = this.groupedData.get(nameOrRow)!;
@@ -315,7 +347,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
                 // Add ungrouped row
                 flattenedData.push(nameOrRow);
             }
-        });
+        }
 
         // Clean up any old group rows
         for (const [groupName] of this.groupRows) {
@@ -332,7 +364,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
      * @param data - The data to update with
      */
     private updateDataSource(data: any[], shouldGroup: boolean = true): void {
-        this.dataSource.data = this.processData(data, shouldGroup);;
+        this.debounceTimer.execute(data, shouldGroup);
     }
 
     ngAfterViewInit() {
@@ -370,7 +402,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
 
                     // 3. For non-group rows within same group, sort by column
                     if (!aIsGroup) {
-                        return this.compareValues(a[active], b[active]) * (direction === 'asc' ? 1 : -1);
+                        return this.compareValues(this.getNestedValue(a, active), this.getNestedValue(b, active)) * (direction === 'asc' ? 1 : -1);
                     }
 
                     // Group rows with same name maintain their order
@@ -378,7 +410,7 @@ export class TableComponent implements AfterViewInit, OnDestroy {
                 }
 
                 // If no grouping, just sort by the column
-                return this.compareValues(a[active], b[active]) * (direction === 'asc' ? 1 : -1);
+                return this.compareValues(this.getNestedValue(a, active), this.getNestedValue(b, active)) * (direction === 'asc' ? 1 : -1);
             });
         };
 
@@ -399,34 +431,31 @@ export class TableComponent implements AfterViewInit, OnDestroy {
     }
 
     /**
-     * Compares two values for sorting
+     * Compares two values for sorting, assuming they are of the same type
      */
     private compareValues(a: any, b: any): number {
-        // Handle undefined/null values
-        if (a === undefined || a === null) return -1;
-        if (b === undefined || b === null) return 1;
-        if (a === undefined || a === null || b === undefined || b === null) {
-            return 0;
+        // Fast path for equality
+        if (a === b) return 0;
+
+        // Handle undefined/null
+        if (a == null) return -1;
+        if (b == null) return 1;
+
+        // Fast type check on first value only since both will be same type
+        if (a.constructor === Date) {
+            return a < b ? -1 : 1;
+        }
+        if (typeof a === 'number') {
+            return a - b;
         }
 
-        // Handle dates
-        if (a instanceof Date && b instanceof Date) {
-            return a.getTime() - b.getTime();
-        }
-
-        // Handle numbers
-        if (typeof a === 'number' && typeof b === 'number') {
-            return a < b ? -1 : (a > b ? 1 : 0);
-        }
-
-        // Handle strings
-        const aStr = String(a).toLowerCase();
-        const bStr = String(b).toLowerCase();
-        return aStr < bStr ? -1 : (aStr > bStr ? 1 : 0);
+        // Default to case-insensitive string comparison
+        return a.toString().toLowerCase().localeCompare(b.toString().toLowerCase());
     }
 
     ngOnDestroy() {
         this.dataSubscription?.unsubscribe();
+        this.debounceTimer.cancel();
     }
 
     /**
@@ -520,8 +549,11 @@ export class TableComponent implements AfterViewInit, OnDestroy {
             } else {
                 if (!this.multiExpand) {
                     // When multiExpand is off, collapse all other expanded groups
-                    const expandedGroups = Array.from(this.expandedRows).filter(r => this.isGroupRow(r));
-                    expandedGroups.forEach(group => this.expandedRows.delete(group));
+                    for (const row of this.expandedRows) {
+                        if (this.isGroupRow(row)) {
+                            this.expandedRows.delete(row);
+                        }
+                    }
                 }
                 this.expandedRows.add(row);
             }
@@ -536,8 +568,11 @@ export class TableComponent implements AfterViewInit, OnDestroy {
             } else {
                 if (!this.multiExpand) {
                     // When multiExpand is off, collapse all other expanded rows
-                    const expandedNonGroups = Array.from(this.expandedRows).filter(r => !this.isGroupRow(r));
-                    expandedNonGroups.forEach(expandedRow => this.expandedRows.delete(expandedRow));
+                    for (const row of this.expandedRows) {
+                        if (!this.isGroupRow(row)) {
+                            this.expandedRows.delete(row);
+                        }
+                    }
                 }
                 this.expandedRows.add(row);
             }
@@ -600,6 +635,8 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         if (!this.isPaused) {
             // When unpausing, update with the latest cached data
             this.dataSource.data = this.cachedData;
+            // Cancel the debounce timer
+            this.debounceTimer.cancel();
         }
     }
 
@@ -611,6 +648,9 @@ export class TableComponent implements AfterViewInit, OnDestroy {
 
         try {
             this.loading = true;
+
+            // Cancel the debounce timer
+            this.debounceTimer.cancel();
 
             if (this.refreshFn) {
                 // Use custom refresh function
@@ -636,20 +676,31 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         const allRows: any[] = [];
 
         // Add rows from groups
-        this.groupedData.forEach(rows => {
-            allRows.push(...rows.filter(row => this.canSelect(row)));
-        });
+        for (const rows of this.groupedData.values()) {
+            for (const row of rows) {
+                if (this.canSelect(row)) {
+                    allRows.push(row);
+                }
+            }
+        }
 
         // Add ungrouped rows
-        this.dataSource.data
-            .filter(row => !this.isGroupRow(row) && this.canSelect(row))
-            .forEach(row => {
+        for (const row of this.dataSource.data) {
+            if (!this.isGroupRow(row) && this.canSelect(row)) {
                 if (!allRows.includes(row)) {
                     allRows.push(row);
                 }
-            });
+            }
+        }
 
-        return allRows.length > 0 && allRows.every(row => this.selection.isSelected(row));
+        // If there are no selectable rows, return false
+        if (allRows.length === 0) return false;
+
+        // Check if all selectable rows are selected
+        for (const row of allRows) {
+            if (!this.selection.isSelected(row)) return false;
+        }
+        return true;
     }
 
     /** Whether some but not all rows are selected */
@@ -660,20 +711,33 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         const allRows: any[] = [];
 
         // Add rows from groups
-        this.groupedData.forEach(rows => {
-            allRows.push(...rows.filter(row => this.canSelect(row)));
-        });
+        for (const rows of this.groupedData.values()) {
+            for (const row of rows) {
+                if (this.canSelect(row)) {
+                    allRows.push(row);
+                }
+            }
+        }
 
         // Add ungrouped rows
-        this.dataSource.data
-            .filter(row => !this.isGroupRow(row) && this.canSelect(row))
-            .forEach(row => {
+        for (const row of this.dataSource.data) {
+            if (!this.isGroupRow(row) && this.canSelect(row)) {
                 if (!allRows.includes(row)) {
                     allRows.push(row);
                 }
-            });
+            }
+        }
 
-        const selectedCount = allRows.filter(row => this.selection.isSelected(row)).length;
+        // If there are no selectable rows, return false
+        if (allRows.length === 0) return false;
+
+        // Check if some but not all rows are selected
+        let selectedCount = 0;
+        for (const row of allRows) {
+            if (this.selection.isSelected(row)) {
+                selectedCount++;
+            }
+        }
         return selectedCount > 0 && selectedCount < allRows.length;
     }
 
@@ -690,21 +754,27 @@ export class TableComponent implements AfterViewInit, OnDestroy {
             const allRows: any[] = [];
 
             // Add rows from groups
-            this.groupedData.forEach(rows => {
-                allRows.push(...rows.filter(row => this.canSelect(row)));
-            });
+            for (const rows of this.groupedData.values()) {
+                for (const row of rows) {
+                    if (this.canSelect(row)) {
+                        allRows.push(row);
+                    }
+                }
+            }
 
             // Add ungrouped rows
-            this.dataSource.data
-                .filter(row => !this.isGroupRow(row) && this.canSelect(row))
-                .forEach(row => {
+            for (const row of this.dataSource.data) {
+                if (!this.isGroupRow(row) && this.canSelect(row)) {
                     if (!allRows.includes(row)) {
                         allRows.push(row);
                     }
-                });
+                }
+            }
 
             // Select all rows
-            allRows.forEach(row => this.selection.select(row));
+            for (const row of allRows) {
+                this.selection.select(row);
+            }
         }
 
         this.selectionChange.emit(this.selection.selected);
@@ -774,14 +844,29 @@ export class TableComponent implements AfterViewInit, OnDestroy {
     isGroupSelected(groupRow: any): boolean {
         if (!this.isGroupRow(groupRow)) return false;
         const groupRows = this.getGroupRows(groupRow.name);
-        return groupRows.length > 0 && groupRows.every(row => this.selection.isSelected(row));
+        // If there are no rows in the group, it's not selected
+        if (groupRows.length === 0) return false;
+        // Check if all rows in the group are selected
+        for (const row of groupRows) {
+            if (!this.selection.isSelected(row)) return false;
+        }
+        // All rows in the group are selected
+        return true;
     }
 
     /** Whether some but not all rows in a group are selected */
     isGroupPartiallySelected(groupRow: any): boolean {
         if (!this.isGroupRow(groupRow)) return false;
         const groupRows = this.getGroupRows(groupRow.name);
-        const selectedCount = groupRows.filter(row => this.selection.isSelected(row)).length;
+        if (groupRows.length === 0) return false;
+        let selectedCount = 0;
+        // Count the number of selected rows in the group
+        for (const row of groupRows) {
+            if (this.selection.isSelected(row)) {
+                selectedCount++;
+            }
+        }
+        // If there are some but not all rows selected, return true
         return selectedCount > 0 && selectedCount < groupRows.length;
     }
 
@@ -794,10 +879,14 @@ export class TableComponent implements AfterViewInit, OnDestroy {
 
         if (allSelected) {
             // Deselect all rows in the group
-            groupRows.forEach(row => this.selection.deselect(row));
+            for (const row of groupRows) {
+                this.selection.deselect(row);
+            }
         } else {
             // Select all rows in the group
-            groupRows.forEach(row => this.selection.select(row));
+            for (const row of groupRows) {
+                this.selection.select(row);
+            }
         }
 
         this.selectionChange.emit(this.selection.selected);
@@ -805,48 +894,22 @@ export class TableComponent implements AfterViewInit, OnDestroy {
 
     /** Whether a column's filter menu is open */
     isFilterMenuOpen(columnName: string): boolean {
-        const trigger = this.filterMenuTriggers?.find((t, index) => this.columns[index].name === columnName);
+        let trigger: any;
+        for (let i = 0; i < this.columns.length; i++) {
+            if (this.columns[i].name === columnName) {
+                trigger = this.filterMenuTriggers?.get(i);
+                break;
+            }
+        }
         return trigger?.menuOpen || false;
     }
 
     private getNestedValue(obj: any, path: string): any {
         if (!obj) return null;
-        return path.split('.').reduce((current, key) => current?.[key], obj);
-    }
-
-    /** Applies sorting to the data */
-    private applySorting(data: any[]): any[] {
-        if (!this.sort?.active || !this.sort.direction) {
-            return data;
+        for (const key of path.split('.')) {
+            if (obj[key] === undefined) return null;
+            obj = obj[key];
         }
-
-        return data.slice().sort((a, b) => {
-            const isAsc = this.sort.direction === 'asc';
-            const column = this.columns.find(col => col.name === this.sort.active);
-            if (!column?.sortable) return 0;
-
-            const aValue = this.getNestedValue(a, this.sort.active);
-            const bValue = this.getNestedValue(b, this.sort.active);
-
-            return this.compareValues(aValue, bValue) * (isAsc ? 1 : -1);
-        });
-    }
-
-    /** Applies filtering to the data */
-    private applyFiltering(data: any[]): any[] {
-        const activeFilters = Array.from(this.filters.entries())
-            .filter(([_, value]) => value);
-
-        if (activeFilters.length === 0) {
-            return data;
-        }
-
-        return data.filter(row => {
-            return activeFilters.every(([column, filterValue]) => {
-                const value = this.getNestedValue(row, column);
-                if (value == null) return false;
-                return String(value).toLowerCase().includes(filterValue.toLowerCase());
-            });
-        });
+        return obj;
     }
 }

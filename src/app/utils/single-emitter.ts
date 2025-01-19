@@ -1,3 +1,5 @@
+import { DebounceTimer } from "./debounce";
+
 /**
  * Base class providing event emitter functionality.
  * Allows components to subscribe to and emit events.
@@ -5,6 +7,24 @@
 export class SingleEmitter<T extends (...args: any[]) => void> {
     /** Map storing event listeners for each event type */
     private listeners = new Set<T>();
+
+    /** Debounce timer for emitting events */
+    private debounceTimer: DebounceTimer<(...args: Parameters<T>) => void>;
+
+    /**
+     * Constructor for SingleEmitter.
+     * @param debounceTime - The debounce time in milliseconds. If set to -1, events are emitted immediately. If set to 0, events are emitted in the next tick.
+     */
+    constructor(debounceTime: number = -1) {
+        this.debounceTimer = new DebounceTimer(
+            (...args: Parameters<T>) => {
+                for (const callback of this.listeners) {
+                    callback(...args);
+                }
+            },
+            debounceTime
+        );
+    }
 
     /**
      * Adds a listener for the specified event.
@@ -45,9 +65,7 @@ export class SingleEmitter<T extends (...args: any[]) => void> {
      * @param args - Arguments to pass to event listeners
      */
     emit(...args: Parameters<T>): void {
-        for (const callback of this.listeners) {
-            callback(...args);
-        }
+        this.debounceTimer.execute(...args);
     }
 
     /**

@@ -96,7 +96,7 @@ mat-tab-group {
     min-width: fit-content;
     background-color: var(--mat-sys-surface-container-high);
     border: 1px solid var(--mat-sys-outline-variant);
-    transition: all 150ms ease;
+    //transition: all 150ms ease;
 
     // Status pill in table
     :host ::ng-deep app-table & {
@@ -128,7 +128,7 @@ mat-tab-group {
     }
 
     .property {
-        flex: 1;
+        flex: 0;
         padding: 0.25em 0.75em;
         border-radius: 1em;
         font-size: 0.75rem;
@@ -149,20 +149,20 @@ mat-tab-group {
 
     &.header-pill {
         background-color: var(--mat-sys-surface-container);
-        padding: 0.75em;
+        //padding: 0.75em;
 
-        .label {
+        /*.label {
             font-size: 0.75rem;
             margin-bottom: 0.25em;
         }
 
         .value {
             font-size: 0.875rem;
-        }
+        }*/
     }
 
     &.message-pill {
-        background-color: var(--mat-sys-surface-container);
+        //background-color: var(--mat-sys-surface-container);
         cursor: pointer;
 
         &:hover {
@@ -248,10 +248,6 @@ mat-tab-group {
     font-style: italic;
 }
 
-.detail-container {
-    margin-top: 16px;
-}
-
 :host ::ng-deep {
     .mat-mdc-tab-body-wrapper {
         flex: 1;
@@ -277,4 +273,13 @@ mat-tab-group {
     display: flex;
     flex-direction: column;
     padding: 16px;
+}
+
+::ng-deep .fit-tooltip {
+    white-space: pre-wrap;
+
+    > div {
+        text-align: left;
+        max-width: unset;
+    }
 }
