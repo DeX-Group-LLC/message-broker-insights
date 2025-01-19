@@ -148,7 +148,7 @@ export class TrackerComponent implements OnInit {
     getStatusColor(messageFlow: MessageFlow): string {
         switch (messageFlow.response?.message?.payload?.['error']?.code) {
             case undefined:
-                if (messageFlow.response) {
+                if (messageFlow.response || messageFlow.request.message.header.requestId == null) {
                     return '#4caf50'; // success
                 }
                 return '#808080'; // pending

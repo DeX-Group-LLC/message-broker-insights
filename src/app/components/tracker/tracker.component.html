@@ -45,7 +45,7 @@
 
                     <ng-container *ngSwitchCase="'response.message.payload.error.code'">
                         <span class="pill-item" [style.color]="getStatusColor(element)">
-                            {{element?.response?.message?.payload?.['error']?.code ?? (element.response ? 'SUCCESS' : 'PENDING')}}
+                            {{element?.response?.message?.payload?.['error']?.code ?? (element.response || element.request.message.header.requestId == null ? 'SUCCESS' : 'PENDING')}}
                         </span>
                     </ng-container>
 

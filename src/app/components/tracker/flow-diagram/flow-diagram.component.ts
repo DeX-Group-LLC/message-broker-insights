@@ -134,7 +134,7 @@ export class FlowDiagramComponent implements OnChanges {
             });
             messageIndex++;
             // Add the message broker to originator
-            messages.push({
+            const message = {
                 from: 'message-broker',
                 to: this.messageFlow.request.serviceId,
                 header: {
@@ -142,7 +142,9 @@ export class FlowDiagramComponent implements OnChanges {
                     requestId: this.messageFlow.request.message.header.parentRequestId
                 },
                 isBrokerInput: false
-            });
+            };
+            delete message.header.parentRequestId;
+            messages.push(message);
             messageIndex++;
         }
 
@@ -158,7 +160,7 @@ export class FlowDiagramComponent implements OnChanges {
 
         // Only add message to responder if not NO_RESPONDERS and no internal error
         if (!this.messageFlow.response?.fromBroker) {//!isNoResponders && !isInternalError) {
-            messages.push({
+            const message = {
                 from: 'message-broker',
                 to: this.messageFlow.response!.target!.serviceId!,
                 header: {
@@ -166,7 +168,9 @@ export class FlowDiagramComponent implements OnChanges {
                     requestId: this.messageFlow.response?.message?.header?.requestId
                 },
                 isBrokerInput: false
-            });
+            };
+            delete message.header.parentRequestId;
+            messages.push(message);
             messageIndex++;
 
             // Add messages to auditors after forwarding to responder
