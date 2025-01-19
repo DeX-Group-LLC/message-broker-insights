@@ -52,6 +52,11 @@ export class FlowDiagramComponent implements OnChanges {
         }
     }
 
+    updateFlow(messageFlow: MessageFlow): void {
+        this.messageFlow = messageFlow;
+        this.buildFlowData();
+    }
+
     private buildFlowData(): void {
         if (!this.messageFlow) {
             this.flowData = null;
@@ -66,8 +71,14 @@ export class FlowDiagramComponent implements OnChanges {
         const boxWidth = 100;
         const topPadding = 16;
         const horizontalPadding = 50;
-        const sideServicesX = serviceSpacing * 4;
+        let sideServicesX = serviceSpacing * 3;
         const leftServicesX = horizontalPadding;
+        const timeoutTargetId = this.messageFlow.response?.message?.payload?.error?.details?.targetServiceId;
+        const targetId = this.messageFlow.response?.target?.serviceId;
+        let addedRightWidth = false;
+        let addedResponderWidth = false;
+
+        delete (this.messageFlow as any).parentMessage;
 
         // Track all Y positions for each service
         const serviceMessageYPositions = new Map<string, number[]>();
@@ -98,14 +109,26 @@ export class FlowDiagramComponent implements OnChanges {
         const errorCode = this.messageFlow.response?.message?.payload?.['error']?.code;
         const isInternalError = errorCode === 'INTERNAL_ERROR';
         const isNoResponders = errorCode === 'NO_RESPONDERS';
-        if (this.messageFlow.response?.target?.serviceId && !isNoResponders) {
+        if (targetId && targetId !== 'message-broker' && !isNoResponders) {
             nodes.push({
-                id: this.messageFlow.response.target.serviceId,
-                label: this.messageFlow.response.target.serviceId,
+                id: targetId,
+                label: targetId,
                 type: 'responder',
                 x: initialX + serviceSpacing * 2,
                 y: topPadding
             });
+            sideServicesX += serviceSpacing;
+            addedResponderWidth = true;
+        } else if (timeoutTargetId && timeoutTargetId !== targetId) {
+            nodes.push({
+                id: timeoutTargetId,
+                label: timeoutTargetId,
+                type: 'responder',
+                x: initialX + serviceSpacing * 2,
+                y: topPadding
+            });
+            sideServicesX += serviceSpacing;
+            addedResponderWidth = true;
         }
         // Calculate base width without auditors
         let baseWidth = horizontalPadding * 2 + boxWidth * nodes.length + (serviceSpacing - boxWidth) * (nodes.length - 1);
@@ -117,10 +140,8 @@ export class FlowDiagramComponent implements OnChanges {
         // Add extra space for auditors if they exist
         if (this.messageFlow.auditors?.length) {
             baseWidth += boxWidth;
+            addedRightWidth = true;
         }
-
-        // Set final width
-        this.width = baseWidth;
 
         let messageIndex = 0;
 
@@ -159,7 +180,7 @@ export class FlowDiagramComponent implements OnChanges {
         messageIndex++;
 
         // Only add message to responder if not NO_RESPONDERS and no internal error
-        if (!this.messageFlow.response?.fromBroker) {//!isNoResponders && !isInternalError) {
+        if (this.messageFlow.response?.fromBroker === false) {//!isNoResponders && !isInternalError) {
             const message = {
                 from: 'message-broker',
                 to: this.messageFlow.response!.target!.serviceId!,
@@ -226,8 +247,18 @@ export class FlowDiagramComponent implements OnChanges {
 
         // Add related messages
         for (const msg of this.messageFlow.childMessages || []) {
+            // If targetId is set, we need to add the node to the left side of the diagram:
+            if (msg.serviceId !== targetId && msg.serviceId !== timeoutTargetId) {
+                const msgY = messageStartY + messageIndex * messageSpacing;
+
+                // Track Y position for this service
+                if (!serviceMessageYPositions.has(msg.serviceId)) {
+                    serviceMessageYPositions.set(msg.serviceId, []);
+                }
+                serviceMessageYPositions.get(msg.serviceId)?.push(msgY);
+            }
             messages.push({
-                from: this.messageFlow.response?.target?.serviceId || 'message-broker',
+                from: msg.serviceId,
                 to: 'message-broker',
                 header: msg.header,
                 isBrokerInput: true
@@ -266,6 +297,14 @@ export class FlowDiagramComponent implements OnChanges {
             });
         }
 
+        if (serviceMessageYPositions.size) {
+            if (!addedResponderWidth) {
+                baseWidth += serviceSpacing + boxWidth / 2;
+            } else if (!addedRightWidth) {
+                baseWidth += boxWidth;
+            }
+        }
+
         // Add side services for each message position
         for (const [serviceId, yPositions] of serviceMessageYPositions.entries()) {
             for (const y of yPositions) {
@@ -284,6 +323,9 @@ export class FlowDiagramComponent implements OnChanges {
         // Calculate dimensions including padding
         const maxY = Math.max(...nodes.map(n => n.y)) + messageSpacing;
         const diagramHeight = Math.max(messageSpacing, messageStartY + messages.length * messageSpacing + topPadding);
+
+        // Set final width and height
+        this.width = baseWidth;
         this.height = Math.max(diagramHeight, maxY);
     }
 

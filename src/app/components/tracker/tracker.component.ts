@@ -105,6 +105,7 @@ export class TrackerComponent implements OnInit {
     @ViewChild('tabGroup') tabGroup!: MatTabGroup;
     @ViewChild(TableComponent) table!: TableComponent;
     @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
+    @ViewChild('flowDiagram') flowDiagram?: FlowDiagramComponent;
 
     constructor(
         private websocketService: WebsocketService,
@@ -132,17 +133,18 @@ export class TrackerComponent implements OnInit {
 
     handleDataChange(data: MessageFlow): void {
         // If the selected flow is no longer in the data, clear the selection
-        if (this.selectedFlow && !this.trackerService.flows.includes(this.selectedFlow)) {
-            this.selectedFlow = null;
+        if (this.selectedFlow) {
+            if (!this.trackerService.flows.includes(this.selectedFlow)) {
+                this.selectedFlow = null;
+            } else {
+                this.flowDiagram?.updateFlow(this.selectedFlow);
+            }
         }
     }
     private _handleDataChange = this.handleDataChange.bind(this);
 
     onSelectionChange(selected: MessageFlow[]): void {
         this.selectedFlow = selected[0];
-        if (!this.selectedFlow?.response) {
-            this.tabGroup.selectedIndex = 0;
-        }
     }
 
     getStatusColor(messageFlow: MessageFlow): string {
