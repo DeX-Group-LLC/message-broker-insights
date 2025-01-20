@@ -12,15 +12,16 @@
                     <span *ngIf="isExpanded">Insights</span>
                 </mat-toolbar>
                 <mat-nav-list (click)="toggleNavbar()">
-                    <a mat-list-item [routerLink]="item.path" *ngFor="let item of navItems"
+                    <a mat-list-item [routerLink]="item.enabled ? item.path : null" [routerLinkActive]="['active']" *ngFor="let item of navItems"
                        (click)="$event.stopPropagation()"
-                       [matTooltip]="!isExpanded ? item.shortLabel : ''"
+                       [disabled]="!item.enabled"
+                       [matTooltip]="item.label"
                        matTooltipPosition="right">
-                        <mat-icon matListItemIcon>{{item.icon}}</mat-icon>
+                        <mat-icon matListItemIcon [class]="item.iconClass">{{item.icon}}</mat-icon>
                         <span matListItemTitle>{{item.shortLabel}}</span>
                     </a>
                 </mat-nav-list>
-                <mat-nav-list class="toggle-container">
+                <mat-nav-list class="toggle-container" (click)="toggleNavbar()">
                     <a mat-list-item
                        [matTooltip]="getConnectionTooltip((connectionDetails$ | async) || websocketService.details)"
                        matTooltipPosition="right"
@@ -37,31 +38,29 @@
                     </a>
                     <mat-menu #connectionMenu="matMenu" class="connection-menu">
                         <div class="connection-details">
-                            <div class="detail-row">
-                                <span class="label">Server:</span>
-                                <span class="value">{{ (connectionDetails$ | async)?.url }}</span>
+                            <div class="detail-col">
+                                <div class="label">Server:</div>
+                                <div class="label">Status:</div>
+                                <div class="label">Last Connected:</div>
+                                <div class="label">Latency:</div>
+                                <div class="label" *ngIf="(connectionDetails$ | async)?.reconnectAttempts">Reconnect Attempts:</div>
                             </div>
-                            <div class="detail-row">
-                                <span class="label">Status:</span>
-                                <span class="value">{{ getConnectionLabel((connectionState$ | async) || connectionState.DISCONNECTED) }}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Last Connected:</span>
-                                <span class="value">{{ formatDate((connectionDetails$ | async)?.lastConnected) }}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Latency:</span>
-                                <span class="value">{{ formatLatency((connectionDetails$ | async)?.latency) }}</span>
-                            </div>
-                            <div class="detail-row" *ngIf="(connectionDetails$ | async)?.reconnectAttempts">
-                                <span class="label">Reconnect Attempts:</span>
-                                <span class="value">{{ (connectionDetails$ | async)?.reconnectAttempts }}</span>
+                            <div class="detail-col">
+                                <div class="value">{{ (connectionDetails$ | async)?.url }}</div>
+                                <div class="value">{{ getConnectionLabel((connectionState$ | async) || connectionState.DISCONNECTED) }}</div>
+                                <div class="value">{{ formatDate((connectionDetails$ | async)?.lastConnected) }}</div>
+                                <div class="value">{{ formatLatency((connectionDetails$ | async)?.latency) }}</div>
+                                <div class="value" *ngIf="(connectionDetails$ | async)?.reconnectAttempts">{{ (connectionDetails$ | async)?.reconnectAttempts }}</div>
                             </div>
                         </div>
                         <mat-divider></mat-divider>
-                        <button mat-menu-item (click)="showConnectionEvents()">
+                        <button mat-menu-item (click)="showConnectionHistory()">
                             <mat-icon>history</mat-icon>
-                            <span>View Connection History</span>
+                            <span>View History</span>
+                        </button>
+                        <button mat-menu-item (click)="showConnectionSettings()">
+                            <mat-icon>settings</mat-icon>
+                            <span>Connection Settings</span>
                         </button>
                         <button mat-menu-item (click)="reconnect()" *ngIf="(connectionState$ | async) === connectionState.DISCONNECTED">
                             <mat-icon>refresh</mat-icon>
@@ -72,27 +71,27 @@
                        (click)="$event.stopPropagation()"
                        [matTooltip]="'Change theme'"
                        matTooltipPosition="right">
-                        <mat-icon matListItemIcon>{{ getThemeIcon((currentTheme$ | async) || 'system') }}</mat-icon>
-                        <span matListItemTitle>{{ getThemeLabel((currentTheme$ | async) || 'system') }}</span>
+                        <mat-icon matListItemIcon class="palette-icon">{{ getThemeIcon(themeService.theme || 'system') }}</mat-icon>
+                        <span matListItemTitle>{{ getThemeLabel(themeService.theme || 'system') }}</span>
                     </a>
                     <mat-menu #themeMenu="matMenu" class="theme-menu">
-                        <button mat-menu-item (click)="setTheme('light')" [class.active]="(currentTheme$ | async) === 'light'">
-                            <mat-icon>light_mode</mat-icon>
+                        <button mat-menu-item (click)="setTheme('light')" [class.active]="themeService.theme === 'light'">
+                            <mat-icon class="palette-icon">light_mode</mat-icon>
                             <span>Light</span>
                         </button>
-                        <button mat-menu-item (click)="setTheme('dark')" [class.active]="(currentTheme$ | async) === 'dark'">
-                            <mat-icon>dark_mode</mat-icon>
+                        <button mat-menu-item (click)="setTheme('dark')" [class.active]="themeService.theme === 'dark'">
+                            <mat-icon class="palette-icon">dark_mode</mat-icon>
                             <span>Dark</span>
                         </button>
-                        <button mat-menu-item (click)="setTheme('system')" [class.active]="(currentTheme$ | async) === 'system'">
-                            <mat-icon>settings_suggest</mat-icon>
+                        <button mat-menu-item (click)="setTheme('system')" [class.active]="themeService.theme === 'system'">
+                            <mat-icon class="palette-icon">brightness_auto</mat-icon>
                             <span>System</span>
                         </button>
                         <mat-divider></mat-divider>
                         <div class="color-palette-section">
                             <mat-form-field appearance="fill">
                                 <mat-label>Color Theme</mat-label>
-                                <mat-select [value]="currentColorPalette$ | async" (selectionChange)="setColorPalette($event.value)">
+                                <mat-select [value]="themeService.colorPalette" (selectionChange)="setColorPalette($event.value)">
                                     <mat-option *ngFor="let palette of colorPalettes" [value]="palette">
                                         <div class="color-option">
                                             <div class="color-preview" [class]="palette + '-palette'"></div>
@@ -115,6 +114,7 @@
     </mat-sidenav>
     <mat-sidenav-content style="margin-left: 150px;">
         <mat-toolbar color="primary">
+            <mat-icon style="margin-right: 0.25em;">{{currentPageIcon$ | async}}</mat-icon>
             <span>{{ currentPageTitle$ | async }}</span>
             <span class="toolbar-spacer"></span>
             <ng-container *ngIf="activeToolbarContent">

@@ -1,0 +1,228 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 300px;
+}
+
+.table-container {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    min-height: 0;
+    background: var(--mat-sys-surface);
+    border-radius: 1em 1em 0em 0em;
+
+    // Selection column styles
+    .mat-column-select {
+        width: 36px;
+        padding: 0 4px;
+        text-align: center;
+
+        .mat-mdc-checkbox {
+            margin: 0;
+            padding: 0;
+        }
+    }
+
+    // Expand column styles
+    .mat-column-expand {
+        width: 18px;
+        padding: 0;
+        text-align: center;
+    }
+}
+
+table {
+    width: 100%;
+}
+
+:host ::ng-deep {
+    .expand-icon {
+        transition: transform 150ms ease-in-out;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        margin: 0;
+        transform: rotate(-90deg);
+
+        &.expanded {
+            transform: rotate(0deg);
+        }
+    }
+
+    .mat-mdc-header-row {
+        background-color: var(--mat-sys-surface) !important;
+    }
+
+    .mat-mdc-header-cell {
+        border-bottom: 1px solid var(--mat-sys-outline);
+    }
+
+    .mat-mdc-cell {
+        border-bottom: none;
+    }
+
+    .mat-sort-header-arrow {
+        color: var(--mat-sys-color-primary);
+    }
+
+    /*.mdc-data-table__row:last-child .mdc-data-table__cell {
+        border-bottom: 1px solid var(--mat-sys-outline);
+    }*/
+}
+
+.paginator-container {
+    display: flex;
+    align-items: center;
+    border-top: 1px solid var(--mat-sys-outline);
+    background-color: var(--mat-sys-surface) !important;
+    border-radius: 0em 0em 1em 1em;
+    overflow: hidden;
+
+    .paginator-actions {
+        display: flex;
+        gap: 8px;
+        padding: 0 16px;
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .rotating {
+            animation: rotate 1s linear infinite;
+        }
+    }
+
+    mat-paginator {
+        flex: 1;
+    }
+}
+
+.header-cell-content {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 100%;
+    width: 100%;
+    position: relative;
+    justify-content: flex-start;
+
+    span {
+        margin-right: 2px;
+    }
+
+    .filter-icon {
+        width: 24px;
+        height: 24px;
+        line-height: 24px;
+        opacity: 0;
+        transition: opacity 150ms ease;
+        position: relative;
+        padding: 0;
+
+        &.active {
+            opacity: 1;
+            color: var(--mat-sys-color-primary);
+        }
+
+        mat-icon {
+            font-size: 14px;
+            width: 14px;
+            height: 14px;
+            line-height: 14px;
+        }
+    }
+
+    &:hover .filter-icon {
+        opacity: 1;
+    }
+}
+
+tr {
+    &:not(.sub-row) {
+        &:not(:first-child) > td {
+            border-top: 1px solid var(--mat-sys-outline);
+        }
+
+        &:hover {
+            background: var(--mat-sys-surface-container-high);
+        }
+    }
+
+    &.selected-row {
+        background-color: rgba(var(--mat-sys-color-primary-rgb), 0.04);
+    }
+
+    &.expandable-row {
+        cursor: pointer;
+
+        &:hover + tr.sub-row {
+            background: var(--mat-sys-surface-container-high);
+        }
+    }
+
+    &.selectable-row {
+        cursor: pointer;
+    }
+
+    &.group-row {
+        font-weight: 500;
+
+        td {
+            padding: 0 16px;
+            border-bottom: none;
+        }
+
+        .group-row-content {
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+        }
+
+        &:hover {
+            background: var(--mat-sys-surface-container);
+        }
+
+        & + tr:not(.group-row) {
+            background: var(--mat-sys-surface-container-highest);
+            border-bottom: 1px solid var(--mat-sys-outline-variant);
+        }
+    }
+
+    &.expanded-row {
+        background: var(--mat-sys-surface-container);
+
+        > td {
+            border-bottom: none;
+        }
+    }
+
+    &.sub-row {
+        background: var(--mat-sys-surface-container);
+        height: 0;
+
+        > td {
+            padding: 0;
+        }
+    }
+}
+
+.expanded-detail {
+    overflow: hidden;
+}
+
+.no-data-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--mat-sys-color-on-surface-variant);
+    font-size: 1em;
+}

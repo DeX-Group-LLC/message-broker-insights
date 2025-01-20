@@ -1,0 +1,28 @@
+<mat-card class="history-card">
+    <mat-card-header>
+        <mat-card-title>Connection History</mat-card-title>
+        <button mat-icon-button class="close-button" (click)="dialogRef.close()">
+            <mat-icon>close</mat-icon>
+        </button>
+    </mat-card-header>
+    <mat-card-content>
+        <div class="event-list">
+            <div class="event-item" *ngFor="let event of events">
+                <mat-icon [style.color]="getEventColor(event)">{{getEventIcon(event)}}</mat-icon>
+                <div class="event-details">
+                    <div class="event-type">{{event.type}}</div>
+                    <div class="event-time">{{formatDate(event.timestamp)}}</div>
+                    <div class="event-meta" *ngIf="event.url">
+                        URL: {{event.url}}
+                    </div>
+                    <div class="event-meta" *ngIf="event.attempt">
+                        Attempt: {{event.attempt}}
+                    </div>
+                    <div class="event-meta" *ngIf="event.error">
+                        Error: {{event.error}}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </mat-card-content>
+</mat-card>

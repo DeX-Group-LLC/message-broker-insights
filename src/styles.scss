@@ -1,16 +1,18 @@
 /* You can add global styles to this file, and also import other style files */
-@use '@angular/material' as mat;
+@use "@angular/material" as mat;
 
 // Include the common styles for Angular Material
 @include mat.core();
 
 html {
     color-scheme: light;
-    @include mat.theme((
-        color: mat.$blue-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$blue-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 body.dark-theme {
@@ -18,7 +20,8 @@ body.dark-theme {
 }
 
 // Base styles
-html, body {
+html,
+body {
     height: 100%;
     margin: 0;
 }
@@ -31,97 +34,174 @@ body {
 
 // Color palette themes
 .red-palette {
-    @include mat.theme((
-        color: mat.$red-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$red-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .green-palette {
-    @include mat.theme((
-        color: mat.$green-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$green-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .blue-palette {
-    @include mat.theme((
-        color: mat.$blue-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$blue-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .yellow-palette {
-    @include mat.theme((
-        color: mat.$yellow-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$yellow-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .cyan-palette {
-    @include mat.theme((
-        color: mat.$cyan-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$cyan-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .magenta-palette {
-    @include mat.theme((
-        color: mat.$magenta-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$magenta-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .orange-palette {
-    @include mat.theme((
-        color: mat.$orange-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$orange-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .chartreuse-palette {
-    @include mat.theme((
-        color: mat.$chartreuse-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$chartreuse-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .spring-green-palette {
-    @include mat.theme((
-        color: mat.$spring-green-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$spring-green-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .azure-palette {
-    @include mat.theme((
-        color: mat.$azure-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$azure-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .violet-palette {
-    @include mat.theme((
-        color: mat.$violet-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$violet-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
 }
 
 .rose-palette {
-    @include mat.theme((
-        color: mat.$rose-palette,
-        typography: Roboto,
-        density: 0
-    ));
+    @include mat.theme(
+        (
+            color: mat.$rose-palette,
+            typography: Roboto,
+            density: 0,
+        )
+    );
+}
+
+// Text styles
+.muted {
+    opacity: 0.5;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/*mat-icon {
+    font-variation-settings: 'FILL' 0;
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+}*/
+
+.material-symbols-outlined {
+    font-variation-settings: "FILL" 0;
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: "liga";
+    font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+}
+
+.material-symbols-filled, mat-icon {
+    @extend .material-symbols-outlined;
+    font-variation-settings: "FILL" 1;
 }

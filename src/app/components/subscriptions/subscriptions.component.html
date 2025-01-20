@@ -1,0 +1,80 @@
+<ng-template #toolbarContent>
+    <app-export
+        [data]="table.data"
+        filename="topics-export"
+        tooltip="Export Topics"
+        [customizable]="true"
+        [disabled]="!table.data.length">
+    </app-export>
+</ng-template>
+
+<mat-card>
+    <mat-card-content>
+        <app-table
+            #table
+            [data$]="topicsService.topics$"
+            [columns]="columns"
+            [canExpand]="hasSubscribers"
+            [defaultSort]="{ active: 'name', direction: 'asc' }"
+            [paginationConfig]="{
+                pageSizeOptions: [10, 25, 50, 100],
+                defaultPageSize: 25,
+                showFirstLastButtons: true
+            }">
+
+            <!-- Cell Templates -->
+            <ng-template #cellTemplate let-topic let-column="column">
+                <ng-container [ngSwitch]="column.name">
+                    <ng-container *ngSwitchCase="'name'">
+                        {{topic.name}}
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'subscriberCount'">
+                        <div *ngIf="topic.subscribers.length" class="subscriber-container">
+                            <mat-icon class="expand-icon" [class.expanded]="isExpanded(topic)">expand_more</mat-icon>
+                            <span class="meta-preview" class="muted italic">{{getSubscriberCountDisplay(topic)}}</span>
+                        </div>
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'priorityRange'">
+                        {{getPriorityRange(topic)}}
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'lastUpdated'">
+                        {{getFormattedDate(topic.lastUpdated)}}
+                        <span class="muted italic">({{getElapsedTime(topic.lastUpdated)}})</span>
+                    </ng-container>
+                </ng-container>
+            </ng-template>
+
+            <!-- Expanded Content Template -->
+            <ng-template #expandedContent let-topic>
+                <div class="expanded-detail-content">
+                    <h4>Subscribers</h4>
+                    <table class="subscribers-table">
+                        <thead>
+                            <tr>
+                                <th>Service ID</th>
+                                <th>Priority</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (subscriber of topic.subscribers; track subscriber.serviceId) {
+                                <tr>
+                                    <td>{{subscriber.serviceId}}
+                                        @if ($index === 0) {
+                                            <span class="muted italic" matTooltip="This service will be the primary responder for requests for this topic.">
+                                                (Primary)
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>{{subscriber.priority}}</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </ng-template>
+        </app-table>
+    </mat-card-content>
+</mat-card>

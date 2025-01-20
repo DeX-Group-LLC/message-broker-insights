@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { WebsocketService } from './websocket.service';
+import { BrokerHeader, Message, MessagePayload, MessagePayloadSuccess, WebsocketService } from './websocket.service';
 
 /** Enum defining available log levels in order of severity */
 export enum LogLevel {
@@ -36,18 +36,16 @@ export interface LogEntry {
 export class LogService implements OnDestroy {
     /** Subject holding the current logs */
     private logsSubject = new BehaviorSubject<LogEntry[]>([]);
-    /** Subject indicating whether logs are currently being loaded */
-    private loadingSubject = new BehaviorSubject<boolean>(false);
     /** Subject holding the current minimum log level */
     private minLogLevelSubject = new BehaviorSubject<LogLevel>(LogLevel.INFO);
     /** Observable stream of log entries */
     logs$ = this.logsSubject.asObservable();
-    /** Observable indicating whether logs are currently being loaded */
-    public loading$ = this.loadingSubject.asObservable();
     /** Observable of the current minimum log level */
     public minLogLevel$ = this.minLogLevelSubject.asObservable();
     /** Flag indicating if the service has been initialized */
     private isInitialized = false;
+    /** Maximum number of log entries to store */
+    private maxLogEntries = 10000;
 
     /** Map of log levels to their severity order */
     private readonly logLevelSeverity = {
@@ -77,8 +75,8 @@ export class LogService implements OnDestroy {
         await this.setupLogSubscription();
 
         // Set up event listeners
-        this.websocketService.on('connected', this._setupLogSubscription);
-        this.websocketService.on('response:system.log:1.0.0', this._addLog);
+        this.websocketService.connected$.on(this._setupLogSubscription);
+        this.websocketService.message$.on('response:system.log:1.0.0', this._addLog);
 
         this.isInitialized = true;
     }
@@ -88,8 +86,8 @@ export class LogService implements OnDestroy {
      * Removes event listeners and completes observables.
      */
     ngOnDestroy() {
-        this.websocketService.off('connected', this._setupLogSubscription);
-        this.websocketService.off('response:system.log:1.0.0', this._addLog);
+        this.websocketService.connected$.off(this._setupLogSubscription);
+        this.websocketService.message$.off('response:system.log:1.0.0', this._addLog);
         this.logsSubject.complete();
     }
 
@@ -126,15 +124,9 @@ export class LogService implements OnDestroy {
      * Requests log updates from the server.
      */
     private async setupLogSubscription() {
-        try {
-            this.loadingSubject.next(true);
-            const minLogLevel = this.minLogLevelSubject.value;
-            const levels = Object.values(LogLevel)
-                .filter(level => this.meetsMinLogLevel(level));
-            return await this.websocketService.request('system.log.subscribe', { levels });
-        } finally {
-            this.loadingSubject.next(false);
-        }
+        const levels = Object.values(LogLevel)
+            .filter(level => this.meetsMinLogLevel(level));
+        return await this.websocketService.request('system.log.subscribe', { levels });
     }
     private _setupLogSubscription = this.setupLogSubscription.bind(this);
 
@@ -144,30 +136,30 @@ export class LogService implements OnDestroy {
      *
      * @param message - Log message from the server
      */
-    private addLog(message: any): void {
-        if (!this.meetsMinLogLevel(message.level)) {
+    private addLog(_: BrokerHeader, payload: any): void {
+        if (!this.meetsMinLogLevel(payload.level)) {
             return;
         }
         const log: LogEntry = {
             id: this.logsSubject.value.length,
             timestamp: new Date(),
-            level: message.level,
-            module: message.module,
-            message: message.message
+            level: payload.level,
+            module: payload.module,
+            message: payload.message
         };
 
         const baseFields = new Set(Object.keys(log));
         // Add all other fields as meta
-        for (const key in message) {
+        for (const key in payload) {
             if (!baseFields.has(key)) {
                 log.meta ??= {};
-                log.meta[key] = message[key];
+                log.meta[key] = payload[key];
             }
         }
 
-        // Limit the number of latest logs to 10000 to prevent memory issues
+        // Limit the number of latest logs to maxLogEntries to prevent memory issues
         const currentLogs = this.logsSubject.value;
-        if (currentLogs.length > 10000) currentLogs.shift();
+        if (currentLogs.length >= this.maxLogEntries) currentLogs.shift();
 
         // Add the log to the logs subject
         currentLogs.push(log);
@@ -197,7 +189,7 @@ export class LogService implements OnDestroy {
      *
      * @returns Promise that resolves when the refresh is complete
      */
-    public async refresh(): Promise<void> {
-        return this.setupLogSubscription();
+    public async refresh(): Promise<Message<BrokerHeader, MessagePayloadSuccess>> {
+        return await this.setupLogSubscription();
     }
 }

@@ -15,13 +15,15 @@ import { animate, state, style, transition, trigger, group } from '@angular/anim
 import { Observable, filter, map } from 'rxjs';
 import { ThemeService, Theme, ColorPalette } from '../../services/theme.service';
 import { WebsocketService, ConnectionState, ConnectionDetails } from '../../services/websocket.service';
-import { ConnectionEventsDialogComponent } from '../connection-events-dialog/connection-events-dialog.component';
+import { ConnectionHistoryComponent } from './connection-history/connection-history.component';
+import { ConnectionSettingsComponent } from './connection-settings/connection-settings.component';
 import { routes, RouteData } from '../../app.routes';
-import { MatSelectChange } from '@angular/material/select';
 
 interface NavItem {
     path: string;
+    enabled: boolean;
     icon: string;
+    iconClass?: string;
     label: string;
     shortLabel: string;
 }
@@ -52,7 +54,7 @@ interface NavItem {
     animations: [
         trigger('sidenavAnimation', [
             state('expanded', style({
-                width: '150px'
+                width: '170px'
             })),
             state('collapsed', style({
                 width: '55px'
@@ -68,12 +70,10 @@ interface NavItem {
 export class LayoutComponent implements OnInit {
     /** Whether the sidebar is expanded */
     isExpanded = true;
-    /** Observable of the current theme */
-    currentTheme$!: Observable<Theme>;
-    /** Observable of the current color palette */
-    currentColorPalette$!: Observable<ColorPalette>;
     /** Observable of the current page title */
     currentPageTitle$!: Observable<string>;
+    /** Observable of the current page icon */
+    currentPageIcon$!: Observable<string>;
     /** Current WebSocket connection state */
     connectionState = ConnectionState;
     /** Observable of the current connection state */
@@ -86,7 +86,9 @@ export class LayoutComponent implements OnInit {
         .filter((route: Route) => route.data)
         .map((route: Route) => ({
             path: `/${route.path}`,
+            enabled: (route.data as RouteData).enabled ?? true,
             icon: (route.data as RouteData).icon,
+            iconClass: (route.data as RouteData).iconClass,
             label: (route.data as RouteData).label,
             shortLabel: (route.data as RouteData).shortLabel
         }));
@@ -115,7 +117,7 @@ export class LayoutComponent implements OnInit {
      * @param router - Angular router service for navigation
      */
     constructor(
-        private themeService: ThemeService,
+        public themeService: ThemeService,
         private router: Router,
         public websocketService: WebsocketService,
         private dialog: MatDialog
@@ -126,14 +128,21 @@ export class LayoutComponent implements OnInit {
      * Sets up theme and page title observables.
      */
     ngOnInit() {
-        this.currentTheme$ = this.themeService.theme$;
-        this.currentColorPalette$ = this.themeService.colorPalette$;
         this.currentPageTitle$ = this.router.events.pipe(
             filter(event => event instanceof NavigationEnd),
             map(() => {
                 const currentRoute = this.router.url;
                 const navItem = this.navItems.find(item => item.path === currentRoute);
                 return navItem?.label || 'Message Broker Monitor';
+            })
+        );
+
+        this.currentPageIcon$ = this.router.events.pipe(
+            filter(event => event instanceof NavigationEnd),
+            map(() => {
+                const currentRoute = this.router.url;
+                const navItem = this.navItems.find(item => item.path === currentRoute);
+                return navItem?.icon || '';
             })
         );
 
@@ -144,10 +153,10 @@ export class LayoutComponent implements OnInit {
 
             // Listen for state changes
             const handler = (state: ConnectionState) => observer.next(state);
-            this.websocketService.on('stateChange', handler);
+            this.websocketService.stateChange$.on(handler);
 
             // Cleanup
-            return () => this.websocketService.off('stateChange', handler);
+            return () => this.websocketService.stateChange$.off(handler);
         });
 
         // Set up connection details observable
@@ -160,15 +169,15 @@ export class LayoutComponent implements OnInit {
             const latencyHandler = () => observer.next(this.websocketService.details);
             const eventHandler = () => observer.next(this.websocketService.details);
 
-            this.websocketService.on('stateChange', stateHandler);
-            this.websocketService.on('latencyUpdate', latencyHandler);
-            this.websocketService.on('connectionEvent', eventHandler);
+            this.websocketService.stateChange$.on(stateHandler);
+            this.websocketService.latencyUpdate$.on(latencyHandler);
+            this.websocketService.connection$.on(eventHandler);
 
             // Cleanup
             return () => {
-                this.websocketService.off('stateChange', stateHandler);
-                this.websocketService.off('latencyUpdate', latencyHandler);
-                this.websocketService.off('connectionEvent', eventHandler);
+                this.websocketService.stateChange$.off(stateHandler);
+                this.websocketService.latencyUpdate$.off(latencyHandler);
+                this.websocketService.connection$.off(eventHandler);
             };
         });
     }
@@ -202,7 +211,7 @@ export class LayoutComponent implements OnInit {
             case 'dark':
                 return 'dark_mode';
             case 'system':
-                return 'settings_suggest';
+                return 'brightness_auto';
             default:
                 return 'light_mode';
         }
@@ -227,14 +236,15 @@ export class LayoutComponent implements OnInit {
      */
     getConnectionIcon(state: ConnectionState): string {
         switch (state) {
+            case ConnectionState.CONNECTING:
+            case ConnectionState.RECONNECTING:
+                return 'cloud_sync';
             case ConnectionState.CONNECTED:
                 return 'cloud_done';
-            case ConnectionState.CONNECTING:
-                return 'cloud_sync';
             case ConnectionState.DISCONNECTED:
                 return 'cloud_off';
             default:
-                return 'cloud_off';
+                return 'warning';
         }
     }
 
@@ -278,10 +288,10 @@ export class LayoutComponent implements OnInit {
      */
     getConnectionTooltip(details: ConnectionDetails): string {
         const lines = [
-            `Server: ${details.url}`,
-            `Status: ${this.getConnectionLabel(details.state)}`,
-            `Last Connected: ${this.formatDate(details.lastConnected)}`,
-            `Latency: ${this.formatLatency(details.latency)}`
+            `Server: \t\t\t\t${details.url}`,
+            `Status: \t\t\t\t${this.getConnectionLabel(details.state)}`,
+            `Last Connected: \t${this.formatDate(details.lastConnected)}`,
+            `Latency: \t\t\t${this.formatLatency(details.latency)}`
         ];
 
         if (details.reconnectAttempts > 0) {
@@ -295,8 +305,31 @@ export class LayoutComponent implements OnInit {
      * Shows the connection events dialog.
      */
     showConnectionEvents(): void {
-        this.dialog.open(ConnectionEventsDialogComponent, {
-            data: this.websocketService.details.recentEvents,
+        this.dialog.open(ConnectionHistoryComponent, {
+            width: '600px',
+            height: '80vh',
+            maxHeight: '80vh',
+            autoFocus: false
+        });
+    }
+
+    /**
+     * Shows the connection history dialog.
+     */
+    showConnectionHistory(): void {
+        this.dialog.open(ConnectionHistoryComponent, {
+            width: '600px',
+            height: '80vh',
+            maxHeight: '80vh',
+            autoFocus: false
+        });
+    }
+
+    /**
+     * Shows the connection settings dialog.
+     */
+    showConnectionSettings(): void {
+        this.dialog.open(ConnectionSettingsComponent, {
             width: '600px',
             autoFocus: false
         });

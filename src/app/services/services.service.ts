@@ -1,5 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
+import { Metric, MetricInfo, MetricsService } from './metrics.service';
 import { WebsocketService } from './websocket.service';
 
 /** Status of a service */
@@ -13,16 +14,16 @@ export interface ServiceInfo {
     name: string;
     /** Service description */
     description: string;
+    /** Current status of the service */
+    status: ServiceStatus;
     /** Timestamp when the service connected */
     connectedAt: Date;
     /** Timestamp of the last heartbeat received */
     lastHeartbeat: Date;
-    /** Current status of the service */
-    status: ServiceStatus;
-    /** List of topics the service is subscribed to */
-    subscriptions?: string[];
+    /** List of topics the service is subscribed to with priority */
+    subscriptions?: { topic: string; priority: number }[];
     /** Service-specific metrics */
-    metrics?: Record<string, number>;
+    metrics?: Metric[];
     /** Additional metadata about the service */
     meta?: any;
 }
@@ -45,32 +46,20 @@ export class ServicesService implements OnDestroy {
     private loadingSubject = new BehaviorSubject<boolean>(false);
     /** Observable stream of services */
     services$ = this.servicesSubject.asObservable();
-    /** Observable indicating whether services are currently being loaded */
+    /** Observable indicating whether services are currently being loading */
     public loading$ = this.loadingSubject.asObservable();
     /** ID of the polling interval timer */
     private intervalId?: number;
     /** Map of disconnected services by ID */
     private disconnectedServices = new Map<string, ServiceInfo>();
-    /** Currently selected service ID */
-    private selectedServiceId?: string;
 
     /**
      * Creates an instance of ServicesService.
      *
      * @param websocketService - Service for WebSocket communication
      */
-    constructor(private websocketService: WebsocketService) {
+    constructor(private websocketService: WebsocketService, private metricsService: MetricsService) {
         this.startPolling();
-    }
-
-    /**
-     * Sets the currently selected service ID.
-     * This is used to determine when to fetch additional service details.
-     *
-     * @param serviceId - ID of the selected service
-     */
-    setSelectedServiceId(serviceId?: string): void {
-        this.selectedServiceId = serviceId;
     }
 
     /**
@@ -96,70 +85,67 @@ export class ServicesService implements OnDestroy {
 
     /**
      * Polls the server for current services.
-     * Only fetches metrics and subscriptions for the selected service.
      */
     private async pollServices(): Promise<void> {
         try {
             this.loadingSubject.next(true);
-            const response = await this.websocketService.request('system.service.list', {});
+            const response = (await this.websocketService.request('system.service.list', {})).payload as any;
             if (response && response.services && Array.isArray(response.services)) {
                 const currentServiceIds = new Set<string>();
-                const services = await Promise.all(response.services.map(async (service: any) => {
+                const currentServices = this.servicesSubject.value;
+                const servicesMap = new Map(currentServices.map(s => [s.id, s]));
+
+                const services = response.services.map((service: any) => {
                     currentServiceIds.add(service.id);
-                    const serviceInfo: ServiceInfo = {
-                        id: service.id,
-                        name: service.name,
-                        description: service.description || '',
-                        connectedAt: new Date(service.connectedAt),
-                        lastHeartbeat: new Date(service.lastHeartbeat),
-                        status: 'connected',
-                        meta: this.extractMeta(service)
-                    };
+                    let serviceInfo = servicesMap.get(service.id);
 
-                    // Only fetch additional details for the selected service
-                    if (service.id === this.selectedServiceId) {
-                        // Try to get subscriptions
-                        try {
-                            const subsResponse = await this.websocketService.request('system.service.subscriptions', { serviceId: service.id });
-                            if (subsResponse && subsResponse.subscriptions) {
-                                serviceInfo.subscriptions = subsResponse.subscriptions;
-                            }
-                        } catch (error) {
-                            console.warn(`Failed to get subscriptions for service ${service.id}:`, error);
+                    if (serviceInfo) {
+                        // Update existing service in place
+                        serviceInfo.name = service.name;
+                        serviceInfo.description = service.description || '';
+                        serviceInfo.status = 'connected';
+                        serviceInfo.connectedAt = new Date(service.connectedAt);
+                        serviceInfo.lastHeartbeat = new Date(service.lastHeartbeat);
+
+                        const meta = this.extractMeta(service);
+                        if (meta) {
+                            serviceInfo.meta = meta;
+                        } else {
+                            //delete serviceInfo.meta;
                         }
-
-                        // Get metrics for this service
-                        try {
-                            const metricsResponse = await this.websocketService.request('system.metrics', { showAll: true });
-                            if (metricsResponse && metricsResponse.metrics) {
-                                const serviceMetrics: Record<string, number> = {};
-                                for (const [name, info] of Object.entries<any>(metricsResponse.metrics)) {
-                                    if (name.startsWith('se.')) {
-                                        serviceMetrics[name] = info.value;
-                                    }
-                                }
-                                if (Object.keys(serviceMetrics).length > 0) {
-                                    serviceInfo.metrics = serviceMetrics;
-                                }
-                            }
-                        } catch (error) {
-                            console.warn(`Failed to get metrics for service ${service.id}:`, error);
+                    } else {
+                        // Create new service
+                        serviceInfo = {
+                            id: service.id,
+                            name: service.name,
+                            description: service.description || '',
+                            status: 'connected',
+                            connectedAt: new Date(service.connectedAt),
+                            lastHeartbeat: new Date(service.lastHeartbeat)
+                        };
+                        const meta = this.extractMeta(service);
+                        if (meta) {
+                            serviceInfo.meta = meta;
                         }
                     }
 
                     return serviceInfo;
-                }));
+                });
 
                 // Handle disconnected services
-                const currentServices = this.servicesSubject.value;
                 const disconnectedServices = currentServices.filter(s => !currentServiceIds.has(s.id));
 
                 disconnectedServices.forEach(service => {
-                    const disconnectedService = { ...service, status: 'disconnected' as ServiceStatus };
-                    this.disconnectedServices.set(service.id, disconnectedService);
+                    // Update existing service in place if it exists in disconnectedServices
+                    let disconnectedService = this.disconnectedServices.get(service.id);
+                    if (!disconnectedService) {
+                        disconnectedService = { ...service };
+                        this.disconnectedServices.set(service.id, disconnectedService);
+                    }
+                    disconnectedService.status = 'disconnected';
 
                     // Keep only the last MAX_DISCONNECTED_SERVICES
-                    if (this.disconnectedServices.size > MAX_DISCONNECTED_SERVICES) {
+                    if (this.disconnectedServices.size >= MAX_DISCONNECTED_SERVICES) {
                         let oldestHeartbeat = new Date();
                         let oldestService: ServiceInfo | undefined;
                         for (const service of this.disconnectedServices.values()) {
@@ -213,6 +199,18 @@ export class ServicesService implements OnDestroy {
     }
 
     /**
+     * Gets the service info for a given service ID.
+     *
+     * @param serviceId - Service ID to get the info for
+     * @returns Service info
+     */
+    public getService(serviceId: string): ServiceInfo | undefined {
+        const service = this.servicesSubject.value.find(service => service.id === serviceId);
+        if (service) return service;
+        return this.disconnectedServices.get(serviceId);
+    }
+
+    /**
      * Stops the services polling interval.
      * Cleans up the interval timer.
      */
@@ -229,8 +227,9 @@ export class ServicesService implements OnDestroy {
      * @param serviceId - ID of the service to fetch subscriptions for
      * @returns Promise resolving to the subscriptions response
      */
-    async fetchServiceSubscriptions(serviceId: string): Promise<any> {
-        return this.websocketService.request('system.service.subscriptions', { serviceId });
+    async fetchServiceSubscriptions(serviceId: string): Promise<{ subscriptions: { topic: string; priority: number }[] }> {
+        const response = await this.websocketService.request('system.service.subscriptions', { serviceId });
+        return response.payload as any;
     }
 
     /**
@@ -238,8 +237,19 @@ export class ServicesService implements OnDestroy {
      *
      * @returns Promise resolving to the metrics response
      */
-    async fetchServiceMetrics(): Promise<any> {
-        return this.websocketService.request('system.metrics', { showAll: true });
+    /*async fetchServiceMetrics(serviceId: string): Promise<Metric[]> {
+        const response: { metrics: Record<string, MetricInfo> } = await this.websocketService.request('system.metrics', { showAll: true, paramFilter: { serviceId } });
+        return Object.values(response.metrics).map((metric) => ({ ...metric, timestamp: new Date(metric.timestamp) }));
+    }*/
+    async fetchServiceMetrics(serviceId: string): Promise<Metric[]> {
+        const metrics = [];
+        const serviceParam = `{serviceid:${serviceId}}`;
+        for (const metric of this.metricsService.getCurrentMetrics()) {
+            if (metric.name.includes(serviceParam)) {
+                metrics.push(metric);
+            }
+        }
+        return metrics;
     }
 
     /**

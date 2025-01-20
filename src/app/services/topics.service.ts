@@ -98,7 +98,7 @@ export class TopicsService implements OnDestroy {
     private async pollTopics(): Promise<void> {
         try {
             this.loadingSubject.next(true);
-            const response = await this.websocketService.request('system.topic.subscribers', {});
+            const response = (await this.websocketService.request('system.topic.subscribers', {})).payload as any;
 
             if (response && typeof response.subscribers === 'object') {
                 const topicSubscribers = response.subscribers as TopicSubscribersResponse;
@@ -155,5 +155,13 @@ export class TopicsService implements OnDestroy {
      */
     async refresh(): Promise<void> {
         await this.pollTopics();
+    }
+
+    /**
+     * Gets the current topics.
+     * @returns Current topics
+     */
+    getTopics(): Topic[] {
+        return this.currentTopics;
     }
 }

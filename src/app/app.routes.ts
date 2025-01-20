@@ -1,16 +1,23 @@
 import { Routes } from '@angular/router';
+import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { LogsComponent } from './components/logs/logs.component';
 import { MetricsComponent } from './components/metrics/metrics.component';
 import { ServicesComponent } from './components/services/services.component';
-import { TopicsComponent } from './components/topics/topics.component';
+import { SubscriptionsComponent } from './components/subscriptions/subscriptions.component';
+import { TrackerComponent } from './components/tracker/tracker.component';
+import { Component } from '@angular/core';
 
 /**
  * Interface defining the data structure for route metadata.
  * Used to configure navigation items in the layout.
  */
 export interface RouteData {
+    /** Whether the route is enabled */
+    enabled: boolean;
     /** Icon name from Material Icons library */
     icon: string;
+    /** Icon class for custom icons */
+    iconClass?: string;
     /** Full label for the route in navigation */
     label: string;
     /** Short label for collapsed navigation state */
@@ -23,9 +30,54 @@ export interface RouteData {
  * - /logs: Displays system logs with filtering and sorting
  * - /metrics: Shows system metrics with real-time updates
  * - /services: Shows system services with status and details
- * - /topics: Shows message topics and their subscribers
+ * - /subscriptions: Shows message topics and their subscribers
  */
 export const routes: Routes = [
+    {
+        path: '',
+        redirectTo: 'dashboard',
+        pathMatch: 'full'
+    },
+    {
+        path: 'alarms',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'alarm',
+            label: 'Alarms',
+            shortLabel: 'Alarms'
+        }
+    },
+    {
+        path: 'alerts',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'notifications',
+            label: 'Alerts',
+            shortLabel: 'Alerts'
+        }
+    },
+    {
+        path: 'dashboard',
+        component: DashboardComponent,
+        data: {
+            icon: 'dashboard',
+            label: 'Dashboard',
+            shortLabel: 'Dashboard'
+        }
+    },
+    {
+        path: 'database',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'database_search',
+            iconClass: 'material-symbols-filled',
+            label: 'Database Viewer',
+            shortLabel: 'Database'
+        }
+    },
     {
         path: 'logs',
         component: LogsComponent,
@@ -40,31 +92,61 @@ export const routes: Routes = [
         component: MetricsComponent,
         data: {
             icon: 'monitoring',
+            iconClass: 'material-symbols-outlined',
             label: 'System Metrics',
             shortLabel: 'Metrics'
+        }
+    },
+    {
+        path: 'performance',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'speed',
+            label: 'Performance Bottlenecks',
+            shortLabel: 'Performance'
+        }
+    },
+    {
+        path: 'security',
+        component: Component,
+        data: {
+            enabled: false,
+            icon: 'security',
+            iconClass: 'material-symbols-filled',
+            label: 'Security',
+            shortLabel: 'Security'
         }
     },
     {
         path: 'services',
         component: ServicesComponent,
         data: {
-            icon: 'settings_applications',
+            icon: 'lan',
             label: 'System Services',
             shortLabel: 'Services'
         }
     },
     {
-        path: 'topics',
-        component: TopicsComponent,
+        path: 'subscriptions',
+        component: SubscriptionsComponent,
         data: {
-            icon: 'topic',
-            label: 'Message Topics',
-            shortLabel: 'Topics'
+            icon: 'bookmarks',
+            label: 'Topic Subscriptions',
+            shortLabel: 'Subscriptions'
         }
     },
     {
-        path: '',
-        redirectTo: 'logs',
-        pathMatch: 'full'
+        path: 'tracker',
+        component: TrackerComponent,
+        data: {
+            icon: 'mediation',
+            label: 'Message Tracker',
+            shortLabel: 'Tracker'
+        }
+    },
+    {
+        path: '**',
+        redirectTo: 'dashboard'
     }
 ];

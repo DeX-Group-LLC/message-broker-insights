@@ -1,6 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { WebsocketService } from './websocket.service';
+import { TimeFormatService } from './time-format.service';
 
 /**
  * Raw metric information received from the server.
@@ -59,7 +60,7 @@ export class MetricsService implements OnDestroy {
      *
      * @param websocketService - Service for WebSocket communication
      */
-    constructor(private websocketService: WebsocketService) {
+    constructor(private websocketService: WebsocketService, private timeFormatService: TimeFormatService) {
         this.startPolling();
     }
 
@@ -94,21 +95,47 @@ export class MetricsService implements OnDestroy {
         try {
             this.loadingSubject.next(true);
             const payload = await this.websocketService.request('system.metrics', { showAll: true });
-            const metricsMap = payload.metrics as Record<string, MetricInfo>;
+            const metricsMap = (payload.payload as any).metrics as Record<string, MetricInfo>;
             if (metricsMap && typeof metricsMap === 'object') {
                 // Transform metrics from server format to application format
-                const metrics = Object.entries(metricsMap).map(([name, info]) => ({
+                const newMetrics = Object.entries(metricsMap).map(([name, info]) => ({
                     name,
                     type: info.type,
                     value: info.value,
                     timestamp: new Date(info.timestamp)
                 }));
+
+                // Update metrics in place to maintain object references
+                const currentMetrics = this.metricsSubject.getValue();
+                const newMetricNames = new Set(newMetrics.map(m => m.name));
+
+                // Update existing metrics and add new ones
+                newMetrics.forEach(newMetric => {
+                    const index = currentMetrics.findIndex(m => m.name === newMetric.name);
+                    if (index >= 0) {
+                        // Update existing metric in place
+                        Object.assign(currentMetrics[index], newMetric);
+                    } else {
+                        // Add new metric
+                        currentMetrics.push(newMetric);
+                    }
+                });
+
+                // Remove metrics that no longer exist
+                const toRemove = currentMetrics.filter(m => !newMetricNames.has(m.name));
+                toRemove.forEach(metric => {
+                    const index = currentMetrics.indexOf(metric);
+                    if (index >= 0) {
+                        currentMetrics.splice(index, 1);
+                    }
+                });
+
                 // Limit the number of metrics to 5min
-                if (this.metrics.length > this.maxMetrics) this.metrics.shift();
+                if (this.metrics.length >= this.maxMetrics) this.metrics.shift();
                 // Add the new metrics to the buffer
-                this.metrics.push(metrics);
-                // Emit the latest metrics to subscribers
-                this.metricsSubject.next(metrics);
+                this.metrics.push(newMetrics);
+                // Emit the updated metrics to subscribers
+                this.metricsSubject.next(currentMetrics);
             } else {
                 console.error('Invalid metrics response:', metricsMap);
             }
@@ -131,6 +158,16 @@ export class MetricsService implements OnDestroy {
     }
 
     /**
+     * Gets the current value of a specific metric.
+     * @param metricName - Name of the metric to get the value for
+     * @returns Current value of the metric or undefined if not found
+     */
+    public getMetric(metricName: string): Metric | undefined {
+        const metrics = this.metricsSubject.getValue();
+        return metrics.find(m => m.name === metricName);
+    }
+
+    /**
      * Gets the history of values for a specific metric.
      * Returns an array of value and timestamp pairs.
      * Filters out consecutive entries with the same timestamp.
@@ -138,20 +175,25 @@ export class MetricsService implements OnDestroy {
      * @param metricName - Name of the metric to get history for
      * @returns Array of value and timestamp pairs
      */
-    public getMetricHistory(metricName: string): { value: number, timestamp: Date }[] {
-        const history = this.metrics.map(metrics => {
+    public getMetricHistory(metricName: string): Metric[] {
+        const history: Metric[] = [];
+        for (const metrics of this.metrics) {
             const metric = metrics.find(m => m.name === metricName);
-            return metric ? { value: metric.value, timestamp: metric.timestamp } : null;
-        }).filter((entry): entry is { value: number, timestamp: Date } => entry !== null);
+            if (metric) history.push(metric);
+        }
 
         // Sort by timestamp
         history.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
         // Filter out consecutive entries with the same timestamp
-        return history.filter((entry, index, array) => {
-            if (index === 0) return true;
-            return entry.timestamp.getTime() !== array[index - 1].timestamp.getTime();
-        });
+        for (let i = 0; i < history.length; i++) {
+            if (i === 0) continue;
+            if (history[i].timestamp.getTime() === history[i - 1].timestamp.getTime()) {
+                history.splice(i, 1);
+                i--;
+            }
+        }
+        return history;
     }
 
     /**
@@ -160,6 +202,36 @@ export class MetricsService implements OnDestroy {
     public clearHistory(): void {
         this.metrics = [];
         this.metricsSubject.next([]);
+    }
+
+    /**
+     * Gets the current metrics value
+     * @returns Current metrics array
+     */
+    public getCurrentMetrics(): Metric[] {
+        return this.metricsSubject.getValue();
+    }
+
+    /**
+     * Gets the formatted metric display value
+     * @param metric - Metric to format
+     * @returns Formatted value string
+     */
+    getMetricDisplayValue(metric: Metric): string {
+        if (typeof metric.value !== 'number') {
+            return String(metric.value);
+        }
+
+        switch (metric.type.toLowerCase()) {
+            case 'percent':
+                return `${(metric.value * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
+            case 'rate':
+                return `${metric.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}/s`;
+            case 'uptime':
+                return this.timeFormatService.renderElapsedTime(metric.value * 1000);
+            default:
+                return metric.value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        }
     }
 
     /**
