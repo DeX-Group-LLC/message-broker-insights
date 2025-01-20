@@ -295,7 +295,7 @@ export class ServicesComponent implements AfterViewInit, OnDestroy {
      */
     closeDetails(): void {
         this.stopSelectedServicePolling();
-        this.selectedService = undefined;
+        this.table.clearSelection();
     }
 
     /**
