@@ -275,6 +275,6 @@ export class TrackerComponent implements OnInit {
      * Closes the service details panel.
      */
     closeDetails(): void {
-        this.selectedFlow = null;
+        this.table.clearSelection();
     }
 }

@@ -24,11 +24,11 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatRadioModule } from '@angular/material/radio';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Observable, Subscription } from 'rxjs';
 import { SelectionModel } from '@angular/cdk/collections';
-import { fastClone } from './utils/table.utils';
 import { DebounceTimer } from '../../../utils/debounce';
 
 /**
@@ -90,7 +90,8 @@ export interface TableSortConfig {
         MatFormFieldModule,
         MatInputModule,
         MatTooltipModule,
-        MatCheckboxModule
+        MatCheckboxModule,
+        MatRadioModule
     ],
     templateUrl: './table.component.html',
     styleUrls: ['./table.component.scss'],

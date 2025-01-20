@@ -17,7 +17,7 @@
                [class.clickable]="isMessageClickable(msg)"
                (click)="onMessageClick(msg)">
                 <!-- Arrow Line -->
-                <line [attr.x1]="getNodeX(msg.from)" [attr.x2]="getNodeX(msg.to)" y1="0" y2="0"
+                <line [attr.x1]="getNodeX(msg.from)" [attr.x2]="getNodeX(msg.to) + (getNodeX(msg.from) > getNodeX(msg.to) ? 9 : -9)" y1="0" y2="0"
                     [class]="'message-line ' + msg.header.action + ' ' + (msg.status || '') + (msg.isBrokerInput ? ' isBrokerInput' : '')" />
 
                 <!-- Arrow Head -->
