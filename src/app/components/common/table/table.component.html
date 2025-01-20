@@ -10,12 +10,28 @@
                 </mat-checkbox>
             </th>
             <td mat-cell *matCellDef="let row">
-                <mat-checkbox *ngIf="(canSelect(row) && !isGroupRow(row)) || (isGroupRow(row) && multiSelect)"
-                            [checked]="isGroupRow(row) ? isGroupSelected(row) : selection.isSelected(row)"
-                            [indeterminate]="isGroupRow(row) && isGroupPartiallySelected(row)"
+                @if (multiSelect) {
+                    @if (isGroupRow(row)) {
+                        <mat-checkbox
+                            [checked]="isGroupSelected(row)"
+                            [indeterminate]="isGroupPartiallySelected(row)"
                             (click)="$event.stopPropagation()"
-                            (change)="isGroupRow(row) ? toggleGroupSelection(row) : toggleSelection(row)">
-                </mat-checkbox>
+                            (change)="toggleGroupSelection(row)">
+                        </mat-checkbox>
+                    } @else if (canSelect(row)) {
+                        <mat-checkbox
+                            [checked]="selection.isSelected(row)"
+                            (click)="$event.stopPropagation()"
+                            (change)="toggleSelection(row)">
+                        </mat-checkbox>
+                    }
+                } @else if (canSelect(row)) {
+                    <mat-radio-button
+                                    [checked]="selection.isSelected(row)"
+                                    (click)="$event.stopPropagation()"
+                                    (change)="toggleSelection(row)">
+                    </mat-radio-button>
+                }
             </td>
         </ng-container>
 

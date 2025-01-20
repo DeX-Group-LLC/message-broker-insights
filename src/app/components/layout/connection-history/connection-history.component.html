@@ -12,6 +12,9 @@
                 <div class="event-details">
                     <div class="event-type">{{event.type}}</div>
                     <div class="event-time">{{formatDate(event.timestamp)}}</div>
+                    <div class="event-meta" *ngIf="event.url">
+                        URL: {{event.url}}
+                    </div>
                     <div class="event-meta" *ngIf="event.attempt">
                         Attempt: {{event.attempt}}
                     </div>

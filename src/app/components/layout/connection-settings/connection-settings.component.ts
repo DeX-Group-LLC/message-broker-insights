@@ -6,8 +6,29 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialogRef } from '@angular/material/dialog';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { WebsocketService } from '../../../services/websocket.service';
+
+/**
+ * Validates WebSocket URL protocol based on current page protocol and hostname
+ * - For HTTP: Both WS and WSS are allowed
+ * - For HTTPS on localhost: Both WS and WSS are allowed
+ * - For HTTPS on other domains: Only WSS is allowed
+ */
+function validateWebSocketProtocol(control: AbstractControl): ValidationErrors | null {
+    const url = control.value;
+    if (!url) return null;
+
+    const isHttps = location.protocol.startsWith('https:');
+    const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+    // Only enforce WSS for HTTPS on non-localhost domains
+    if (isHttps && !isLocalhost && url.startsWith('ws://')) {
+        return { protocol: true };
+    }
+
+    return null;
+}
 
 @Component({
     selector: 'app-connection-settings',
@@ -28,7 +49,8 @@ export class ConnectionSettingsComponent {
     urlForm = new FormGroup({
         url: new FormControl('', [
             Validators.required,
-            Validators.pattern('^wss?:\\/\\/[\\w\\.-]+(:\\d+)?(\\/[\\w\\.-]*)*$')
+            Validators.pattern('^wss?:\\/\\/[\\w\\.-]+(:\\d+)?(\\/[\\w\\.-]*)*$'),
+            validateWebSocketProtocol
         ])
     });
 
@@ -43,8 +65,13 @@ export class ConnectionSettingsComponent {
         if (this.urlForm.valid) {
             const url = this.urlForm.get('url')?.value;
             if (url) {
-                this.websocketService.connect(url);
-                this.dialogRef.close();
+                try {
+                    this.websocketService.connect(url);
+                    this.dialogRef.close();
+                } catch (error) {
+                    // If the service throws an error, mark the form control as invalid
+                    this.urlForm.get('url')?.setErrors({ protocol: true });
+                }
             }
         }
     }
@@ -60,6 +87,9 @@ export class ConnectionSettingsComponent {
         }
         if (control?.hasError('pattern')) {
             return 'Invalid WebSocket URL (must start with ws:// or wss://)';
+        }
+        if (control?.hasError('protocol')) {
+            return 'HTTPS pages must use WSS protocol except for localhost connections';
         }
         return '';
     }

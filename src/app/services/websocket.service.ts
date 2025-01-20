@@ -58,6 +58,8 @@ export interface ConnectionEvent {
     type: ConnectionEventType;
     /** Timestamp of the event */
     timestamp: Date;
+    /** URL of the WebSocket server */
+    url: string;
     /** Optional error message */
     error?: string;
     /** Optional attempt number for reconnection events */
@@ -80,21 +82,73 @@ export interface ConnectionDetails {
     events: ConnectionEvent[];
 }
 
-export interface MessageHeader {
+/**
+ * Represents the header section of a message.
+ * Contains metadata about the message including its action type, topic, and version.
+ */
+export type BrokerHeader = {
+    /** The type of action this message represents (e.g., REQUEST, RESPONSE, PUBLISH) */
     action: ActionType;
+
+    /** The topic this message belongs to, using dot notation (e.g., 'service.event') */
     topic: string;
+
+    /** The version of the message format (e.g., '1.0.0') */
     version: string;
+
+    /** Optional unique identifier for request-response message pairs */
     requestId?: string;
-}
 
-export interface MessagePayload extends Record<string, any> {
+    /** Optional unique identifier for parent request-response message pairs */
+    parentRequestId?: string;
+};
+
+export type ClientHeader = BrokerHeader & {
+    /** Optional timeout for request-response message pairs */
     timeout?: number;
-}
+};
 
-export interface Message {
-    header: MessageHeader;
-    payload: MessagePayload;
-}
+export type MessageHeader = BrokerHeader | ClientHeader;
+
+export type MessagePayloadError = {
+    /**
+     * Represents an error structure within a message.
+     * Used to communicate error details in a standardized format.
+     */
+    error: {
+        /** Unique error code identifying the type of error */
+        code: string;
+
+        /** Human-readable error message describing what went wrong */
+        message: string;
+
+        /** Timestamp when the error occurred in ISO 8601 format */
+        timestamp: string; // ISO 8601 format (e.g., "2023-10-27T10:30:00Z")
+
+        /** Optional additional error details as a structured object */
+        details?: object;
+    };
+};
+
+export type MessagePayloadSuccess = Record<string, any>;
+
+/**
+ * Represents the payload section of a message.
+ * Contains the actual data being transmitted along with optional control fields.
+ */
+export type MessagePayload = MessagePayloadSuccess | MessagePayloadError;
+
+/**
+ * Represents a complete message in the system.
+ * Combines a header and payload to form a full message structure.
+ */
+export type Message<T extends MessageHeader = MessageHeader, U extends MessagePayload = MessagePayload> = {
+    /** Message metadata and routing information */
+    header: T;
+
+    /** Message content and data */
+    payload: U;
+};
 
 /**
  * Service for managing WebSocket communication with the server.
@@ -107,11 +161,23 @@ export class WebsocketService {
     /** Active WebSocket connection */
     private socket: WebSocket | null = null;
     /** Map of pending requests awaiting responses */
-    private pendingRequests = new Map<string, { resolve: (response: any) => void; reject: (error: any) => void }>();
+    private pendingRequests = new Map<string, { resolve: (message: Message<BrokerHeader, MessagePayloadSuccess>) => void; reject: (message: Message<BrokerHeader, MessagePayloadError>) => void }>();
     /** Current state of the WebSocket connection */
     private _state = ConnectionState.DISCONNECTED;
+    /** Storage key for the WebSocket URL */
+    private readonly WS_URL_KEY = 'websocket_url';
+    /** Default WebSocket URL based on current location */
+    private readonly DEFAULT_URL = (() => {
+        // Otherwise, use the current location
+        const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        // Force WSS only for HTTPS on non-localhost domains
+        const forceWSS = location.protocol.startsWith('https:') && !isLocalhost;
+        // Default to matching the page protocol, but allow both for HTTP or localhost
+        const protocol = forceWSS ? 'wss:' : (location.protocol.startsWith('https:') ? 'wss:' : 'ws:');
+        return `${protocol}//${location.hostname}:3000`;
+    })();
     /** URL of the WebSocket server */
-    private _url = location.protocol.startsWith('https:') ? `wss://${location.hostname}:${location.port}` : `ws://${location.hostname}:3000`;
+    private _url: string;
     /** Time of last successful connection */
     private _lastConnected?: Date;
     /** Number of reconnection attempts */
@@ -147,7 +213,7 @@ export class WebsocketService {
     /** Error events */
     error$ = new SingleEmitter<(error: Event) => void>();
     /** Message events */
-    message$ = new MultiEmitter<(message: Message) => void>();
+    message$ = new MultiEmitter<(header: MessageHeader, payload: MessagePayload) => void>();
 
     /** Gets the current connection state */
     get state(): ConnectionState {
@@ -171,7 +237,46 @@ export class WebsocketService {
      * Automatically connects to the WebSocket server.
      */
     constructor() {
+        // Initialize URL from localStorage or default
+        this._url = this.getStoredUrl();
         // Connect to the WebSocket server
+        this.connect();
+    }
+
+    /**
+     * Gets the stored WebSocket URL from localStorage or returns the default URL
+     * @returns The stored URL or default URL
+     */
+    private getStoredUrl(): string {
+        const storedUrl = localStorage.getItem(this.WS_URL_KEY);
+        return storedUrl || this.DEFAULT_URL;
+    }
+
+    /**
+     * Sets the WebSocket URL in localStorage
+     * @param url - The URL to store
+     */
+    private setStoredUrl(url: string): void {
+        localStorage.setItem(this.WS_URL_KEY, url);
+    }
+
+    /**
+     * Updates the WebSocket URL and reconnects
+     * @param url - The new WebSocket URL
+     * @throws Error if trying to use WS protocol on HTTPS for non-localhost domains
+     */
+    public updateUrl(url: string): void {
+        const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        const isHttps = location.protocol.startsWith('https:');
+
+        // Only enforce WSS for HTTPS on non-localhost domains
+        if (isHttps && !isLocalhost && url.startsWith('ws://')) {
+            throw new Error('Cannot use WS protocol on HTTPS for non-localhost domains. Use WSS instead.');
+        }
+
+        this.setStoredUrl(url);
+        this._url = url;
+        this.disconnect();
         this.connect();
     }
 
@@ -186,6 +291,7 @@ export class WebsocketService {
             type,
             timestamp: new Date(),
             error,
+            url: this._url,
             attempt: type === ConnectionEventType.RECONNECTING ? this._reconnectAttempts : undefined
         };
 
@@ -247,9 +353,14 @@ export class WebsocketService {
      * Connects to the WebSocket server.
      * Handles reconnection and sets up event listeners.
      *
-     * @param url - WebSocket server URL
+     * @param url - Optional WebSocket server URL. If not provided, uses the stored URL.
      */
-    connect(url: string = this._url): void {
+    connect(url?: string): void {
+        if (url) {
+            return this.updateUrl(url);
+        } else {
+            url = this._url;
+        }
         // Stop any pending reconnection
         this.stopReconnectTimeout();
 
@@ -284,7 +395,14 @@ export class WebsocketService {
         }
 
         this.stateChange$.emit(this._state);
-        this.socket = new WebSocket(url);
+        try {
+            this.socket = new WebSocket(url);
+        } catch (error: any) {
+            console.error('Error connecting to WebSocket:', error);
+            this.addEvent(ConnectionEventType.ERROR, error instanceof Error ? error.message : 'Unknown error');
+            this.error$.emit(error);
+            return;
+        }
 
         this.socket.onopen = () => {
             this._state = ConnectionState.CONNECTED;
@@ -299,10 +417,22 @@ export class WebsocketService {
 
         this.socket.onmessage = (event) => {
             try {
-                const [header, payload] = event.data.split('\n');
-                const [action, topic, version, requestId] = header.split(':');
-                const message = JSON.parse(payload);
+                const [headerStr, payloadStr] = event.data.split('\n');
+                const [action, topic, version, requestId, parentRequestId, timeout] = headerStr.split(':');
+                const header: MessageHeader = { action, topic, version, requestId, parentRequestId, timeout };
+                const payload: MessagePayload = JSON.parse(payloadStr);
 
+                // Parse the error timestamp
+                if (payload.error) {
+                    payload.error.timestamp = new Date(payload.error.timestamp);
+                }
+
+                // Emit the message
+                this.message$.emit(`${action}:${topic}`, header, payload);
+                this.message$.emit(`${action}:${topic}:${version}`, header, payload);
+                this.message$.emit(`${action}:${topic}:${version}:${requestId}`, header, payload);
+
+                // Handle the message
                 if (topic === 'system.heartbeat' && action === ActionType.REQUEST) {
                     this.send(ActionType.RESPONSE, 'system.heartbeat', { timestamp: new Date().toISOString() }, requestId);
                 } else if (action === ActionType.RESPONSE && requestId) {
@@ -313,15 +443,12 @@ export class WebsocketService {
                     this.pendingRequests.delete(requestId);
 
                     // Resolve the request
-                    if (message.error) {
-                        request.reject(message);
+                    if (payload.error) {
+                        request.reject({ header, payload: payload as MessagePayloadError });
                     } else {
-                        request.resolve(message);
+                        request.resolve({ header, payload: payload as MessagePayloadSuccess });
                     }
                 }
-
-                // Emit the message
-                this.message$.emit(header, message);
             } catch (error) {
                 console.error('Error parsing message:', error);
                 this.addEvent(ConnectionEventType.ERROR, error instanceof Error ? error.message : String(error));
@@ -333,6 +460,7 @@ export class WebsocketService {
             this.addEvent(ConnectionEventType.DISCONNECTED);
             this.stateChange$.emit(this._state);
             this.stopHeartbeat();
+            this.socket = null;
 
             // Only attempt to reconnect if not suppressed
             if (this.suppressReconnect) {
@@ -362,13 +490,10 @@ export class WebsocketService {
      */
     private async send(action: ActionType, topic: string, payload: Object = {}, requestId?: string): Promise<void> {
         await this.waitForReady();
-        // Serialize the header:
-        let header = `${action}:${topic}:1.0.0`;
-        if (requestId) header += `:${requestId}`;
-        // Serialize the payload:
-        let payloadString = JSON.stringify(payload);
+        // Serialize the message:
+        const message = this.serializeMessage({ action, topic, version: '1.0.0', requestId }, payload);
         // Serialize and send the message:
-        this.socket!.send(`${header}\n${payloadString}`);
+        this.socket!.send(message);
     }
 
     /**
@@ -379,13 +504,41 @@ export class WebsocketService {
      * @param timeout - Optional timeout in milliseconds
      * @returns Promise that resolves with the response
      */
-    async request(topic: string, payload: Object = {}, timeout?: number): Promise<any> {
+    async request(topic: string, payload: Object = {}, timeout?: number): Promise<Message<BrokerHeader, MessagePayloadSuccess>> {
         return await new Promise((resolve, reject) => {
             const requestId = uuidv4();
             if (timeout) (payload as any).timeout = timeout;
             this.send(ActionType.REQUEST, topic, payload, requestId);
             this.pendingRequests.set(requestId, { resolve, reject });
         });
+    }
+
+    /**
+     * Subscribes to a topic.
+     * @param action - The action type
+     * @param topic - The topic to subscribe to
+     * @param priority - The priority of the subscription
+     * @param callback - The callback function to handle incoming messages
+     * @returns Promise that resolves with the subscription response
+     */
+    async subscribe(action: ActionType.PUBLISH | ActionType.REQUEST, topic: string, priority: number = 0, callback: (header: MessageHeader, payload: MessagePayload) => void): Promise<Message<BrokerHeader, MessagePayloadSuccess>> {
+        // Clear all existing subscriptions
+        this.message$.clear(`${action}:${topic}`);
+        // Subscribe to the topic
+        this.message$.on(`${action}:${topic}`, callback);
+        // Request to subscribe to the topic
+        return await this.request('system.topic.subscribe', { topic, priority });
+    }
+
+    /**
+     * Unsubscribes from a topic.
+     * @param action - The action type
+     * @param topic - The topic to unsubscribe from
+     */
+    unsubscribe(action: ActionType.PUBLISH | ActionType.REQUEST, topic: string): void {
+        this.message$.clear(`${action}:${topic}`);
+        // Request to unsubscribe from the topic
+        this.request('system.topic.unsubscribe', { topic });
     }
 
     /**
@@ -413,5 +566,34 @@ export class WebsocketService {
         return new Promise<void>(resolve => {
             this.connection$.once(event => event.type === ConnectionEventType.CONNECTED ? resolve() : undefined);
         });
+    }
+
+    /**
+     * Serializes a message into a string.
+     * @param header - The header of the message
+     * @param payload - The payload of the message
+     * @returns The serialized message
+     */
+    serializeMessage(header: MessageHeader, payload: MessagePayload): string {
+        // Create the header line
+        let headerLine = `${header.action}:${header.topic}:${header.version}`;
+
+        if ((header as ClientHeader).timeout) headerLine += `:${header.requestId ?? ''}:${header.parentRequestId ?? ''}:${(header as ClientHeader).timeout}`;
+        else if (header.parentRequestId) headerLine += `:${header.requestId ?? ''}:${header.parentRequestId}`;
+        else if (header.requestId) headerLine += `:${header.requestId}`;
+
+        // Create the payload line
+        const payloadLine = JSON.stringify(payload);
+        return `${headerLine}\n${payloadLine}`;
+    }
+
+    /**
+     * Gets the size of a message in bytes.
+     * @param header - The header of the message
+     * @param payload - The payload of the message
+     * @returns The size of the message in bytes
+     */
+    getMessageSize(header: MessageHeader, payload: MessagePayload): number {
+        return new TextEncoder().encode(this.serializeMessage(header, payload)).length;
     }
 }

@@ -143,7 +143,6 @@ export class ThemeService {
         document.documentElement.setAttribute('color-scheme', effectiveTheme);
 
         // Notify all components that the theme has changed
-        console.log('Theme changed to', this.currentTheme, this.currentColorPalette);
         this.themeChanged$.emit(this.currentTheme, this.currentColorPalette);
     }
 }

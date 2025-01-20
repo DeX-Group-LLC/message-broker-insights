@@ -1,30 +1,26 @@
 import { ActionType } from "../../services/websocket.service";
-import { MessageFlow } from "./tracker.component";
+import { MessageFlow } from "../../services/tracker.service";
 
 export const MOCK_DATA: MessageFlow[] = [
     {
-        status: 'success',
-        receivedAt: new Date('2024-01-20T10:00:00'),
-        completedAt: new Date('2024-01-20T10:00:01'),
-        brokerProcessingTime: 50,
-        timeout: 30000,
-        listeners: [
-            { serviceId: 'logging-service', topic: 'system.auth.request' },
-            { serviceId: 'audit-service', topic: 'system.auth.request' }
-        ],
+        auditors: ['logging-service', 'audit-service'],
         request: {
             serviceId: 'frontend-service',
+            timeout: 30000,
+            receivedAt: new Date('2024-01-20T10:00:00'),
             message: {
                 header: {
                     action: ActionType.REQUEST,
                     topic: 'system.auth.request',
                     version: '1.0.0',
-                    requestId: 'req-001'
+                    requestId: 'req-001',
+                    parentRequestId: 'req-000'
                 },
                 payload: { username: 'john.doe', action: 'login' }
             }
         },
         response: {
+            sentAt: new Date('2024-01-20T10:00:01'),
             target: {
                 serviceId: 'auth-service',
                 priority: 1
@@ -40,35 +36,40 @@ export const MOCK_DATA: MessageFlow[] = [
                 payload: { token: 'xyz123', expiresIn: 3600 }
             }
         },
-        relatedMessages: [
-            {
-                action: ActionType.PUBLISH,
-                topic: 'system.audit.log',
+        parentMessage: {
+            serviceId: 'login-service',
+            header: {
+                action: ActionType.REQUEST,
+                topic: 'frontend-service.auth.login',
                 version: '1.0.0',
-                requestId: 'req-001-1',
-                originatorServiceId: 'auth-service',
-                responderServiceIds: ['audit-service', 'logging-service'],
-                status: 'success'
+                requestId: 'req-000'
+            }
+        },
+        childMessages: [
+            {
+                serviceId: 'auth-service',
+                header: {
+                    action: ActionType.PUBLISH,
+                    topic: 'system.audit.log',
+                    version: '1.0.0'
+                }
             },
             {
-                action: ActionType.REQUEST,
-                topic: 'system.user.validate',
-                version: '1.0.0',
-                requestId: 'req-001-2',
-                originatorServiceId: 'auth-service',
-                responderServiceId: 'user-service',
-                status: 'success'
+                serviceId: 'auth-service',
+                header: {
+                    action: ActionType.REQUEST,
+                    topic: 'system.user.validate',
+                    version: '1.0.0',
+                    requestId: 'req-001-1'
+                },
             }
         ]
     },
     {
-        status: 'timeout',
-        receivedAt: new Date('2024-01-20T10:05:00'),
-        completedAt: new Date('2024-01-20T10:05:02'),
-        brokerProcessingTime: 45,
-        timeout: 2000,
         request: {
             serviceId: 'user-service',
+            timeout: 2000,
+            receivedAt: new Date('2024-01-20T10:05:00'),
             message: {
                 header: {
                     action: ActionType.REQUEST,
@@ -76,10 +77,11 @@ export const MOCK_DATA: MessageFlow[] = [
                     version: '1.0.0',
                     requestId: 'req-002'
                 },
-                payload: { to: 'user@example.com', template: 'welcome' }
+                payload: { timeout: 2000, to: 'user@example.com', template: 'welcome' }
             }
         },
         response: {
+            sentAt: new Date('2024-01-20T10:05:02'),
             target: {
                 serviceId: 'email-service',
                 priority: 2
@@ -96,31 +98,21 @@ export const MOCK_DATA: MessageFlow[] = [
                     error: {
                         code: 'REQUEST_TIMEOUT',
                         message: 'Request timed out after 2000ms',
-                        metadata: {
+                        timestamp: new Date('2024-01-20T10:05:02'),
+                        details: {
                             timeout: 2000,
                             responderServiceId: 'email-service'
                         }
                     }
                 }
             }
-        },
-        error: {
-            code: 'REQUEST_TIMEOUT',
-            message: 'Request timed out after 2000ms',
-            metadata: {
-                timeout: 2000,
-                responderServiceId: 'email-service'
-            }
         }
     },
     {
-        status: 'error',
-        receivedAt: new Date('2024-01-20T10:10:00'),
-        completedAt: new Date('2024-01-20T10:10:01'),
-        brokerProcessingTime: 30,
-        timeout: 30000,
         request: {
             serviceId: 'order-service',
+            timeout: 30000,
+            receivedAt: new Date('2024-01-20T10:10:00'),
             message: {
                 header: {
                     action: ActionType.REQUEST,
@@ -132,6 +124,7 @@ export const MOCK_DATA: MessageFlow[] = [
             }
         },
         response: {
+            sentAt: new Date('2024-01-20T10:10:02'),
             target: {
                 serviceId: 'inventory-service',
                 priority: 2
@@ -148,30 +141,21 @@ export const MOCK_DATA: MessageFlow[] = [
                     error: {
                         code: 'INSUFFICIENT_STOCK',
                         message: 'Not enough stock available',
-                        requestedQuantity: 5,
-                        availableQuantity: 3
+                        timestamp: new Date('2024-01-20T10:10:01'),
+                        details: {
+                            requestedQuantity: 5,
+                            availableQuantity: 3
+                        }
                     }
                 }
-            }
-        },
-        error: {
-            code: 'INSUFFICIENT_STOCK',
-            message: 'Not enough stock available',
-            metadata: {
-                productId: '123',
-                requestedQuantity: 5,
-                availableQuantity: 3
             }
         }
     },
     {
-        status: 'dropped',
-        receivedAt: new Date('2024-01-20T10:15:00'),
-        completedAt: new Date('2024-01-20T10:15:00'),
-        brokerProcessingTime: 5,
-        timeout: 30000,
         request: {
             serviceId: 'catalog-service',
+            timeout: 30000,
+            receivedAt: new Date('2024-01-20T10:15:00'),
             message: {
                 header: {
                     action: ActionType.REQUEST,
@@ -183,6 +167,7 @@ export const MOCK_DATA: MessageFlow[] = [
             }
         },
         response: {
+            sentAt: new Date('2024-01-20T10:15:02'),
             fromBroker: true,
             message: {
                 header: {
@@ -195,27 +180,20 @@ export const MOCK_DATA: MessageFlow[] = [
                     error: {
                         code: 'NO_RESPONDERS',
                         message: 'No responders available for topic',
-                        topic: 'system.pricing.request'
+                        timestamp: new Date('2024-01-20T10:15:00'),
+                        details: {
+                            topic: 'system.pricing.request'
+                        }
                     }
                 }
-            }
-        },
-        error: {
-            code: 'NO_RESPONDERS',
-            message: 'No responders available for topic',
-            metadata: {
-                topic: 'system.pricing.request'
             }
         }
     },
     {
-        status: 'error',
-        receivedAt: new Date('2024-01-20T10:20:00'),
-        completedAt: new Date('2024-01-20T10:20:00'),
-        brokerProcessingTime: 2,
-        timeout: 30000,
         request: {
             serviceId: 'payment-service',
+            timeout: 30000,
+            receivedAt: new Date('2024-01-20T10:20:00'),
             message: {
                 header: {
                     action: ActionType.REQUEST,
@@ -227,6 +205,7 @@ export const MOCK_DATA: MessageFlow[] = [
             }
         },
         response: {
+            sentAt: new Date('2024-01-20T10:20:02'),
             fromBroker: true,
             message: {
                 header: {
@@ -239,29 +218,20 @@ export const MOCK_DATA: MessageFlow[] = [
                     error: {
                         code: 'INTERNAL_ERROR',
                         message: 'Message broker internal error',
-                        details: 'Failed to route message due to internal error'
+                        timestamp: new Date('2024-01-20T10:20:00'),
+                            details: {
+                            error: 'Failed to route message due to internal error'
+                        }
                     }
                 }
-            }
-        },
-        error: {
-            code: 'INTERNAL_ERROR',
-            message: 'Message broker internal error',
-            metadata: {
-                errorId: 'mb-err-123',
-                component: 'message-router',
-                details: 'Failed to route message due to internal error'
             }
         }
     },
     {
-        status: 'dropped',
-        receivedAt: new Date('2024-01-20T10:25:00'),
-        completedAt: new Date('2024-01-20T10:25:02'),
-        brokerProcessingTime: 2000,
-        timeout: 30000,
         request: {
             serviceId: 'order-service',
+            timeout: 30000,
+            receivedAt: new Date('2024-01-20T10:25:00'),
             message: {
                 header: {
                     action: ActionType.REQUEST,
@@ -283,6 +253,7 @@ export const MOCK_DATA: MessageFlow[] = [
             }
         },
         response: {
+            sentAt: new Date('2024-01-20T10:25:02'),
             target: {
                 serviceId: 'shipping-service',
                 priority: 1
@@ -299,18 +270,12 @@ export const MOCK_DATA: MessageFlow[] = [
                     error: {
                         code: 'SERVICE_UNAVAILABLE',
                         message: 'Message broker is busy',
-                        details: 'Request dropped due to broker capacity limit'
+                        timestamp: new Date('2024-01-20T10:25:02'),
+                        details: {
+                            error: 'Request dropped due to broker capacity limit'
+                        }
                     }
                 }
-            }
-        },
-        error: {
-            code: 'SERVICE_UNAVAILABLE',
-            message: 'Message broker is busy',
-            metadata: {
-                errorId: 'mb-err-456',
-                component: 'message-queue',
-                details: 'Request dropped due to broker capacity limit'
             }
         }
     }

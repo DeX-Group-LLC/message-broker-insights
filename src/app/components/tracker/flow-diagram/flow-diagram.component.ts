@@ -2,13 +2,14 @@ import { Component, Input, Output, EventEmitter, OnChanges, SimpleChanges, NO_ER
 import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatIconModule } from '@angular/material/icon';
-import { ActionType, MessageHeader } from '../../../services/websocket.service';
-import { MessageFlow } from '../tracker.component';
+import { MessageHeader } from '../../../services/websocket.service';
+import { MessageFlow } from '../../../services/tracker.service';
+import { ServicesService } from '../../../services/services.service';
 
 interface FlowNode {
     id: string;
     label: string;
-    type: 'originator' | 'responder' | 'listener' | 'broker';
+    type: 'parent' | 'originator' | 'broker' | 'responder' | 'auditor' | 'child';
     x: number;
     y: number;
 }
@@ -16,31 +17,15 @@ interface FlowNode {
 interface FlowMessage {
     from: string;
     to: string;
-    label: string;
-    type: 'request' | 'response' | 'publish';
+    header: MessageHeader;
     timestamp?: Date;
-    status?: 'success' | 'error' | 'dropped' | 'timeout';
+    status?: string;  // error code or 'SUCCESS'
     isBrokerInput?: boolean;  // True if message is going to broker
 }
 
 interface FlowData {
     nodes: FlowNode[];
     messages: FlowMessage[];
-}
-
-interface RelatedMessage {
-    type: 'Publish' | 'Request';
-    topic: string;
-    originatorServiceId: string;
-    responderServiceIds?: string[];  // For Publish type
-    responderServiceId?: string;     // For Request type
-    status: 'success' | 'error' | 'dropped' | 'timeout';
-    requestId?: string;              // For Request type
-}
-
-interface Listener {
-    serviceId: string;
-    topic: string;
 }
 
 @Component({
@@ -59,10 +44,17 @@ export class FlowDiagramComponent implements OnChanges {
     height = 400;
     flowData: FlowData | null = null;
 
+    constructor(private servicesService: ServicesService) {}
+
     ngOnChanges(changes: SimpleChanges): void {
         if (changes['messageFlow']) {
             this.buildFlowData();
         }
+    }
+
+    updateFlow(messageFlow: MessageFlow): void {
+        this.messageFlow = messageFlow;
+        this.buildFlowData();
     }
 
     private buildFlowData(): void {
@@ -79,17 +71,27 @@ export class FlowDiagramComponent implements OnChanges {
         const boxWidth = 100;
         const topPadding = 16;
         const horizontalPadding = 50;
-        const sideServicesX = serviceSpacing *4;
+        let sideServicesX = serviceSpacing * 3;
+        const leftServicesX = horizontalPadding;
+        const timeoutTargetId = this.messageFlow.response?.message?.payload?.error?.details?.targetServiceId;
+        const targetId = this.messageFlow.response?.target?.serviceId;
+        let addedRightWidth = false;
+        let addedResponderWidth = false;
 
         // Track all Y positions for each service
         const serviceMessageYPositions = new Map<string, number[]>();
+
+        // Calculate initial x position based on whether there's a parent message
+        const initialX = this.messageFlow.parentMessage ?
+            leftServicesX + boxWidth + boxWidth/2 :
+            leftServicesX + boxWidth/2;
 
         // Add core services with top padding
         nodes.push({
             id: this.messageFlow.request.serviceId,
             label: this.messageFlow.request.serviceId,
             type: 'originator',
-            x: horizontalPadding + boxWidth/2,
+            x: initialX,
             y: topPadding
         });
 
@@ -97,223 +99,246 @@ export class FlowDiagramComponent implements OnChanges {
             id: 'message-broker',
             label: 'Message Broker',
             type: 'broker',
-            x: horizontalPadding + boxWidth/2 + serviceSpacing,
+            x: initialX + serviceSpacing,
             y: topPadding
         });
 
         // Only add responder node if it exists and is needed
-        const isInternalError = this.messageFlow.error?.code === 'INTERNAL_ERROR';
-        const isNoResponders = this.messageFlow.error?.code === 'NO_RESPONDERS';
-        if (this.messageFlow.response?.target?.serviceId && !isNoResponders) {
+        const errorCode = this.messageFlow.response?.message?.payload?.['error']?.code;
+        const isInternalError = errorCode === 'INTERNAL_ERROR';
+        const isNoResponders = errorCode === 'NO_RESPONDERS';
+        if (targetId && targetId !== 'message-broker' && !isNoResponders) {
             nodes.push({
-                id: this.messageFlow.response.target.serviceId,
-                label: this.messageFlow.response.target.serviceId,
+                id: targetId,
+                label: targetId,
                 type: 'responder',
-                x: horizontalPadding + boxWidth/2 + serviceSpacing * 2,
+                x: initialX + serviceSpacing * 2,
                 y: topPadding
             });
+            sideServicesX += serviceSpacing;
+            addedResponderWidth = true;
+        } else if (timeoutTargetId && timeoutTargetId !== targetId) {
+            nodes.push({
+                id: timeoutTargetId,
+                label: timeoutTargetId,
+                type: 'responder',
+                x: initialX + serviceSpacing * 2,
+                y: topPadding
+            });
+            sideServicesX += serviceSpacing;
+            addedResponderWidth = true;
         }
+        // Calculate base width without auditors
+        let baseWidth = horizontalPadding * 2 + boxWidth * nodes.length + (serviceSpacing - boxWidth) * (nodes.length - 1);
 
-        // Calculate base width without listeners
-        let baseWidth = horizontalPadding * 2 + boxWidth + serviceSpacing * (nodes.length - 1);
-
-        // Add listeners if they exist
-        if (this.messageFlow.listeners?.length) {
-            // Add extra space for listeners column
-            baseWidth += serviceSpacing + horizontalPadding;
+        // Add extra space for parent message if it exists
+        if (this.messageFlow.parentMessage) {
+            baseWidth += boxWidth;
         }
-
-        // Set final width
-        this.width = baseWidth;
+        // Add extra space for auditors if they exist
+        if (this.messageFlow.auditors?.length) {
+            baseWidth += boxWidth;
+            addedRightWidth = true;
+        }
 
         let messageIndex = 0;
+
+        // Add parent message if it exists
+        if (this.messageFlow.parentMessage) {
+            messages.push({
+                from: this.messageFlow.parentMessage.serviceId,
+                to: 'message-broker',
+                header: this.messageFlow.parentMessage.header,
+                isBrokerInput: true
+            });
+            messageIndex++;
+            // Add the message broker to originator
+            const message = {
+                from: 'message-broker',
+                to: this.messageFlow.request.serviceId,
+                header: {
+                    ...this.messageFlow.parentMessage.header,
+                    requestId: this.messageFlow.request.message.header.parentRequestId
+                },
+                isBrokerInput: false
+            };
+            delete message.header.parentRequestId;
+            messages.push(message);
+            messageIndex++;
+        }
 
         // Add request messages
         messages.push({
             from: this.messageFlow.request.serviceId,
             to: 'message-broker',
-            label: this.messageFlow.request.message.header.topic,
-            type: 'request',
-            timestamp: this.messageFlow.receivedAt,
+            header: this.messageFlow.request.message.header,
+            timestamp: this.messageFlow.request.receivedAt,
             isBrokerInput: true
         });
         messageIndex++;
 
         // Only add message to responder if not NO_RESPONDERS and no internal error
-        if (!isNoResponders && !isInternalError) {
-            messages.push({
+        if (this.messageFlow.response?.fromBroker === false) {//!isNoResponders && !isInternalError) {
+            const message = {
                 from: 'message-broker',
                 to: this.messageFlow.response!.target!.serviceId!,
-                label: this.messageFlow.request.message.header.topic,
-                type: 'request',
-                timestamp: new Date(this.messageFlow.receivedAt.getTime() + this.messageFlow.brokerProcessingTime),
+                header: {
+                    ...this.messageFlow.request.message.header,
+                    requestId: this.messageFlow.response?.message?.header?.requestId
+                },
                 isBrokerInput: false
-            });
+            };
+            delete message.header.parentRequestId;
+            messages.push(message);
             messageIndex++;
 
-            // Add messages to listeners after forwarding to responder
-            this.messageFlow.listeners?.forEach((listener: Listener) => {
+            // Add messages to auditors after forwarding to responder
+            for (const serviceId of this.messageFlow.auditors || []) {
                 const msgY = messageStartY + messageIndex * messageSpacing;
 
                 // Track Y position for this service
-                if (!serviceMessageYPositions.has(listener.serviceId)) {
-                    serviceMessageYPositions.set(listener.serviceId, []);
+                if (!serviceMessageYPositions.has(serviceId)) {
+                    serviceMessageYPositions.set(serviceId, []);
                 }
-                serviceMessageYPositions.get(listener.serviceId)?.push(msgY);
+                serviceMessageYPositions.get(serviceId)?.push(msgY);
 
                 messages.push({
                     from: 'message-broker',
-                    to: listener.serviceId,
-                    label: this.messageFlow.request.message.header.topic,
-                    type: 'publish',
-                    timestamp: new Date(this.messageFlow.receivedAt.getTime() + this.messageFlow.brokerProcessingTime),
+                    to: serviceId,
+                    header: this.messageFlow.request.message.header,
                     isBrokerInput: false
                 });
                 messageIndex++;
-            });
+            }
         }
 
-        // Add response messages if exists or timeout/dropped/internal error response
-        if (this.messageFlow.status === 'timeout') {
-            // For timeout, add response from broker to originator
+        // Add response messages if exists
+        if (this.messageFlow.response?.message) {
+            const status = this.messageFlow.response.message.payload?.['error']?.code ?? 'SUCCESS';
+            const isFromBroker = this.messageFlow.response.fromBroker;
+
+            if (!isFromBroker) {
+                // Add response from target to broker
+                messages.push({
+                    from: this.messageFlow.response.target!.serviceId!,
+                    to: 'message-broker',
+                    header: this.messageFlow.response.message.header,
+                    status,
+                    isBrokerInput: true
+                });
+            }
+
+            // Add response from broker to originator
             messages.push({
                 from: 'message-broker',
                 to: this.messageFlow.request.serviceId,
-                label: this.messageFlow.request.message.header.topic,
-                type: 'response',
-                timestamp: new Date(this.messageFlow.receivedAt.getTime() + this.messageFlow.timeout),
-                status: 'timeout',
+                header: {
+                    ...this.messageFlow.response!.message.header,
+                    requestId: this.messageFlow.request.message.header.requestId
+                },
+                timestamp: this.messageFlow.response?.sentAt,
+                status,
                 isBrokerInput: false
             });
-            messageIndex++;
-        } else if (this.messageFlow.status === 'dropped' || isInternalError) {
-            // For dropped/internal error, add response from broker to originator
-            messages.push({
-                from: 'message-broker',
-                to: this.messageFlow.request.serviceId,
-                label: this.messageFlow.request.message.header.topic,
-                type: 'response',
-                timestamp: this.messageFlow.completedAt,
-                status: isInternalError ? 'error' : 'dropped',
-                isBrokerInput: false
-            });
-            messageIndex++;
-        } else if (this.messageFlow.response) {
-            messages.push({
-                from: this.messageFlow.response.target!.serviceId!,
-                to: 'message-broker',
-                label: this.messageFlow.request.message.header.topic,
-                type: 'response',
-                timestamp: new Date(this.messageFlow.completedAt.getTime() - this.messageFlow.brokerProcessingTime),
-                status: this.messageFlow.status,
-                isBrokerInput: true
-            });
-            messages.push({
-                from: 'message-broker',
-                to: this.messageFlow.request.serviceId,
-                label: this.messageFlow.request.message.header.topic,
-                type: 'response',
-                timestamp: this.messageFlow.completedAt,
-                status: this.messageFlow.status,
-                isBrokerInput: false
-            });
-            messageIndex += 2;
+            messageIndex += isFromBroker ? 1 : 2;
         }
 
         // Add related messages
-        this.messageFlow.relatedMessages?.forEach(msg => {
-            if (msg.action === ActionType.PUBLISH) {
-                messages.push({
-                    from: msg.originatorServiceId,
-                    to: 'message-broker',
-                    label: msg.topic,
-                    type: 'publish',
-                    timestamp: this.messageFlow.completedAt,
-                    isBrokerInput: true
-                });
-                messageIndex++;
+        for (const msg of this.messageFlow.childMessages || []) {
+            // If targetId is set, we need to add the node to the left side of the diagram:
+            if (msg.serviceId !== targetId && msg.serviceId !== timeoutTargetId) {
+                const msgY = messageStartY + messageIndex * messageSpacing;
 
-                // Add messages from broker to each responder
-                msg.responderServiceIds?.forEach((responder: string) => {
-                    const msgY = messageStartY + messageIndex * messageSpacing;
-
-                    // Track Y position for this service
-                    if (!serviceMessageYPositions.has(responder)) {
-                        serviceMessageYPositions.set(responder, []);
-                    }
-                    serviceMessageYPositions.get(responder)?.push(msgY);
-
-                    messages.push({
-                        from: 'message-broker',
-                        to: responder,
-                        label: msg.topic,
-                        type: 'publish',
-                        timestamp: this.messageFlow.completedAt,
-                        isBrokerInput: false
-                    });
-                    messageIndex++;
-                });
-            } else {
-                // For request type, track the Y position when the message is going TO the service
-                const toServiceY = messageStartY + (messageIndex + 1) * messageSpacing; // +1 to get the second message Y
-                if (msg.responderServiceId && !serviceMessageYPositions.has(msg.responderServiceId)) {
-                    serviceMessageYPositions.set(msg.responderServiceId, []);
+                // Track Y position for this service
+                if (!serviceMessageYPositions.has(msg.serviceId)) {
+                    serviceMessageYPositions.set(msg.serviceId, []);
                 }
-                if (msg.responderServiceId) {
-                    serviceMessageYPositions.get(msg.responderServiceId)?.push(toServiceY);
-                }
+                serviceMessageYPositions.get(msg.serviceId)?.push(msgY);
+            }
+            messages.push({
+                from: msg.serviceId,
+                to: 'message-broker',
+                header: msg.header,
+                isBrokerInput: true
+            });
+            messageIndex++;
 
-                messages.push({
-                    from: msg.originatorServiceId,
-                    to: 'message-broker',
-                    label: msg.topic,
-                    type: 'request',
-                    timestamp: this.messageFlow.completedAt,
-                    isBrokerInput: true
-                });
+            // Add messages from broker to each target
+            /*for (const targetId of msg.targetServiceIds || []) {
+                const msgY = messageStartY + messageIndex * messageSpacing;
+
+                // Track Y position for this service
+                if (!serviceMessageYPositions.has(targetId)) {
+                    serviceMessageYPositions.set(targetId, []);
+                }
+                serviceMessageYPositions.get(targetId)?.push(msgY);
+
                 messages.push({
                     from: 'message-broker',
-                    to: msg.responderServiceId!,
-                    label: msg.topic,
-                    type: 'request',
-                    timestamp: this.messageFlow.completedAt,
+                    to: targetId,
+                    header: msg.header,
                     isBrokerInput: false
                 });
-                messageIndex += 2;
+                messageIndex++;
+            }*/
+        }
+
+        // Add parent message Y position if it exists
+        if (this.messageFlow.parentMessage) {
+            const msgY = messageStartY + 0 * messageSpacing; // First message
+            nodes.push({
+                id: `${this.messageFlow.parentMessage.serviceId}-${msgY}`,
+                label: this.messageFlow.parentMessage.serviceId,
+                type: 'parent',
+                x: leftServicesX + boxWidth/2,
+                y: msgY - 12 + topPadding
+            });
+        }
+
+        if (serviceMessageYPositions.size) {
+            if (!addedResponderWidth) {
+                baseWidth += serviceSpacing + boxWidth / 2;
+            } else if (!addedRightWidth) {
+                baseWidth += boxWidth;
             }
-        });
+        }
 
         // Add side services for each message position
-        serviceMessageYPositions.forEach((yPositions, serviceId) => {
-            yPositions.forEach(y => {
+        for (const [serviceId, yPositions] of serviceMessageYPositions.entries()) {
+            for (const y of yPositions) {
                 nodes.push({
                     id: `${serviceId}-${y}`, // Make ID unique for each instance
                     label: serviceId,
-                    type: 'listener',
+                    type: 'auditor',
                     x: sideServicesX,
                     y: y - 12 + topPadding
                 });
-            });
-        });
+            }
+        }
 
         this.flowData = { nodes, messages };
 
         // Calculate dimensions including padding
         const maxY = Math.max(...nodes.map(n => n.y)) + messageSpacing;
         const diagramHeight = Math.max(messageSpacing, messageStartY + messages.length * messageSpacing + topPadding);
+
+        // Set final width and height
+        this.width = baseWidth;
         this.height = Math.max(diagramHeight, maxY);
     }
 
     getNodeX(nodeId: string): number {
         // Strip the Y position suffix for side services when looking up nodes
         const baseNodeId = nodeId.split('-')[0];
-        const node = this.flowData?.nodes.find(n => n.id.startsWith(baseNodeId));
+        const node = this.flowData?.nodes.find(n => n.id.startsWith(nodeId));
         if (!node) return 0;
 
         // If this is a side service and we're getting the x for an arrow endpoint,
         // adjust by half the box width
-        if (node.type === 'listener') {
+        if (node.type === 'auditor' || node.type === 'child') {
             return node.x - 50; // Half of boxWidth
+        } else if (node.type === 'parent') {
+            return node.x + 50; // Half of boxWidth
         }
         return node.x;
     }
@@ -331,19 +356,20 @@ export class FlowDiagramComponent implements OnChanges {
 
     getMessageTooltip(msg: FlowMessage): string {
         const parts = [
-            `Type: ${msg.type}`,
-            `From: ${msg.from}`,
-            `To: ${msg.to}`,
-            `Topic: ${msg.label}`,
-            `Time: ${msg.timestamp ? msg.timestamp.toLocaleTimeString() : 'N/A'}`,
+            `From: ${this.getServiceName(msg.from)}`,
+            `To: ${this.getServiceName(msg.to)}`,
         ];
+
+        if (msg.timestamp) {
+            parts.push(`Time: ${msg.timestamp.toLocaleTimeString()}`);
+        }
 
         if (msg.status) {
             parts.push(`Status: ${msg.status}`);
         }
 
         // Add header info if available
-        const header = this.getMessageHeader(msg);
+        const header = msg.header;
         if (header) {
             parts.push('', 'Header:');
             Object.entries(header).forEach(([key, value]) => {
@@ -351,70 +377,59 @@ export class FlowDiagramComponent implements OnChanges {
             });
         }
 
+        if (this.isMessageClickable(msg)) {
+            parts.push('', 'Click to view details.');
+        }
+
         return parts.join('\n');
     }
 
-    private getMessageHeader(msg: FlowMessage): MessageHeader | null {
-        if (!this.messageFlow) return null;
-
-        // For the main request/response flow
-        if (msg.from === this.messageFlow.request.serviceId && msg.to === 'message-broker') {
-            return this.messageFlow.request.message.header;
-        }
-        if (msg.from === 'message-broker' && msg.to === this.messageFlow.response?.target?.serviceId) {
-            return this.messageFlow.request.message.header;
-        }
-        if (msg.from === this.messageFlow.response?.target?.serviceId && msg.to === 'message-broker' && this.messageFlow.response) {
-            return this.messageFlow.request.message.header;
-        }
-        if (msg.from === 'message-broker' && msg.to === this.messageFlow.request.serviceId && this.messageFlow.response) {
-            return this.messageFlow.request.message.header;
-        }
-
-        // For related messages
-        const relatedMsg = this.messageFlow.relatedMessages?.find((rm: any) => {
-            if (rm.type === 'Publish') {
-                return rm.topic === msg.label &&
-                    ((msg.isBrokerInput && rm.originatorServiceId === msg.from) ||
-                     (!msg.isBrokerInput && rm.responderServiceIds?.includes(msg.to)));
-            } else {
-                return rm.topic === msg.label &&
-                    ((msg.isBrokerInput && rm.originatorServiceId === msg.from) ||
-                     (!msg.isBrokerInput && rm.responderServiceId === msg.to));
-            }
-        });
-
-        if (relatedMsg) {
-            return {
-                action: relatedMsg.action,
-                topic: relatedMsg.topic,
-                version: relatedMsg.version,
-                requestId: relatedMsg.requestId
-            };
-        }
-
-        return null;
-    }
-
     isMessageClickable(msg: FlowMessage): boolean {
-        const header = this.getMessageHeader(msg);
-        return !!header?.['requestId'] && header['requestId'] !== this.messageFlow.request.message.header.requestId;
+        const header = msg.header;
+        return !!header?.requestId && msg.from !== 'message-broker' && header.requestId !== this.messageFlow.request.message.header.requestId;
     }
 
     onMessageClick(msg: FlowMessage): void {
-        const header = this.getMessageHeader(msg);
-        if (header?.['requestId'] && header['requestId'] !== this.messageFlow.request.message.header.requestId) {
-            this.messageSelect.emit(header['requestId']);
+        const header = msg.header;
+        if (header?.requestId && header.requestId !== this.messageFlow.request.message.header.requestId) {
+            this.messageSelect.emit(header.requestId);
         }
     }
 
     getStatusIcon(status: string): string {
         switch (status) {
-            case 'success': return 'check_circle';
-            case 'error': return 'cancel';
-            case 'dropped': return 'unpublished';
-            case 'timeout': return 'timer_off';
-            default: return '';
+            case 'SUCCESS': return 'check_circle';
+            case 'NO_RESPONDERS':
+            case 'SERVICE_UNAVAILABLE': return 'unpublished';
+            case 'REQUEST_TIMEOUT': return 'timer_off';
+            default: return 'cancel';
         }
+    }
+
+    getStatusColor(code: string): string {
+        switch (code) {
+            case 'SUCCESS': return 'success';
+            case 'NO_RESPONDERS':
+            case 'SERVICE_UNAVAILABLE': return 'dropped';
+            case 'REQUEST_TIMEOUT': return 'timeout';
+            default: return 'error';
+        }
+    }
+
+    getStatusText(code: string): string {
+        switch (code) {
+            case 'SUCCESS': return 'Success';
+            case 'NO_RESPONDERS':
+            case 'SERVICE_UNAVAILABLE': return 'Dropped';
+            case 'REQUEST_TIMEOUT': return 'Timeout';
+            default: return 'Error';
+        }
+    }
+
+    getServiceName(serviceId: string): string {
+        if (serviceId === 'message-broker') {
+            return 'Message Broker';
+        }
+        return this.servicesService.getService(serviceId)?.name || serviceId;
     }
 }
