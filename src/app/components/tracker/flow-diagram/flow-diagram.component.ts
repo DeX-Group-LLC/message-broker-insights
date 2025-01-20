@@ -78,8 +78,6 @@ export class FlowDiagramComponent implements OnChanges {
         let addedRightWidth = false;
         let addedResponderWidth = false;
 
-        delete (this.messageFlow as any).parentMessage;
-
         // Track all Y positions for each service
         const serviceMessageYPositions = new Map<string, number[]>();
 
