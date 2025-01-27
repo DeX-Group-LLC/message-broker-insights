@@ -19,7 +19,6 @@ import { MatTableModule } from '@angular/material/table';
 import { TableComponent } from '../common/table/table.component';
 import { BaseChartDirective } from 'ng2-charts';
 import { SingleEmitter } from '../../utils/single-emitter';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 
 // Register Chart.js components
