@@ -42,7 +42,8 @@ export class FlowDiagramComponent implements OnChanges {
 
     width = 800;
     height = 400;
-    flowData: FlowData | null = null;
+    flowData: FlowData | undefined;
+    lastBuildUpdateCount: number = -1;
 
     constructor(private servicesService: ServicesService) {}
 
@@ -53,13 +54,18 @@ export class FlowDiagramComponent implements OnChanges {
     }
 
     updateFlow(messageFlow: MessageFlow): void {
+        // If the flow is the same and the update count is the same, do nothing
+        if (this.messageFlow === messageFlow && this.lastBuildUpdateCount === this.messageFlow.updateCount) return;
+
+        // Update the flow and build the data
         this.messageFlow = messageFlow;
+        this.lastBuildUpdateCount = this.messageFlow.updateCount;
         this.buildFlowData();
     }
 
     private buildFlowData(): void {
         if (!this.messageFlow) {
-            this.flowData = null;
+            this.flowData = undefined;
             return;
         }
 
@@ -401,7 +407,7 @@ export class FlowDiagramComponent implements OnChanges {
             case 'SUCCESS': return 'check_circle';
             case 'NO_RESPONDERS':
             case 'SERVICE_UNAVAILABLE': return 'unpublished';
-            case 'REQUEST_TIMEOUT': return 'timer_off';
+            case 'TIMEOUT': return 'timer_off';
             default: return 'cancel';
         }
     }
@@ -411,7 +417,7 @@ export class FlowDiagramComponent implements OnChanges {
             case 'SUCCESS': return 'success';
             case 'NO_RESPONDERS':
             case 'SERVICE_UNAVAILABLE': return 'dropped';
-            case 'REQUEST_TIMEOUT': return 'timeout';
+            case 'TIMEOUT': return 'timeout';
             default: return 'error';
         }
     }
@@ -421,7 +427,7 @@ export class FlowDiagramComponent implements OnChanges {
             case 'SUCCESS': return 'Success';
             case 'NO_RESPONDERS':
             case 'SERVICE_UNAVAILABLE': return 'Dropped';
-            case 'REQUEST_TIMEOUT': return 'Timeout';
+            case 'TIMEOUT': return 'Timeout';
             default: return 'Error';
         }
     }

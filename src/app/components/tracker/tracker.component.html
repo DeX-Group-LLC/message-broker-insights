@@ -85,7 +85,7 @@
                 [customizable]="true"
                 [disabled]="!selectedFlow">
             </app-export>
-            <button mat-icon-button class="close-button" (click)="closeDetails()" matTooltip="Close details">
+            <button mat-icon-button class="close-button" (click)="closeDetails()" matTooltip="Close details" [matTooltipClass]="'fit-tooltip'">
                 <mat-icon>close</mat-icon>
             </button>
         </div>
@@ -105,19 +105,19 @@
                                         {{selectedFlow.response?.message?.payload?.['error']?.code ?? (selectedFlow.response ? 'SUCCESS' : 'PENDING')}}
                                     </span>
                                 </div>
-                                <div class="pill-item" matTooltip="When the message broker received the request from the originator.">
+                                <div class="pill-item" matTooltip="When the message broker received the request from the originator." [matTooltipClass]="'fit-tooltip'">
                                     <span class="label">Started</span>
                                     <span class="value">{{getFormattedDate(selectedFlow.request.receivedAt)}}</span>
                                 </div>
-                                <div class="pill-item" matTooltip="When the message broker sent the response to the originator.">
+                                <div class="pill-item" matTooltip="When the message broker sent the response to the originator." [matTooltipClass]="'fit-tooltip'">
                                     <span class="label">Completed</span>
                                     <span class="value">{{selectedFlow.response?.sentAt != null ? getFormattedDate(selectedFlow.response!.sentAt!) : 'N/A'}}</span>
                                 </div>
-                                <div class="pill-item" matTooltip="Total time from broker receiving the request to getting the response.">
+                                <div class="pill-item" matTooltip="Total time from broker receiving the request to getting the response." [matTooltipClass]="'fit-tooltip'">
                                     <span class="label">Total Duration</span>
                                     <span class="value">{{getProcessingDuration(selectedFlow)}}</span>
                                 </div>
-                                <div class="pill-item" matTooltip="Maximum time allowed for the responder to send a response.">
+                                <div class="pill-item" matTooltip="Maximum time allowed for the responder to send a response." [matTooltipClass]="'fit-tooltip'">
                                     <span class="label">Timeout</span>
                                     <span class="value">{{selectedFlow.request.timeout.toLocaleString(undefined, { maximumFractionDigits: 0 })}}ms</span>
                                 </div>
@@ -128,7 +128,7 @@
                         <div class="section">
                             <h3>Request</h3>
                             <div class="pill-section">
-                                <div class="pill-item service-pill fit-tooltip" [matTooltip]="'Name: ' + getServiceName(selectedFlow.request.serviceId) + '\n' + 'ID: ' + selectedFlow.request.serviceId">
+                                <div class="pill-item service-pill fit-tooltip" [matTooltip]="'Name: ' + getServiceName(selectedFlow.request.serviceId) + '\n' + 'ID: ' + selectedFlow.request.serviceId" [matTooltipClass]="'fit-tooltip'">
                                     <span class="label">Originator</span>
                                     <span class="value">{{getServiceName(selectedFlow.request.serviceId)}}</span>
                                 </div>
@@ -154,7 +154,7 @@
                                         <span class="value">{{item.value}}</span>
                                     </div>
                                 </ng-container>
-                                <div class="pill-item" matTooltip="Total size of header and payload combined.">
+                                <div class="pill-item" matTooltip="Total size of header and payload combined." [matTooltipClass]="'fit-tooltip'">
                                     <span class="label">Size</span>
                                     <span class="value">{{getMessageSize(selectedFlow.request.message)}} bytes</span>
                                 </div>
@@ -173,11 +173,11 @@
                         <div class="section" *ngIf="selectedFlow.response">
                             <h3>Response</h3>
                             <div class="pill-section">
-                                <div class="pill-item service-pill fit-tooltip" [matTooltip]="selectedFlow.response.fromBroker ? null : 'Name: ' + getServiceName(selectedFlow.response.target?.serviceId!) + '\n' + 'ID: ' + selectedFlow.response.target?.serviceId">
+                                <div class="pill-item service-pill fit-tooltip" [matTooltip]="selectedFlow.response.fromBroker ? null : 'Name: ' + getServiceName(selectedFlow.response.target?.serviceId!) + '\n' + 'ID: ' + selectedFlow.response.target?.serviceId" [matTooltipClass]="'fit-tooltip'">
                                     <span class="label">Responder</span>
                                     @if (selectedFlow.response.target && !selectedFlow.response.fromBroker) {
                                         <span class="value">{{getServiceName(selectedFlow.response.target.serviceId)}}</span>
-                                        <span class="property" matTooltip="Higher number means lower priority.">Priority: {{selectedFlow.response.target.priority}}</span>
+                                        <span class="property" matTooltip="Higher number means lower priority." [matTooltipClass]="'fit-tooltip'">Priority: {{selectedFlow.response.target.priority}}</span>
                                     } @else if (selectedFlow.response.message) {
                                         <span class="value warning">message-broker</span>
                                     }
@@ -205,7 +205,7 @@
                                             <span class="value">{{item.value}}</span>
                                         </div>
                                     </ng-container>
-                                    <div class="pill-item" matTooltip="Total size of header and payload combined.">
+                                    <div class="pill-item" matTooltip="Total size of header and payload combined." [matTooltipClass]="'fit-tooltip'">
                                         <span class="label">Size</span>
                                         <span class="value">{{getMessageSize(selectedFlow.response.message)}} bytes</span>
                                     </div>
@@ -226,7 +226,7 @@
                             <h3>Auditors</h3>
                             <div class="pill-section">
                                 <div class="pill-item" *ngFor="let serviceId of selectedFlow.auditors"
-                                    matTooltip="Services that receive a copy of the message but don't respond.">
+                                    matTooltip="Services that receive a copy of the message but don't respond." [matTooltipClass]="'fit-tooltip'">
                                     <span class="label">Service</span>
                                     <span class="value">{{getServiceName(serviceId)}}</span>
                                 </div>
@@ -261,7 +261,7 @@
                             <h3>Message Chain</h3>
                             <div class="pill-section">
                                 @if (selectedFlow.parentMessage) {
-                                    <div class="pill-item message-pill" [matTooltip]="'The message that triggered the current message\'s flow.\nClick to view the flow diagram.'">
+                                    <div class="pill-item message-pill" [matTooltip]="'The message that triggered the current message\'s flow.\nClick to view the flow diagram.'" [matTooltipClass]="'fit-tooltip'">
                                         <span class="label">Parent Request</span>
                                         <span class="value">{{getServiceName(selectedFlow.parentMessage.serviceId)}}</span>
                                         <span class="property">Action: {{selectedFlow.parentMessage.header.action}}</span>
@@ -279,7 +279,7 @@
                                     </div>
                                 }
                                 @for (child of selectedFlow.childMessages; track child) {
-                                    <div class="pill-item message-pill" [matTooltip]="'Messages that were triggered by the current message\'s flow.\nClick to view the flow diagram.'">
+                                    <div class="pill-item message-pill" [matTooltip]="'Messages that were triggered by the current message\'s flow.\nClick to view the flow diagram.'" [matTooltipClass]="'fit-tooltip'">
                                         <span class="label">Child Request</span>
                                         <span class="value">{{getServiceName(child.serviceId)}}</span>
                                         <span class="property">Action: {{child.header.action}}</span>

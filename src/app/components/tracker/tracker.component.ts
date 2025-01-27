@@ -156,7 +156,7 @@ export class TrackerComponent implements OnInit {
                 return '#808080'; // pending
             case 'NO_RESPONDERS':
             case 'SERVICE_UNAVAILABLE':
-            case 'REQUEST_TIMEOUT': return '#ff9800';
+            case 'TIMEOUT': return '#ff9800';
             default:return '#f44336';
         }
     }

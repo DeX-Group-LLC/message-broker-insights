@@ -6,7 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Subscription } from 'rxjs';
-import { NgChartsModule, BaseChartDirective } from 'ng2-charts';
+import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartOptions, Point, TooltipItem } from 'chart.js';
 import 'chartjs-adapter-moment';
 import { MetricsService, Metric } from '../../services/metrics.service';
@@ -31,7 +31,7 @@ import { cssvar, hexToRGBA, scaledLightDark, scaledMix } from '../utils/style.ut
         MatCardModule,
         MatIconModule,
         MatTooltipModule,
-        NgChartsModule,
+        BaseChartDirective,
         ExportComponent,
         TableComponent
     ],

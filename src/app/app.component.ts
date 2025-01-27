@@ -10,6 +10,8 @@ import { LogService } from './services/log.service';
 import { MetricsService } from './services/metrics.service';
 import { ServicesService } from './services/services.service';
 import { TopicsService } from './services/topics.service';
+import { TrackerService } from './services/tracker.service';
+import { ThemeService } from './services/theme.service';
 
 @Component({
     selector: 'app-root',
@@ -36,6 +38,8 @@ export class AppComponent {
         private logService: LogService,
         private metricsService: MetricsService,
         private servicesService: ServicesService,
-        private topicsService: TopicsService
+        private themeService: ThemeService,
+        private topicsService: TopicsService,
+        private trackerService: TrackerService
     ) {}
 }
