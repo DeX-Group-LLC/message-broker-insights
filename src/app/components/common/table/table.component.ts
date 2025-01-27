@@ -270,7 +270,9 @@ export class TableComponent implements AfterViewInit, OnDestroy {
         // Initialize debounce timer with default delay
         this.debounceTimer = new DebounceTimer(
             (data: any[], shouldGroup: boolean = true) => {
-                this.dataSource.data = this.processData(data, shouldGroup);
+                if (!this.isPaused) {
+                    this.dataSource.data = this.processData(data, shouldGroup);
+                }
             },
             this._debounceDelay
         );
