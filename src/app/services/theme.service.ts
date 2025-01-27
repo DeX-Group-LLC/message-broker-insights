@@ -1,5 +1,4 @@
 import { Injectable, Renderer2, RendererFactory2 } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
 import { SingleEmitter } from '../utils/single-emitter';
 
 /** Available theme options for the application */

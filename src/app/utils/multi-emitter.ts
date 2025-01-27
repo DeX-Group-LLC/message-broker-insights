@@ -1,32 +1,34 @@
-import { DebounceTimer } from "./debounce";
+import { SingleEmitter } from "./single-emitter";
 
 /**
  * Base class providing event emitter functionality.
  * Allows components to subscribe to and emit events.
  */
 export class MultiEmitter<T extends (...args: any[]) => void> {
-    /** Map storing event listeners for each event type */
-    private listeners = new Map<string, Set<T>>();
+    /** Map storing event emitters for each event type */
+    private events = new Map<string, SingleEmitter<T>>();
 
-    /** Debounce timer for emitting events */
-    private debounceTimer: DebounceTimer<(event: string, ...args: Parameters<T>) => void>;
+    /** Default debounce time for new emitters */
+    private debounceTime: number;
 
     /**
      * Constructor for MultiEmitter.
      * @param debounceTime - The debounce time in milliseconds. If set to -1, events are emitted immediately. If set to 0, events are emitted in the next tick.
      */
     constructor(debounceTime: number = 0) {
-        this.debounceTimer = new DebounceTimer(
-            (event: string, ...args: Parameters<T>) => {
-                const callbacks = this.listeners.get(event);
-                if (callbacks) {
-                    for (const callback of callbacks) {
-                        callback(...args);
-                    }
-                }
-            },
-            debounceTime
-        );
+        this.debounceTime = debounceTime;
+    }
+
+    /**
+     * Gets or creates a SingleEmitter for the given event type
+     */
+    private getEmitter(event: string): SingleEmitter<T> {
+        let emitter = this.events.get(event);
+        if (!emitter) {
+            emitter = new SingleEmitter<T>(this.debounceTime);
+            this.events.set(event, emitter);
+        }
+        return emitter;
     }
 
     /**
@@ -36,9 +38,7 @@ export class MultiEmitter<T extends (...args: any[]) => void> {
      * @param callback - Function to call when the event occurs
      */
     on(event: string, callback: T): void {
-        const callbacks = this.listeners.get(event) ?? new Set();
-        callbacks.add(callback);
-        this.listeners.set(event, callbacks);
+        this.getEmitter(event).on(callback);
     }
 
     /**
@@ -49,11 +49,7 @@ export class MultiEmitter<T extends (...args: any[]) => void> {
      * @param callback - Function to call when the event occurs
      */
     once(event: string, callback: T): void {
-        const onceCallback = (...args: Parameters<T>) => {
-            this.off(event, onceCallback as T);
-            return callback(...args);
-        };
-        this.on(event, onceCallback as T);
+        this.getEmitter(event).once(callback);
     }
 
     /**
@@ -63,24 +59,27 @@ export class MultiEmitter<T extends (...args: any[]) => void> {
      * @param callback - Function to remove from listeners
      */
     off(event: string, callback: T): void {
-        const callbacks = this.listeners.get(event);
-        if (callbacks) {
-            callbacks.delete(callback);
-            if (callbacks.size === 0) {
-                this.listeners.delete(event);
+        const emitter = this.events.get(event);
+        if (emitter) {
+            emitter.off(callback);
+            // Clean up empty emitters
+            if (emitter['listeners'].size === 0) {
+                this.events.delete(event);
             }
         }
     }
 
     /**
      * Emits an event with the specified arguments.
-     * Protected method that derived classes can use to emit events.
      *
      * @param event - Event to emit
      * @param args - Arguments to pass to event listeners
      */
     emit(event: string, ...args: Parameters<T>): void {
-        this.debounceTimer.execute(event, ...args);
+        const emitter = this.events.get(event);
+        if (emitter) {
+            emitter.emit(...args);
+        }
     }
 
     /**
@@ -90,9 +89,13 @@ export class MultiEmitter<T extends (...args: any[]) => void> {
      */
     clear(event?: string): void {
         if (event) {
-            this.listeners.delete(event);
+            const emitter = this.events.get(event);
+            if (emitter) {
+                emitter.clear();
+                this.events.delete(event);
+            }
         } else {
-            this.listeners.clear();
+            this.events.clear();
         }
     }
 }
