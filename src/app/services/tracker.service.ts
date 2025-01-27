@@ -81,7 +81,7 @@ export class TrackerService implements OnDestroy {
     public data$ = new SingleEmitter<(message: MessageFlow) => void>(1000);
 
     constructor(private websocketService: WebsocketService) {
-        this.websocketService.waitForReady().then(this._initialize);
+        this.initialize();
     }
 
     ngOnDestroy() {
