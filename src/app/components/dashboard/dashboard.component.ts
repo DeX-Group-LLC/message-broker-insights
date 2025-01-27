@@ -5,7 +5,7 @@ import { MatTableModule } from '@angular/material/table';
 import { Subscription } from 'rxjs';
 import { ChartConfiguration, ChartOptions, Tick, TooltipItem } from 'chart.js';
 import 'chartjs-adapter-moment';
-import { BaseChartDirective, NgChartsModule } from 'ng2-charts';
+import { BaseChartDirective } from 'ng2-charts';
 import { MetricsService, Metric } from '../../services/metrics.service';
 import { LogService } from '../../services/log.service';
 import { TimeFormatService } from '../../services/time-format.service';
@@ -28,16 +28,16 @@ interface SystemMetrics {
 
 @Component({
     selector: 'app-dashboard',
-    standalone: true,
+    templateUrl: './dashboard.component.html',
+    styleUrls: ['./dashboard.component.scss'],
     imports: [
         CommonModule,
         MatCardModule,
         MatTableModule,
-        NgChartsModule,
+        BaseChartDirective,
         TableComponent
     ],
-    templateUrl: './dashboard.component.html',
-    styleUrls: ['./dashboard.component.scss']
+    standalone: true
 })
 export class DashboardComponent implements OnInit, OnDestroy {
     /** Column configurations */
