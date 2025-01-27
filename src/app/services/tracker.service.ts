@@ -50,6 +50,8 @@ export interface MessageFlow {
     parentMessage?: RelatedMessage;
     /** Child messages in the flow */
     childMessages?: RelatedMessage[];
+    /** Update count */
+    updateCount: number;
 }
 
 /**
@@ -136,7 +138,8 @@ export class TrackerService implements OnDestroy {
                             serviceId: clientMessage.from,
                             timeout: clientMessage.timeout,
                             message: clientMessage.message
-                        }
+                        },
+                        updateCount: 0
                     };
                     this.flowMap.set(requestId, flow);
                     this.flowQueue.push(flow);
@@ -172,6 +175,9 @@ export class TrackerService implements OnDestroy {
                                     header: flow.request.message.header
                                 });
 
+                                // Increment the parent flow's update count
+                                parentFlow.updateCount++;
+
                                 // Add parent to this flow
                                 flow.parentMessage = {
                                     serviceId: parentFlow.request.serviceId,
@@ -198,6 +204,9 @@ export class TrackerService implements OnDestroy {
                     },
                     message: clientMessage.message
                 };
+
+                // Increment the update count
+                flow.updateCount++;
             }
         } else {
             // Broker message
@@ -219,6 +228,9 @@ export class TrackerService implements OnDestroy {
                     if (!flow.response) flow.response = { fromBroker: true, target: { serviceId: 'message-broker', priority: Number.MAX_VALUE }, message: brokerMessage.message };
                     flow.response.sentAt = new Date(brokerMessage.timestamp);
                     //flow.response.message = brokerMessage.message;
+
+                    // Increment the update count
+                    flow.updateCount++;
                 }
             }
         }
