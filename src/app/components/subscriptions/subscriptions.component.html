@@ -25,6 +25,10 @@
             <!-- Cell Templates -->
             <ng-template #cellTemplate let-topic let-column="column">
                 <ng-container [ngSwitch]="column.name">
+                    <ng-container *ngSwitchCase="'action'">
+                        {{topic.action}}
+                    </ng-container>
+
                     <ng-container *ngSwitchCase="'name'">
                         {{topic.name}}
                     </ng-container>
@@ -55,22 +59,28 @@
                         <thead>
                             <tr>
                                 <th>Service ID</th>
-                                <th>Priority</th>
+                                @if (topic.action === 'request') {
+                                    <th>Priority</th>
+                                }
                             </tr>
                         </thead>
+
                         <tbody>
                             @for (subscriber of topic.subscribers; track subscriber.serviceId) {
                                 <tr>
                                     <td>{{subscriber.serviceId}}
-                                        @if ($index === 0) {
+                                        @if ($index === 0 && topic.action === 'request') {
                                             <span class="muted italic" matTooltip="This service will be the primary responder for requests for this topic.">
                                                 (Primary)
                                             </span>
                                         }
                                     </td>
-                                    <td>{{subscriber.priority}}</td>
+                                    @if (topic.action === 'request') {
+                                        <td>{{subscriber.priority}}</td>
+                                    }
                                 </tr>
                             }
+
                         </tbody>
                     </table>
                 </div>

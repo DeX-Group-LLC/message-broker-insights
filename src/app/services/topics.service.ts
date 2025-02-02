@@ -10,21 +10,34 @@ export interface Subscriber {
     priority: number;
 }
 
+/** Structure of a topic subscription in the response */
+interface TopicSubscription {
+    /** The action type (request/publish) */
+    action: string;
+    /** Name of the topic */
+    topic: string;
+    /** List of subscribers */
+    subscribers: Subscriber[];
+}
+
+/** Response structure from system.topic.subscribers */
+interface TopicSubscribersResponse {
+    /** Array of topic subscriptions */
+    subscriptions: TopicSubscription[];
+}
+
 /** Structure of a topic in the application */
 export interface Topic {
     /** Name of the topic */
     name: string;
+    /** Action type (request/publish) */
+    action: string;
     /** Number of subscribers to this topic */
     subscriberCount: number;
     /** List of subscribers with their priorities */
     subscribers: Subscriber[];
     /** Last time the topic was updated */
     lastUpdated: Date;
-}
-
-/** Response structure from system.topic.subscribers */
-interface TopicSubscribersResponse {
-    [topicName: string]: Subscriber[];
 }
 
 /**
@@ -98,35 +111,43 @@ export class TopicsService implements OnDestroy {
     private async pollTopics(): Promise<void> {
         try {
             this.loadingSubject.next(true);
-            const response = (await this.websocketService.request('system.topic.subscribers', {})).payload as any;
+            const response = (await this.websocketService.request('system.topic.subscribers', {})).payload as TopicSubscribersResponse;
 
-            if (response && typeof response.subscribers === 'object') {
-                const topicSubscribers = response.subscribers as TopicSubscribersResponse;
-                const topicNames = new Set(Object.keys(topicSubscribers));
+            if (response && Array.isArray(response.subscriptions)) {
+                const topicSubscriptions = response.subscriptions;
+                const topicNames = new Set(topicSubscriptions.map(s => s.topic));
                 const currentTopicNames = new Set(this.currentTopics.map(t => t.name));
 
                 // Add new topics
-                for (const name of topicNames) {
-                    if (!currentTopicNames.has(name)) {
-                        const subscribers = topicSubscribers[name];
+                for (const subscription of topicSubscriptions) {
+                    if (!currentTopicNames.has(subscription.topic)) {
                         const topic: Topic = {
-                            name,
-                            subscriberCount: subscribers.length,
-                            subscribers: subscribers,
+                            name: subscription.topic,
+                            action: subscription.action,
+                            subscriberCount: subscription.subscribers.length,
+                            subscribers: subscription.subscribers,
                             lastUpdated: new Date()
                         };
                         this.currentTopics.push(topic);
-                        this.topicMap.set(name, topic);
+                        this.topicMap.set(subscription.topic, topic);
                     }
                 }
 
                 // Update existing topics
                 for (const topic of this.currentTopics) {
-                    if (topicNames.has(topic.name)) {
-                        const subscribers = topicSubscribers[topic.name];
-                        topic.subscriberCount = subscribers.length;
-                        topic.subscribers = subscribers;
-                        topic.lastUpdated = new Date();
+                    const subscription = topicSubscriptions.find(s => s.topic === topic.name);
+                    if (subscription) {
+                        // Check if there are actual changes before updating
+                        const hasActionChange = topic.action !== subscription.action;
+                        const hasSubscriberCountChange = topic.subscriberCount !== subscription.subscribers.length;
+                        const hasSubscriberChange = JSON.stringify(topic.subscribers) !== JSON.stringify(subscription.subscribers);
+
+                        if (hasActionChange || hasSubscriberCountChange || hasSubscriberChange) {
+                            topic.action = subscription.action;
+                            topic.subscriberCount = subscription.subscribers.length;
+                            topic.subscribers = subscription.subscribers;
+                            topic.lastUpdated = new Date();
+                        }
                     }
                 }
 

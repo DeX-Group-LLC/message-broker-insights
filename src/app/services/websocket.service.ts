@@ -527,7 +527,7 @@ export class WebsocketService {
         // Subscribe to the topic
         this.message$.on(`${action}:${topic}`, callback);
         // Request to subscribe to the topic
-        return await this.request('system.topic.subscribe', { topic, priority });
+        return await this.request('system.topic.subscribe', { action, topic, priority });
     }
 
     /**
@@ -538,7 +538,7 @@ export class WebsocketService {
     unsubscribe(action: ActionType.PUBLISH | ActionType.REQUEST, topic: string): void {
         this.message$.clear(`${action}:${topic}`);
         // Request to unsubscribe from the topic
-        this.request('system.topic.unsubscribe', { topic });
+        this.request('system.topic.unsubscribe', { action, topic });
     }
 
     /**

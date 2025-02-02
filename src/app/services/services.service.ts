@@ -1,7 +1,7 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { Metric, MetricInfo, MetricsService } from './metrics.service';
-import { WebsocketService } from './websocket.service';
+import { ActionType, WebsocketService } from './websocket.service';
 
 /** Status of a service */
 export type ServiceStatus = 'connected' | 'disconnected';
@@ -21,7 +21,7 @@ export interface ServiceInfo {
     /** Timestamp of the last heartbeat received */
     lastHeartbeat: Date;
     /** List of topics the service is subscribed to with priority */
-    subscriptions?: { topic: string; priority: number }[];
+    subscriptions?: { action: ActionType; topic: string; priority?: number }[];
     /** Service-specific metrics */
     metrics?: Metric[];
     /** Additional metadata about the service */
@@ -227,7 +227,7 @@ export class ServicesService implements OnDestroy {
      * @param serviceId - ID of the service to fetch subscriptions for
      * @returns Promise resolving to the subscriptions response
      */
-    async fetchServiceSubscriptions(serviceId: string): Promise<{ subscriptions: { topic: string; priority: number }[] }> {
+    async fetchServiceSubscriptions(serviceId: string): Promise<{ subscriptions: { action: ActionType; topic: string; priority?: number }[] }> {
         const response = await this.websocketService.request('system.service.subscriptions', { serviceId });
         return response.payload as any;
     }

@@ -42,10 +42,16 @@ export class SubscriptionsComponent implements AfterViewInit, OnDestroy {
 
     /** Table columns configuration */
     columns: TableColumn[] = [
-        { name: 'name', label: 'Topic', sortable: true },
-        { name: 'subscriberCount', label: 'Subscribers', sortable: true },
-        { name: 'priorityRange', label: 'Priority Range', sortable: false },
-        { name: 'lastUpdated', label: 'Last Updated', sortable: true }
+        { name: 'action', label: 'Action', sortable: true, filterable: true },
+        { name: 'name', label: 'Topic', sortable: true, filterable: true },
+        { name: 'subscriberCount', label: 'Subscribers', sortable: true, filterable: true },
+        { name: 'priorityRange', label: 'Priority Range', sortable: false, filterable: (data: Topic, filter: string) => {
+            filter = filter.toLowerCase();
+            return this.getPriorityRange(data).toLowerCase().includes(filter);
+        } },
+        { name: 'lastUpdated', label: 'Last Updated', sortable: true, filterable: true }
+
+
     ];
 
     @ViewChild('toolbarContent') toolbarContent?: TemplateRef<any>;
@@ -117,9 +123,11 @@ export class SubscriptionsComponent implements AfterViewInit, OnDestroy {
      * @returns Priority range string
      */
     getPriorityRange(topic: Topic): string {
-        if (!topic.subscribers.length) return 'N/A';
+        if (!topic.subscribers.length) return '';
 
-        const priorities = topic.subscribers.map(s => s.priority);
+        const priorities = topic.subscribers.map(s => s.priority).filter(p => p !== undefined);
+        if (priorities.length === 0) return '';
+
         const min = Math.min(...priorities);
         const max = Math.max(...priorities);
         return min === max ? `${min}` : `${min} - ${max}`;

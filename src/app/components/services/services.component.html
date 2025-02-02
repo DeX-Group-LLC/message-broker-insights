@@ -181,8 +181,10 @@
                             @for (subscription of selectedService.subscriptions; track subscription) {
                                 <div class="pill-item subscription-pill">
                                     <span class="label">{{subscription.topic}}</span>
-                                    <div class="property">Priority: {{subscription.priority}}</div>
+                                    <span class="property">Action: {{subscription.action}}</span>
+                                    <span class="property" *ngIf="subscription.priority !== undefined">Priority: {{subscription.priority}}</span>
                                 </div>
+
                             }
                         </div>
                     } @else {
