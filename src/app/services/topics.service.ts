@@ -20,11 +20,12 @@ interface TopicSubscription {
     subscribers: Subscriber[];
 }
 
-/** Response structure from system.topic.subscribers */
-interface TopicSubscribersResponse {
+/** Response structure from system.topic.subscriptions */
+interface TopicSubscriptionsResponse {
     /** Array of topic subscriptions */
     subscriptions: TopicSubscription[];
 }
+
 
 /** Structure of a topic in the application */
 export interface Topic {
@@ -111,7 +112,8 @@ export class TopicsService implements OnDestroy {
     private async pollTopics(): Promise<void> {
         try {
             this.loadingSubject.next(true);
-            const response = (await this.websocketService.request('system.topic.subscribers', {})).payload as TopicSubscribersResponse;
+            const response = (await this.websocketService.request('system.topic.subscriptions', {})).payload as TopicSubscriptionsResponse;
+
 
             if (response && Array.isArray(response.subscriptions)) {
                 const topicSubscriptions = response.subscriptions;
